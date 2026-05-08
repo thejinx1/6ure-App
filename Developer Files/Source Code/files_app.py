@@ -1,0 +1,968 @@
+from __future__ import annotations
+
+import html
+import os
+import sys
+import threading
+import time
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+
+def app_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+APPDATA_FOLDER_NAME = "6ure Leak Upld. User Data"
+
+
+def persistent_app_data_dir() -> Path:
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / APPDATA_FOLDER_NAME
+
+    if not sys.platform.startswith("win"):
+        root = os.environ.get("XDG_DATA_HOME")
+        if root:
+            return Path(root) / APPDATA_FOLDER_NAME
+        return Path.home() / ".local" / "share" / APPDATA_FOLDER_NAME
+
+    root = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+    if root:
+        return Path(root) / APPDATA_FOLDER_NAME
+    return app_dir() / "data" / APPDATA_FOLDER_NAME
+
+
+def files_data_dir() -> Path:
+    configured = os.environ.get("REYLI_DATA_DIR")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return persistent_app_data_dir()
+
+
+def webview_profile_dir() -> Path:
+    configured = os.environ.get("REYLI_FILES_WEBVIEW_PROFILE")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return persistent_app_data_dir() / "webview-profile"
+
+
+os.environ.setdefault("REYLI_CONFIG_FILE", "6ure-files-state.json")
+os.environ.setdefault("REYLI_CONFIG_BACKUP_FILE", "6ure-files-state.backup.json")
+os.environ.setdefault("REYLI_DATA_DIR", str(files_data_dir()))
+os.environ.setdefault("REYLI_LEGACY_DATA_DIR", str(app_dir()))
+if sys.platform.startswith("win"):
+    os.environ.setdefault("WEBVIEW2_USER_DATA_FOLDER", str(webview_profile_dir()))
+
+import webview  # noqa: E402
+
+from server import (  # noqa: E402
+    create_server,
+    is_discord_oauth_url,
+    stop_discord_presence,
+    sync_leaker_proxy_cookies_from_webview,
+)
+
+
+APP_NAME = "6ure™ App"
+APP_WIDTH = 860
+APP_HEIGHT = 720
+WEBVIEW_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
+)
+MAC_WEBVIEW_USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Apple Silicon Mac OS X 14_0) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+)
+LEAKER_CLOUD_URL = "https://6ureleaks.com/dashboard/resources"
+LEAKER_UPLOAD_URL = "https://6ureleaks.com/dashboard/upload"
+LEAKER_HOST = "6ureleaks.com"
+LEAKER_AUTH_TIMEOUT_SECONDS = 20 * 60
+LEAKER_OAUTH_TIMEOUT_SECONDS = 10 * 60
+
+
+def webview_gui() -> str | None:
+    if sys.platform.startswith("win"):
+        return "edgechromium"
+    if sys.platform == "darwin":
+        return "cocoa"
+    return None
+
+
+def webview_user_agent() -> str:
+    return MAC_WEBVIEW_USER_AGENT if sys.platform == "darwin" else WEBVIEW_USER_AGENT
+
+
+def leaker_control_html() -> str:
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leaker Mode</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #080910;
+      color: #f7f5ff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 10px;
+    }
+    main {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(82, 247, 255, 0.22);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(82, 247, 255, 0.16), transparent 38%),
+        linear-gradient(180deg, rgba(16, 19, 32, 0.96), rgba(7, 10, 18, 0.96));
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.46), 0 0 34px rgba(82, 247, 255, 0.08);
+    }
+    .copy {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+    strong {
+      font-size: 12px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+    span {
+      color: #9693b5;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    button {
+      min-height: 32px;
+      padding: 7px 12px;
+      border: 1px solid rgba(255, 93, 115, 0.28);
+      border-radius: 7px;
+      background: rgba(39, 11, 18, 0.9);
+      color: #ff9cab;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    button:hover {
+      border-color: rgba(255, 143, 160, 0.38);
+      background: rgba(66, 14, 27, 0.96);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="copy">
+      <strong>Leaker Mode</strong>
+      <span>Upload dashboard is open.</span>
+    </div>
+    <button type="button" onclick="window.pywebview.api.exit_leaker_mode()">Exit</button>
+  </main>
+</body>
+</html>"""
+
+
+def safe_destroy_window(window) -> None:
+    if not window:
+        return
+    try:
+        if not window.events.closed.is_set():
+            window.destroy()
+    except Exception:
+        pass
+
+
+def is_leaker_dashboard_url(url: str) -> bool:
+    try:
+        parsed = urllib.parse.urlsplit(str(url or ""))
+    except ValueError:
+        return False
+    host = parsed.netloc.lower().split("@")[-1].split(":")[0]
+    return host == LEAKER_HOST and parsed.path.lower().startswith("/dashboard")
+
+
+def is_leaker_oauth_return_url(url: str) -> bool:
+    try:
+        parsed = urllib.parse.urlsplit(str(url or ""))
+    except ValueError:
+        return False
+    host = parsed.netloc.lower().split("@")[-1].split(":")[0]
+    path = parsed.path.lower() or "/"
+    return host == LEAKER_HOST and (
+        path == "/"
+        or path.startswith("/dashboard")
+        or path.startswith("/requests/api/auth/discord/callback")
+        or path.startswith("/api/auth/callback")
+        or path.startswith("/requests/account")
+    )
+
+
+def is_leaker_window_authenticated(window, current_url: str) -> bool:
+    if not is_leaker_dashboard_url(current_url):
+        return False
+    try:
+        result = window.evaluate_js(
+            """
+            (() => {
+              const text = (document.body ? document.body.innerText : '').toLowerCase();
+              const hasPassword = Boolean(document.querySelector('input[type="password"]'));
+              const hasLoginLink = Boolean(document.querySelector('a[href*="/login"], a[href*="/signin"], a[href*="/auth"]'));
+              const hasLoginText = text.includes('sign in') || text.includes('log in') || text.includes('login');
+              const hasDashboardShell = text.includes('cloud') || text.includes('upload') || text.includes('dashboard');
+              return { loginSignals: hasPassword || hasLoginLink || (hasLoginText && !hasDashboardShell) };
+            })()
+            """
+        )
+        if isinstance(result, dict) and result.get("loginSignals"):
+            return False
+    except Exception:
+        pass
+    return True
+
+
+class LeakerControlApi:
+    def __init__(self, owner: "FilesWindowApi") -> None:
+        self.owner = owner
+
+    def exit_leaker_mode(self) -> dict:
+        return self.owner.exit_leaker_mode()
+
+
+class FilesWindowApi:
+    def __init__(self) -> None:
+        self.window = None
+        self.maximized = False
+        self._leaker_lock = threading.RLock()
+        self._leaker_login_window = None
+        self._leaker_cloud_window = None
+        self._leaker_upload_window = None
+        self._leaker_control_window = None
+        self._leaker_oauth_window = None
+        self._leaker_thread: threading.Thread | None = None
+        self._leaker_oauth_thread: threading.Thread | None = None
+        self._leaker_session_id = 0
+        self._leaker_oauth_id = 0
+        self._leaker_exiting = False
+        self._leaker_status = {
+            "phase": "idle",
+            "message": "Leaker Mode is idle.",
+            "active": False,
+            "needsLogin": False,
+            "updatedAt": int(time.time() * 1000),
+        }
+        self._leaker_oauth_status = {
+            "phase": "idle",
+            "message": "Discord OAuth is idle.",
+            "active": False,
+            "completed": False,
+            "cancelled": False,
+            "syncedCookies": 0,
+            "updatedAt": int(time.time() * 1000),
+        }
+
+    def bind(self, window) -> None:
+        self.window = window
+
+    def window_action(self, action: str) -> None:
+        if not self.window:
+            return
+
+        if action == "minimize":
+            self.window.minimize()
+            return
+
+        if action == "maximize":
+            if self.maximized:
+                self.window.restore()
+            else:
+                self.window.maximize()
+            self.maximized = not self.maximized
+            return
+
+        if action == "close":
+            self.window.destroy()
+
+    def select_folders(self) -> list[str]:
+        if not self.window:
+            return []
+        try:
+            result = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=True)
+            return [str(item) for item in result] if result else []
+        except Exception:
+            return []
+
+    def select_folder(self) -> str:
+        folders = self.select_folders()
+        return folders[0] if folders else ""
+
+    def _set_leaker_status(self, phase: str, message: str, *, active: bool = False, needs_login: bool = False) -> dict:
+        with self._leaker_lock:
+            self._leaker_status = {
+                "phase": phase,
+                "message": message,
+                "active": active,
+                "needsLogin": needs_login,
+                "updatedAt": int(time.time() * 1000),
+            }
+            return dict(self._leaker_status)
+
+    def leaker_status(self) -> dict:
+        with self._leaker_lock:
+            status = dict(self._leaker_status)
+            cloud_open = bool(self._leaker_cloud_window and not self._leaker_cloud_window.events.closed.is_set())
+            upload_open = bool(self._leaker_upload_window and not self._leaker_upload_window.events.closed.is_set())
+            control_open = bool(self._leaker_control_window and not self._leaker_control_window.events.closed.is_set())
+            login_open = bool(self._leaker_login_window and not self._leaker_login_window.events.closed.is_set())
+        if status.get("phase") == "active" and not (cloud_open or upload_open):
+            return self._set_leaker_status("idle", "Leaker Mode windows were closed.")
+        status.update(
+            {
+                "success": True,
+                "cloudOpen": cloud_open,
+                "uploadOpen": upload_open,
+                "controlOpen": control_open,
+                "loginOpen": login_open,
+                "cloudUrl": LEAKER_CLOUD_URL,
+                "uploadUrl": LEAKER_UPLOAD_URL,
+            }
+        )
+        return status
+
+    def _set_leaker_oauth_status(
+        self,
+        phase: str,
+        message: str,
+        *,
+        active: bool = False,
+        completed: bool = False,
+        cancelled: bool = False,
+        synced_cookies: int = 0,
+    ) -> dict:
+        with self._leaker_lock:
+            self._leaker_oauth_status = {
+                "phase": phase,
+                "message": message,
+                "active": active,
+                "completed": completed,
+                "cancelled": cancelled,
+                "syncedCookies": int(synced_cookies or 0),
+                "updatedAt": int(time.time() * 1000),
+            }
+            return dict(self._leaker_oauth_status)
+
+    def leaker_oauth_status(self) -> dict:
+        with self._leaker_lock:
+            status = dict(self._leaker_oauth_status)
+            window_open = bool(self._leaker_oauth_window and not self._leaker_oauth_window.events.closed.is_set())
+            thread_alive = bool(self._leaker_oauth_thread and self._leaker_oauth_thread.is_alive())
+            if status.get("active") and not window_open and not status.get("completed") and not thread_alive:
+                status = self._set_leaker_oauth_status(
+                    "cancelled",
+                    "Discord OAuth window was closed.",
+                    cancelled=True,
+                )
+                window_open = False
+        status.update({"success": True, "windowOpen": window_open})
+        return status
+
+    def open_leaker_oauth(self, url: str) -> dict:
+        clean_url = str(url or "").strip()
+        if not is_discord_oauth_url(clean_url):
+            raise ValueError("Only Discord OAuth URLs can be opened separately.")
+
+        with self._leaker_lock:
+            existing = self._leaker_oauth_window
+            if existing and not existing.events.closed.is_set():
+                try:
+                    existing.restore()
+                except Exception:
+                    pass
+                return self.leaker_oauth_status()
+
+            self._leaker_oauth_id += 1
+            oauth_id = self._leaker_oauth_id
+            self._leaker_oauth_status = {
+                "phase": "opening",
+                "message": "Opening Discord OAuth in a separate window.",
+                "active": True,
+                "completed": False,
+                "cancelled": False,
+                "syncedCookies": 0,
+                "updatedAt": int(time.time() * 1000),
+            }
+            self._leaker_oauth_thread = threading.Thread(
+                target=self._run_leaker_oauth,
+                args=(oauth_id, clean_url),
+                daemon=True,
+            )
+            self._leaker_oauth_thread.start()
+
+        return self.leaker_oauth_status()
+
+    def _is_current_leaker_oauth(self, oauth_id: int) -> bool:
+        with self._leaker_lock:
+            return self._leaker_oauth_id == oauth_id
+
+    def _run_leaker_oauth(self, oauth_id: int, url: str) -> None:
+        oauth_window = None
+        returned_at = None
+        try:
+            oauth_window = webview.create_window(
+                "Discord OAuth",
+                url,
+                width=900,
+                height=760,
+                min_size=(620, 520),
+                resizable=True,
+                frameless=False,
+                easy_drag=False,
+                background_color="#080910",
+                text_select=True,
+            )
+            with self._leaker_lock:
+                if not self._is_current_leaker_oauth(oauth_id):
+                    safe_destroy_window(oauth_window)
+                    return
+                self._leaker_oauth_window = oauth_window
+
+            self._set_leaker_oauth_status(
+                "waiting",
+                "Complete Discord OAuth in the separate window.",
+                active=True,
+            )
+
+            deadline = time.monotonic() + LEAKER_OAUTH_TIMEOUT_SECONDS
+            while time.monotonic() < deadline and self._is_current_leaker_oauth(oauth_id):
+                if oauth_window.events.closed.is_set():
+                    self._set_leaker_oauth_status(
+                        "cancelled",
+                        "Discord OAuth window was closed.",
+                        cancelled=True,
+                    )
+                    return
+
+                try:
+                    current_url = oauth_window.get_current_url() or ""
+                except Exception:
+                    current_url = ""
+
+                if is_leaker_oauth_return_url(current_url):
+                    if returned_at is None:
+                        returned_at = time.monotonic()
+                    if time.monotonic() - returned_at >= 1.0:
+                        synced = 0
+                        try:
+                            synced = sync_leaker_proxy_cookies_from_webview(oauth_window.get_cookies())
+                        except Exception:
+                            synced = 0
+                        self._set_leaker_oauth_status(
+                            "completed",
+                            "Discord OAuth completed. Returning to Leaker Mode.",
+                            completed=True,
+                            synced_cookies=synced,
+                        )
+                        time.sleep(0.35)
+                        safe_destroy_window(oauth_window)
+                        return
+                else:
+                    returned_at = None
+
+                time.sleep(0.35)
+
+            if self._is_current_leaker_oauth(oauth_id):
+                self._set_leaker_oauth_status(
+                    "timeout",
+                    "Discord OAuth timed out.",
+                    cancelled=True,
+                )
+                safe_destroy_window(oauth_window)
+        except Exception as error:
+            if self._is_current_leaker_oauth(oauth_id):
+                self._set_leaker_oauth_status(
+                    "error",
+                    f"Discord OAuth could not be opened: {error}",
+                    cancelled=True,
+                )
+        finally:
+            with self._leaker_lock:
+                if self._leaker_oauth_window is oauth_window:
+                    self._leaker_oauth_window = None
+
+    def start_leaker_mode(self) -> dict:
+        self._set_leaker_status(
+            "ready",
+            "Leaker Mode is handled inside the main 6ure™ App window.",
+            needs_login=False,
+        )
+        return self.leaker_status()
+        with self._leaker_lock:
+            phase = self._leaker_status.get("phase")
+            if phase in {"authenticating", "ready", "launching"}:
+                return self.leaker_status()
+            if phase == "active":
+                self._focus_leaker_windows()
+                return self.leaker_status()
+            self._leaker_session_id += 1
+            session_id = self._leaker_session_id
+            self._leaker_exiting = False
+            self._leaker_status = {
+                "phase": "authenticating",
+            "message": "Checking your 6ureleaks.com upload dashboard session.",
+                "active": False,
+                "needsLogin": True,
+                "updatedAt": int(time.time() * 1000),
+            }
+            self._leaker_thread = threading.Thread(target=self._run_leaker_auth_flow, args=(session_id,), daemon=True)
+            self._leaker_thread.start()
+        return self.leaker_status()
+
+    def launch_leaker_mode(self) -> dict:
+        self._set_leaker_status(
+            "active",
+            "Leaker Mode is active inside the main 6ure™ App window.",
+            active=True,
+            needs_login=False,
+        )
+        return self.leaker_status()
+        with self._leaker_lock:
+            phase = self._leaker_status.get("phase")
+            if phase == "active":
+                self._focus_leaker_windows()
+                return self.leaker_status()
+            if phase != "ready":
+                return self.leaker_status()
+            self._leaker_status = {
+                "phase": "launching",
+                "message": "Opening the Upload dashboard.",
+                "active": False,
+                "needsLogin": False,
+                "updatedAt": int(time.time() * 1000),
+            }
+
+        threading.Thread(target=self._open_leaker_windows, daemon=True).start()
+        return self.leaker_status()
+
+    def exit_leaker_mode(self) -> dict:
+        with self._leaker_lock:
+            self._leaker_exiting = True
+            self._leaker_oauth_id += 1
+            windows = [
+                self._leaker_login_window,
+                self._leaker_cloud_window,
+                self._leaker_upload_window,
+                self._leaker_control_window,
+                self._leaker_oauth_window,
+            ]
+            self._leaker_login_window = None
+            self._leaker_cloud_window = None
+            self._leaker_upload_window = None
+            self._leaker_control_window = None
+            self._leaker_oauth_window = None
+            self._leaker_status = {
+                "phase": "idle",
+                "message": "Leaker Mode is idle.",
+                "active": False,
+                "needsLogin": False,
+                "updatedAt": int(time.time() * 1000),
+            }
+            self._leaker_oauth_status = {
+                "phase": "idle",
+                "message": "Discord OAuth is idle.",
+                "active": False,
+                "completed": False,
+                "cancelled": False,
+                "syncedCookies": 0,
+                "updatedAt": int(time.time() * 1000),
+            }
+
+        for window in windows:
+            safe_destroy_window(window)
+        try:
+            if self.window and not self.window.events.closed.is_set():
+                self.window.restore()
+        except Exception:
+            pass
+        return self.leaker_status()
+
+    def _is_current_leaker_session(self, session_id: int) -> bool:
+        with self._leaker_lock:
+            return not self._leaker_exiting and self._leaker_session_id == session_id
+
+    def _run_leaker_auth_flow(self, session_id: int) -> None:
+        login_window = None
+        try:
+            login_window = webview.create_window(
+                "6ure Leaker Login",
+                LEAKER_UPLOAD_URL,
+                width=1120,
+                height=760,
+                min_size=(760, 540),
+                resizable=True,
+                background_color="#080910",
+                text_select=True,
+                focus=True,
+            )
+            if not login_window:
+                raise RuntimeError("Login window could not be opened.")
+            with self._leaker_lock:
+                if not self._is_current_leaker_session(session_id):
+                    safe_destroy_window(login_window)
+                    return
+                self._leaker_login_window = login_window
+
+            self._set_leaker_status(
+                "authenticating",
+                "Sign in to 6ureleaks.com inside 6ure™ App. Leaker Mode will continue after login.",
+                needs_login=True,
+            )
+
+            deadline = time.monotonic() + LEAKER_AUTH_TIMEOUT_SECONDS
+            while time.monotonic() < deadline and self._is_current_leaker_session(session_id):
+                if login_window.events.closed.is_set():
+                    self._set_leaker_status("idle", "Leaker Mode login was cancelled.")
+                    return
+                current_url = ""
+                try:
+                    current_url = login_window.get_current_url() or ""
+                except Exception:
+                    current_url = ""
+                if is_leaker_window_authenticated(login_window, current_url):
+                    safe_destroy_window(login_window)
+                    with self._leaker_lock:
+                        if self._leaker_login_window is login_window:
+                            self._leaker_login_window = None
+                    self._set_leaker_status(
+                        "ready",
+                        "6ureleaks.com session is ready. Starting Leaker Mode.",
+                        needs_login=False,
+                    )
+                    return
+                time.sleep(0.8)
+
+            if self._is_current_leaker_session(session_id):
+                self._set_leaker_status("idle", "Leaker Mode login timed out.")
+        except Exception as error:
+            if self._is_current_leaker_session(session_id):
+                self._set_leaker_status("error", f"Leaker Mode could not start: {error}")
+        finally:
+            with self._leaker_lock:
+                if self._leaker_login_window is login_window and login_window and login_window.events.closed.is_set():
+                    self._leaker_login_window = None
+
+    def _leaker_layout(self) -> dict:
+        screen = webview.screens[0] if webview.screens else None
+        if not screen:
+            return {"x": 60, "y": 80, "pane_width": 860, "pane_height": 760, "control_x": 740, "control_y": 12}
+        frame = getattr(screen, "frame", None)
+        x = int(getattr(frame, "X", getattr(screen, "x", 0)))
+        y = int(getattr(frame, "Y", getattr(screen, "y", 0)))
+        width = int(getattr(frame, "Width", getattr(screen, "width", 1920)))
+        height = int(getattr(frame, "Height", getattr(screen, "height", 1080)))
+        margin = 14
+        gap = 10
+        control_height = 70
+        pane_width = max(640, int((width - (margin * 2) - gap) / 2))
+        pane_height = max(620, height - control_height - margin)
+        pane_y = y + control_height
+        return {
+            "x": x + margin,
+            "y": pane_y,
+            "pane_width": pane_width,
+            "pane_height": pane_height,
+            "right_x": x + margin + pane_width + gap,
+            "control_x": x + max(margin, int((width - 360) / 2)),
+            "control_y": y + 8,
+        }
+
+    def _open_leaker_windows(self) -> None:
+        try:
+            self._close_leaker_dashboard_windows()
+            layout = self._leaker_layout()
+            cloud_window = webview.create_window(
+                "6ure Leaker Mode - Cloud",
+                LEAKER_CLOUD_URL,
+                width=layout["pane_width"],
+                height=layout["pane_height"],
+                x=layout["x"],
+                y=layout["y"],
+                min_size=(620, 520),
+                resizable=True,
+                background_color="#080910",
+                text_select=True,
+                focus=True,
+            )
+            upload_window = webview.create_window(
+                "6ure Leaker Mode - Upload",
+                LEAKER_UPLOAD_URL,
+                width=layout["pane_width"],
+                height=layout["pane_height"],
+                x=layout["right_x"],
+                y=layout["y"],
+                min_size=(620, 520),
+                resizable=True,
+                background_color="#080910",
+                text_select=True,
+                focus=True,
+            )
+            control_window = webview.create_window(
+                "Leaker Mode",
+                html=leaker_control_html(),
+                js_api=LeakerControlApi(self),
+                width=360,
+                height=70,
+                x=layout["control_x"],
+                y=layout["control_y"],
+                min_size=(320, 64),
+                resizable=False,
+                frameless=False,
+                easy_drag=True,
+                on_top=True,
+                background_color="#080910",
+                text_select=False,
+                focus=False,
+            )
+
+            with self._leaker_lock:
+                self._leaker_cloud_window = cloud_window
+                self._leaker_upload_window = upload_window
+                self._leaker_control_window = control_window
+                self._leaker_status = {
+                    "phase": "active",
+                    "message": "Leaker Mode is active.",
+                    "active": True,
+                    "needsLogin": False,
+                    "updatedAt": int(time.time() * 1000),
+                }
+
+            try:
+                if self.window and not self.window.events.closed.is_set():
+                    self.window.minimize()
+            except Exception:
+                pass
+        except Exception as error:
+            self._set_leaker_status("error", f"Leaker Mode windows could not be opened: {error}")
+
+    def _focus_leaker_windows(self) -> None:
+        for window in (self._leaker_cloud_window, self._leaker_upload_window, self._leaker_control_window):
+            try:
+                if window and not window.events.closed.is_set():
+                    window.restore()
+            except Exception:
+                pass
+
+    def _close_leaker_dashboard_windows(self) -> None:
+        with self._leaker_lock:
+            windows = [self._leaker_cloud_window, self._leaker_upload_window, self._leaker_control_window]
+            self._leaker_cloud_window = None
+            self._leaker_upload_window = None
+            self._leaker_control_window = None
+        for window in windows:
+            safe_destroy_window(window)
+
+
+def start_http_server():
+    server = create_server(0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server
+
+
+def wait_for_server(port: int, timeout: float = 3.0) -> None:
+    deadline = time.monotonic() + timeout
+    url = f"http://127.0.0.1:{port}/health"
+    last_error: Exception | None = None
+
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=0.4) as response:
+                if response.status == 200:
+                    return
+        except Exception as error:
+            last_error = error
+            time.sleep(0.05)
+
+    raise RuntimeError(f"Local server did not start: {last_error}")
+
+
+def fallback_connection_html(reason: str = "") -> str:
+    clean_reason = html.escape(str(reason or "Local service is unavailable."))
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>6ure™ App</title>
+  <style>
+    :root {{ color-scheme: dark; }}
+    * {{ box-sizing: border-box; }}
+    html, body {{
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(82, 247, 255, 0.13), transparent 34%),
+        radial-gradient(circle at 78% 24%, rgba(139, 92, 246, 0.1), transparent 30%),
+        #080910;
+      color: #f7f5ff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }}
+    body {{
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }}
+    .card {{
+      width: min(460px, 100%);
+      display: grid;
+      justify-items: center;
+      gap: 14px;
+      padding: 22px;
+      border: 1px solid rgba(82, 247, 255, 0.22);
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(82, 247, 255, 0.12), transparent 38%),
+        linear-gradient(180deg, rgba(16, 19, 32, 0.98), rgba(7, 10, 18, 0.98));
+      box-shadow: 0 28px 86px rgba(0, 0, 0, 0.5), 0 0 44px rgba(82, 247, 255, 0.08);
+      text-align: center;
+      animation: cardIn 420ms cubic-bezier(0.2, 0.86, 0.2, 1) both;
+    }}
+    .mark {{
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(82, 247, 255, 0.24);
+      border-radius: 12px;
+      background: rgba(82, 247, 255, 0.08);
+      color: #b8faff;
+      box-shadow: 0 0 30px rgba(82, 247, 255, 0.14);
+    }}
+    .mark svg {{ width: 30px; height: 30px; }}
+    h1 {{
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 950;
+    }}
+    p {{
+      margin: 0;
+      color: #9693b5;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }}
+    button {{
+      min-height: 38px;
+      padding: 8px 16px;
+      border: 1px solid rgba(82, 247, 255, 0.28);
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(24, 26, 44, 0.94), rgba(82, 247, 255, 0.2));
+      color: #f7f5ff;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+    }}
+    @keyframes cardIn {{
+      from {{ opacity: 0; transform: translateY(14px) scale(0.96); }}
+      to {{ opacity: 1; transform: none; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M5 9.8A10.7 10.7 0 0 1 12 7.2c2.6 0 5 .9 7 2.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        <path d="M8.2 13.2A6.2 6.2 0 0 1 12 12c1.4 0 2.7.4 3.8 1.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        <path d="M10.8 16.5a2.1 2.1 0 0 1 2.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        <path d="M5 19 19 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+      </svg>
+    </div>
+    <h1>Connection unavailable</h1>
+    <p>6ure™ App could not open its local app screen. Check your connection or restart the app.</p>
+    <p>{clean_reason}</p>
+    <button type="button" onclick="location.reload()">Retry</button>
+  </main>
+</body>
+</html>"""
+
+
+def main() -> None:
+    server = None
+    startup_error: Exception | None = None
+    try:
+        server = start_http_server()
+        wait_for_server(server.server_port)
+    except Exception as error:
+        startup_error = error
+
+    api = FilesWindowApi()
+    url = f"http://127.0.0.1:{server.server_port}/" if server and startup_error is None else None
+
+    window = webview.create_window(
+        APP_NAME,
+        url,
+        html=fallback_connection_html(str(startup_error)) if startup_error is not None else None,
+        width=APP_WIDTH,
+        height=APP_HEIGHT,
+        min_size=(620, 520),
+        frameless=False,
+        easy_drag=False,
+        resizable=True,
+        background_color="#080910",
+        text_select=False,
+    )
+    api.bind(window)
+    if server is not None:
+        setattr(server, "window_bridge", api)
+
+    profile_dir = webview_profile_dir()
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    if sys.platform.startswith("win"):
+        os.environ["WEBVIEW2_USER_DATA_FOLDER"] = str(profile_dir)
+
+    try:
+        start_options = {
+            "debug": False,
+            "private_mode": False,
+            "storage_path": str(profile_dir),
+            "user_agent": webview_user_agent(),
+        }
+        gui = webview_gui()
+        if gui:
+            start_options["gui"] = gui
+        webview.start(**start_options)
+    finally:
+        if server is not None:
+            server.shutdown()
+        stop_discord_presence()
+
+
+if __name__ == "__main__":
+    main()

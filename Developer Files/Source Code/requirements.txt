@@ -1,0 +1,4 @@
+pywebview
+pyinstaller
+requests
+pyobjc; sys_platform == "darwin"

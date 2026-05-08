@@ -1,0 +1,15 @@
+﻿{
+    "version":  "1.1.2",
+    "notes":  "Protected warning toast updated. Protected toasts now stay visible for 10 seconds, include the protected creator profile photo, and use clearer wording.",
+    "windows":  {
+                    "url":  "https://github.com/thejinx1/6ure-files-updates/releases/download/v1.1.2/6ure-files-setup-1.1.2.exe",
+                    "sha256":  "f3fbbcd2ef2c40865f4e96df4d592a2b26ebe1c5d611b5a26047b237462bc0dd",
+                    "sizeBytes":  16396404,
+                    "packageType":  "installer",
+                    "installerArgs":  "/S",
+                    "successExitCodes":  [
+                                             0,
+                                             3010
+                                         ]
+                }
+}

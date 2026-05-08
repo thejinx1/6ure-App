@@ -1,0 +1,30 @@
+Upload these files to the cloud server root:
+
+bot_server.py
+requirements.txt
+.env
+start.sh
+start.ps1
+README.md
+
+Do not upload __pycache__ or local test data.
+
+Server binding:
+
+PUBLIC_BASE_URL=http://217.154.173.102:12988
+HOST=0.0.0.0
+PORT=12988
+
+Before starting the bot, edit .env and fill these values:
+
+DISCORD_TOKEN
+DISCORD_GUILD_ID
+DISCORD_ALLOWED_USER_IDS
+
+Linux start command:
+
+bash start.sh
+
+If the panel asks for a direct startup command, use:
+
+python3 bot_server.py

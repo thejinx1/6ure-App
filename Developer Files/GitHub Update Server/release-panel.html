@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>6ure Files Release Panel</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0a0d11;
+      --panel: #111721;
+      --panel-2: #151c28;
+      --line: rgba(170, 190, 220, 0.2);
+      --line-strong: rgba(103, 216, 255, 0.42);
+      --text: #f4f7fb;
+      --muted: #9aa7b9;
+      --blue: #67d8ff;
+      --green: #4be19a;
+      --yellow: #ffd166;
+      --red: #ff6b7a;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-width: 340px;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: rgba(103, 216, 255, 0.12);
+      color: var(--blue);
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button.primary {
+      background: rgba(75, 225, 154, 0.16);
+      border-color: rgba(75, 225, 154, 0.55);
+      color: var(--green);
+    }
+
+    button.warn {
+      background: rgba(255, 209, 102, 0.12);
+      border-color: rgba(255, 209, 102, 0.5);
+      color: var(--yellow);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.56;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #090d14;
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--line-strong);
+    }
+
+    textarea {
+      min-height: 132px;
+      resize: vertical;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      color: #d9e3ef;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    code,
+    pre {
+      font-family: var(--mono);
+    }
+
+    .shell {
+      width: min(1340px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 18px 0 24px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 14px;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: #0c1119;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .status.ok {
+      border-color: rgba(75, 225, 154, 0.42);
+      color: var(--green);
+    }
+
+    .status.err {
+      border-color: rgba(255, 107, 122, 0.48);
+      color: var(--red);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.82fr) minmax(340px, 1fr) minmax(360px, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      display: grid;
+      gap: 13px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      min-width: 0;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .hint {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .filebox {
+      display: grid;
+      gap: 9px;
+      border: 1px dashed rgba(103, 216, 255, 0.34);
+      border-radius: 8px;
+      padding: 12px;
+      background: #0b111a;
+    }
+
+    .filebox input {
+      border: 0;
+      min-height: auto;
+      padding: 0;
+      background: transparent;
+    }
+
+    .metric {
+      display: grid;
+      gap: 3px;
+      min-height: 55px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px;
+      background: #0b111a;
+      overflow: hidden;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    pre {
+      min-height: 300px;
+      max-height: 45vh;
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #070a10;
+      color: #dcecff;
+      font-size: 12px;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+
+    .log {
+      min-height: 136px;
+      max-height: 28vh;
+      color: #c9d5e6;
+    }
+
+    @media (max-width: 1080px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .top,
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .top {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <div>
+        <h1>6ure Files Release Panel</h1>
+        <p class="sub">Setup EXE sec, GitHub Release olustur, latest.json dosyasini Pages reposuna gonder.</p>
+      </div>
+      <div id="status" class="status">Panel yukleniyor...</div>
+    </header>
+
+    <section class="layout">
+      <div class="panel">
+        <h2>GitHub Ayarlari</h2>
+        <div class="row">
+          <label>Owner
+            <input id="ownerInput" autocomplete="off">
+          </label>
+          <label>Repo
+            <input id="repoInput" autocomplete="off">
+          </label>
+        </div>
+        <label>GitHub token
+          <input id="tokenInput" type="password" autocomplete="off" placeholder="Fine-grained PAT veya classic token">
+        </label>
+        <div class="hint">
+          Token kaydedilmez. Repo icin Contents read/write ve Releases read/write yetkisi yeterli.
+        </div>
+        <label>Manifest URL
+          <input id="manifestUrlInput" readonly>
+        </label>
+        <div class="actions">
+          <button id="saveSettingsBtn" type="button">Kaydet</button>
+          <button id="setConfigBtn" type="button">App Config Bagla</button>
+          <button id="checkPagesBtn" type="button">Pages Kontrol</button>
+        </div>
+        <button id="buildAppBtn" class="warn" type="button">PyInstaller Build Calistir</button>
+      </div>
+
+      <div class="panel">
+        <h2>Yeni Surum</h2>
+        <div class="row">
+          <label>Version
+            <input id="versionInput" placeholder="1.0.1">
+          </label>
+          <label>Package type
+            <select id="packageTypeInput">
+              <option value="installer">Setup EXE / MSI</option>
+              <option value="zip">Portable ZIP</option>
+            </select>
+          </label>
+        </div>
+        <label>Installer args
+          <input id="installerArgsInput" value="/S">
+        </label>
+        <label>Release notes
+          <textarea id="notesInput" placeholder="Yeni cloud manager eklendi&#10;Updater sistemi iyilestirildi"></textarea>
+        </label>
+        <div class="filebox">
+          <label>Setup EXE veya ZIP
+            <input id="packageInput" type="file" accept=".exe,.msi,.zip,application/zip,application/x-msdownload">
+          </label>
+          <div class="hint">Dosya once localhost paneline gonderilir, sonra GitHub Release asset olarak yuklenir.</div>
+        </div>
+        <label>
+          <span>
+            <input id="prereleaseInput" type="checkbox" style="width:auto;min-height:auto;margin-right:6px">
+            Prerelease olarak isaretle
+          </span>
+        </label>
+      </div>
+
+      <div class="panel">
+        <h2>Manifest Onizleme</h2>
+        <div class="row">
+          <div class="metric">
+            <span>Dosya</span>
+            <strong id="fileNameMetric">-</strong>
+          </div>
+          <div class="metric">
+            <span>Boyut</span>
+            <strong id="fileSizeMetric">-</strong>
+          </div>
+        </div>
+        <div class="metric">
+          <span>SHA-256</span>
+          <strong id="shaMetric">-</strong>
+        </div>
+        <pre id="manifestPreview"></pre>
+        <div class="actions">
+          <button id="copyManifestBtn" type="button">Manifest Kopyala</button>
+          <button id="publishBtn" class="primary" type="button">GitHub'a Publish Et</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Islem Logu</h2>
+      <pre id="logOutput" class="log"></pre>
+    </section>
+  </main>
+
+  <script>
+    const $ = selector => document.querySelector(selector);
+    const els = {
+      status: $('#status'),
+      ownerInput: $('#ownerInput'),
+      repoInput: $('#repoInput'),
+      tokenInput: $('#tokenInput'),
+      manifestUrlInput: $('#manifestUrlInput'),
+      saveSettingsBtn: $('#saveSettingsBtn'),
+      setConfigBtn: $('#setConfigBtn'),
+      checkPagesBtn: $('#checkPagesBtn'),
+      buildAppBtn: $('#buildAppBtn'),
+      versionInput: $('#versionInput'),
+      packageTypeInput: $('#packageTypeInput'),
+      installerArgsInput: $('#installerArgsInput'),
+      notesInput: $('#notesInput'),
+      packageInput: $('#packageInput'),
+      prereleaseInput: $('#prereleaseInput'),
+      fileNameMetric: $('#fileNameMetric'),
+      fileSizeMetric: $('#fileSizeMetric'),
+      shaMetric: $('#shaMetric'),
+      manifestPreview: $('#manifestPreview'),
+      copyManifestBtn: $('#copyManifestBtn'),
+      publishBtn: $('#publishBtn'),
+      logOutput: $('#logOutput')
+    };
+
+    let selectedFile = null;
+    let selectedSha = '';
+
+    function setStatus(message, kind = '') {
+      els.status.textContent = message;
+      els.status.className = `status ${kind}`.trim();
+    }
+
+    function log(message) {
+      const time = new Date().toLocaleTimeString();
+      els.logOutput.textContent += `[${time}] ${message}\n`;
+      els.logOutput.scrollTop = els.logOutput.scrollHeight;
+    }
+
+    function setBusy(isBusy) {
+      [
+        els.saveSettingsBtn,
+        els.setConfigBtn,
+        els.checkPagesBtn,
+        els.buildAppBtn,
+        els.copyManifestBtn,
+        els.publishBtn
+      ].forEach(button => button.disabled = isBusy);
+    }
+
+    function bytesToHex(buffer) {
+      return [...new Uint8Array(buffer)]
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes <= 0) return '-';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let value = bytes;
+      let index = 0;
+      while (value >= 1024 && index < units.length - 1) {
+        value /= 1024;
+        index += 1;
+      }
+      return `${value.toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+    }
+
+    function normalizeVersion(version) {
+      return version.trim().replace(/^v/i, '');
+    }
+
+    function owner() {
+      return els.ownerInput.value.trim() || 'thejinx1';
+    }
+
+    function repo() {
+      return els.repoInput.value.trim() || '6ure-files-updates';
+    }
+
+    function manifestUrl() {
+      return `https://${owner()}.github.io/${repo()}/latest.json`;
+    }
+
+    function releaseAssetUrl() {
+      const version = normalizeVersion(els.versionInput.value || '0.0.0');
+      const name = selectedFile ? selectedFile.name : 'setup.exe';
+      return `https://github.com/${owner()}/${repo()}/releases/download/v${version}/${encodeURIComponent(name).replace(/%20/g, '+')}`;
+    }
+
+    function buildPreview() {
+      const packageType = els.packageTypeInput.value;
+      const windows = {
+        url: releaseAssetUrl(),
+        sha256: selectedSha || 'calculated-after-file-select',
+        sizeBytes: selectedFile ? selectedFile.size : 0,
+        packageType
+      };
+      if (packageType === 'installer') {
+        windows.installerArgs = els.installerArgsInput.value.trim();
+        windows.successExitCodes = [0, 3010];
+      }
+      const manifest = {
+        version: normalizeVersion(els.versionInput.value || '0.0.0'),
+        notes: els.notesInput.value.trim(),
+        windows
+      };
+      els.manifestPreview.textContent = JSON.stringify(manifest, null, 2);
+      els.manifestUrlInput.value = manifestUrl();
+      return manifest;
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, options);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.ok === false) {
+        const detail = data.details ? `\n${data.details}` : '';
+        throw new Error(`${data.error || `HTTP ${response.status}`}${detail}`);
+      }
+      return data;
+    }
+
+    async function loadConfig() {
+      try {
+        const config = await api('/api/config');
+        els.ownerInput.value = config.owner || 'thejinx1';
+        els.repoInput.value = config.repo || '6ure-files-updates';
+        els.installerArgsInput.value = config.installerArgs || '/S';
+        setStatus('Hazir.', 'ok');
+        log(`Manifest: ${config.manifestUrl}`);
+      } catch (error) {
+        setStatus(error.message, 'err');
+      } finally {
+        buildPreview();
+      }
+    }
+
+    async function saveSettings() {
+      setBusy(true);
+      try {
+        const data = await api('/api/save-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            owner: owner(),
+            repo: repo(),
+            installerArgs: els.installerArgsInput.value.trim()
+          })
+        });
+        setStatus('Ayarlar kaydedildi.', 'ok');
+        log(`Kaydedildi: ${data.manifestUrl}`);
+      } catch (error) {
+        setStatus(error.message, 'err');
+        log(error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function setAppConfig() {
+      setBusy(true);
+      try {
+        const data = await api('/api/set-app-config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            owner: owner(),
+            repo: repo(),
+            installerArgs: els.installerArgsInput.value.trim()
+          })
+        });
+        setStatus('App config baglandi.', 'ok');
+        log(`Manifest URL: ${data.config.manifestUrl}`);
+        data.updated.forEach(path => log(`Guncellendi: ${path}`));
+      } catch (error) {
+        setStatus(error.message, 'err');
+        log(error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function checkPages() {
+      setBusy(true);
+      try {
+        const data = await api('/api/check-pages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owner: owner(), repo: repo() })
+        });
+        setStatus(`Pages OK: ${data.status}`, 'ok');
+        log(`Pages cevap verdi: ${data.url}`);
+      } catch (error) {
+        setStatus('Pages henuz hazir degil.', 'err');
+        log(error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function buildApp() {
+      setBusy(true);
+      setStatus('Build calisiyor...');
+      log('PyInstaller build basladi.');
+      try {
+        const data = await api('/api/build-app', { method: 'POST' });
+        if (!data.ok) throw new Error(data.stderr || data.stdout || `Build failed: ${data.returncode}`);
+        setStatus('Build tamamlandi.', 'ok');
+        log(data.stdout.trim() || 'Build tamamlandi.');
+        log(`Dist EXE: ${data.distExe}`);
+      } catch (error) {
+        setStatus('Build basarisiz.', 'err');
+        log(error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function handleFileSelected() {
+      selectedFile = els.packageInput.files && els.packageInput.files[0] ? els.packageInput.files[0] : null;
+      selectedSha = '';
+      if (!selectedFile) {
+        els.fileNameMetric.textContent = '-';
+        els.fileSizeMetric.textContent = '-';
+        els.shaMetric.textContent = '-';
+        buildPreview();
+        return;
+      }
+      els.fileNameMetric.textContent = selectedFile.name;
+      els.fileSizeMetric.textContent = `${formatBytes(selectedFile.size)} (${selectedFile.size} bytes)`;
+      els.shaMetric.textContent = 'Hash hesaplaniyor...';
+      setStatus('SHA-256 hesaplaniyor...');
+      try {
+        const buffer = await selectedFile.arrayBuffer();
+        selectedSha = bytesToHex(await crypto.subtle.digest('SHA-256', buffer));
+        els.shaMetric.textContent = selectedSha;
+        setStatus('Dosya hazir.', 'ok');
+        log(`Dosya secildi: ${selectedFile.name}`);
+      } catch (error) {
+        els.shaMetric.textContent = '-';
+        setStatus(error.message, 'err');
+      } finally {
+        buildPreview();
+      }
+    }
+
+    function validatePublish() {
+      if (!els.tokenInput.value.trim()) throw new Error('GitHub token gerekli.');
+      if (!normalizeVersion(els.versionInput.value)) throw new Error('Version gerekli.');
+      if (!selectedFile) throw new Error('Setup EXE veya ZIP sec.');
+    }
+
+    async function publish() {
+      try {
+        validatePublish();
+      } catch (error) {
+        setStatus(error.message, 'err');
+        return;
+      }
+      setBusy(true);
+      setStatus('GitHub upload basladi...');
+      log('Release publish basladi. Buyuk dosyada bu islem biraz surebilir.');
+      try {
+        const form = new FormData();
+        form.append('owner', owner());
+        form.append('repo', repo());
+        form.append('token', els.tokenInput.value.trim());
+        form.append('version', normalizeVersion(els.versionInput.value));
+        form.append('notes', els.notesInput.value.trim());
+        form.append('packageType', els.packageTypeInput.value);
+        form.append('installerArgs', els.installerArgsInput.value.trim());
+        form.append('prerelease', els.prereleaseInput.checked ? 'true' : 'false');
+        form.append('package', selectedFile, selectedFile.name);
+        const data = await api('/api/publish', {
+          method: 'POST',
+          body: form
+        });
+        selectedSha = data.latest.windows.sha256;
+        els.shaMetric.textContent = selectedSha;
+        els.manifestPreview.textContent = JSON.stringify(data.latest, null, 2);
+        setStatus(`v${data.version} yayinlandi.`, 'ok');
+        log(`Release: ${data.releaseUrl}`);
+        log(`Asset: ${data.assetUrl}`);
+        log(`Manifest: ${data.manifestUrl}`);
+      } catch (error) {
+        setStatus('Publish basarisiz.', 'err');
+        log(error.message);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function copyManifest() {
+      try {
+        await navigator.clipboard.writeText(els.manifestPreview.textContent);
+        setStatus('Manifest kopyalandi.', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'err');
+      }
+    }
+
+    [
+      els.ownerInput,
+      els.repoInput,
+      els.versionInput,
+      els.packageTypeInput,
+      els.installerArgsInput,
+      els.notesInput
+    ].forEach(input => input.addEventListener('input', buildPreview));
+
+    els.packageInput.addEventListener('change', handleFileSelected);
+    els.saveSettingsBtn.addEventListener('click', saveSettings);
+    els.setConfigBtn.addEventListener('click', setAppConfig);
+    els.checkPagesBtn.addEventListener('click', checkPages);
+    els.buildAppBtn.addEventListener('click', buildApp);
+    els.copyManifestBtn.addEventListener('click', copyManifest);
+    els.publishBtn.addEventListener('click', publish);
+
+    loadConfig();
+  </script>
+</body>
+</html>

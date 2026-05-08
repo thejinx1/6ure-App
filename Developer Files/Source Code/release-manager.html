@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>6ure™ App Release Manager</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090a10;
+      --panel: #121522;
+      --panel-2: #171b2a;
+      --line: rgba(150, 180, 255, 0.18);
+      --text: #f8f7ff;
+      --muted: #a7acc3;
+      --cyan: #62e6ff;
+      --green: #43f0a8;
+      --danger: #ff6476;
+      --radius: 8px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid rgba(98, 230, 255, 0.24);
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: rgba(98, 230, 255, 0.1);
+      color: var(--cyan);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 9px 10px;
+      background: rgba(7, 9, 16, 0.78);
+      color: var(--text);
+      outline: none;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: #dbe3ff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .shell {
+      width: min(1120px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 22px 0 26px;
+    }
+
+    .top {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    h1,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .sub {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status {
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .status.ok {
+      color: var(--green);
+    }
+
+    .status.err {
+      color: var(--danger);
+    }
+
+    pre {
+      min-height: 420px;
+      max-height: calc(100vh - 260px);
+      margin: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #070910;
+      color: #dff9ff;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+
+    .hint {
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .warn {
+      border-color: rgba(255, 100, 118, 0.24);
+      color: #ffc1c9;
+    }
+
+    @media (max-width: 860px) {
+      .layout,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .top {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="top">
+      <div>
+        <h1>6ure™ App Release Manager</h1>
+        <p class="sub">Generate the update manifest that every installed app reads from one stable URL.</p>
+      </div>
+      <button id="resetBtn" type="button">Reset</button>
+    </div>
+
+    <div class="layout">
+      <section class="panel">
+        <div class="hint warn">
+          Host latest.json at a stable HTTPS URL. A Discord CDN link is fine for the package URL, but Discord signed
+          attachment links can expire; re-uploading latest.json with a fresh package link is required for each release.
+        </div>
+
+        <label>Stable manifest URL used by all apps
+          <input id="manifestUrlInput" placeholder="https://your-domain.example/updates/latest.json">
+        </label>
+
+        <div class="grid">
+          <label>New version
+            <input id="versionInput" placeholder="1.0.1">
+          </label>
+          <label>Package type
+            <select id="packageTypeInput">
+              <option value="installer">Setup EXE / MSI</option>
+              <option value="zip">Portable app ZIP</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Discord package download link
+          <input id="downloadUrlInput" placeholder="https://cdn.discordapp.com/attachments/.../setup.exe?...">
+        </label>
+
+        <div class="grid">
+          <label>Local package file for SHA-256
+            <input id="fileInput" type="file">
+          </label>
+          <label>SHA-256
+            <input id="shaInput" placeholder="Auto-filled after file select">
+          </label>
+        </div>
+
+        <div class="grid">
+          <label>Size bytes
+            <input id="sizeInput" placeholder="Auto-filled after file select">
+          </label>
+          <label>Installer args
+            <input id="installerArgsInput" value="/VERYSILENT /NORESTART">
+          </label>
+        </div>
+
+        <label>Release notes
+          <textarea id="notesInput" placeholder="Added cloud manager&#10;Improved updater"></textarea>
+        </label>
+
+        <div class="actions">
+          <button id="copyManifestBtn" type="button">Copy latest.json</button>
+          <button id="downloadManifestBtn" type="button">Download latest.json</button>
+          <button id="downloadConfigBtn" type="button">Download update-config.json</button>
+        </div>
+        <div id="status" class="status">Choose the package file to calculate SHA-256.</div>
+      </section>
+
+      <section class="panel">
+        <div class="hint">
+          Put update-config.json into the app before building the setup. Then every installed copy will check the same
+          manifest URL and receive future releases from the values you generate here.
+        </div>
+        <pre id="manifestPreview"></pre>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const $ = selector => document.querySelector(selector);
+    const els = {
+      manifestUrlInput: $('#manifestUrlInput'),
+      versionInput: $('#versionInput'),
+      packageTypeInput: $('#packageTypeInput'),
+      downloadUrlInput: $('#downloadUrlInput'),
+      fileInput: $('#fileInput'),
+      shaInput: $('#shaInput'),
+      sizeInput: $('#sizeInput'),
+      installerArgsInput: $('#installerArgsInput'),
+      notesInput: $('#notesInput'),
+      copyManifestBtn: $('#copyManifestBtn'),
+      downloadManifestBtn: $('#downloadManifestBtn'),
+      downloadConfigBtn: $('#downloadConfigBtn'),
+      resetBtn: $('#resetBtn'),
+      status: $('#status'),
+      manifestPreview: $('#manifestPreview')
+    };
+
+    const storageKey = 'sixureReleaseManagerDraft';
+
+    function setStatus(message, kind = '') {
+      els.status.textContent = message;
+      els.status.className = `status ${kind}`.trim();
+    }
+
+    function bytesToHex(buffer) {
+      return [...new Uint8Array(buffer)]
+        .map(byte => byte.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    async function hashFile(file) {
+      const buffer = await file.arrayBuffer();
+      return bytesToHex(await crypto.subtle.digest('SHA-256', buffer));
+    }
+
+    function installerArgsValue() {
+      if (els.packageTypeInput.value !== 'installer') return '';
+      return els.installerArgsInput.value.trim();
+    }
+
+    function buildManifest() {
+      const version = els.versionInput.value.trim();
+      const url = els.downloadUrlInput.value.trim();
+      const sha256 = els.shaInput.value.trim().toLowerCase();
+      const sizeBytes = Number(els.sizeInput.value.trim());
+      const notes = els.notesInput.value.trim();
+      const packageType = els.packageTypeInput.value;
+      const windows = {
+        url,
+        sha256,
+        sizeBytes: Number.isFinite(sizeBytes) && sizeBytes >= 0 ? sizeBytes : undefined,
+        packageType
+      };
+      if (packageType === 'installer') {
+        windows.installerArgs = installerArgsValue();
+        windows.successExitCodes = [0, 3010];
+      }
+      Object.keys(windows).forEach(key => {
+        if (windows[key] === '' || windows[key] === undefined) delete windows[key];
+      });
+      return {
+        version,
+        notes,
+        windows
+      };
+    }
+
+    function buildUpdateConfig() {
+      return {
+        manifestUrl: els.manifestUrlInput.value.trim(),
+        channel: 'stable',
+        allowInsecure: false
+      };
+    }
+
+    function validateManifest(manifest) {
+      if (!manifest.version) return 'Version is required.';
+      if (!manifest.windows.url) return 'Download URL is required.';
+      if (!/^https:\/\//i.test(manifest.windows.url)) return 'Download URL must use HTTPS.';
+      if (!/^[a-f0-9]{64}$/.test(manifest.windows.sha256 || '')) return 'A valid SHA-256 is required.';
+      return '';
+    }
+
+    function updatePreview() {
+      const manifest = buildManifest();
+      els.manifestPreview.textContent = JSON.stringify(manifest, null, 2);
+      localStorage.setItem(storageKey, JSON.stringify({
+        manifestUrl: els.manifestUrlInput.value,
+        version: els.versionInput.value,
+        packageType: els.packageTypeInput.value,
+        downloadUrl: els.downloadUrlInput.value,
+        sha: els.shaInput.value,
+        size: els.sizeInput.value,
+        installerArgs: els.installerArgsInput.value,
+        notes: els.notesInput.value
+      }));
+    }
+
+    function downloadJson(filename, data) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1200);
+    }
+
+    async function copyText(text) {
+      await navigator.clipboard.writeText(text);
+    }
+
+    async function handleFileSelected() {
+      const file = els.fileInput.files && els.fileInput.files[0];
+      if (!file) return;
+      setStatus(`Hashing ${file.name}...`);
+      try {
+        els.shaInput.value = await hashFile(file);
+        els.sizeInput.value = String(file.size);
+        if (!els.downloadUrlInput.value.trim()) {
+          els.downloadUrlInput.placeholder = `Paste the Discord link for ${file.name}`;
+        }
+        setStatus('SHA-256 calculated.', 'ok');
+      } catch (error) {
+        setStatus(`Could not hash file: ${error.message}`, 'err');
+      } finally {
+        updatePreview();
+      }
+    }
+
+    function loadDraft() {
+      try {
+        const draft = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        els.manifestUrlInput.value = draft.manifestUrl || '';
+        els.versionInput.value = draft.version || '';
+        els.packageTypeInput.value = draft.packageType || 'installer';
+        els.downloadUrlInput.value = draft.downloadUrl || '';
+        els.shaInput.value = draft.sha || '';
+        els.sizeInput.value = draft.size || '';
+        els.installerArgsInput.value = draft.installerArgs || '/VERYSILENT /NORESTART';
+        els.notesInput.value = draft.notes || '';
+      } catch {}
+      updatePreview();
+    }
+
+    function resetDraft() {
+      localStorage.removeItem(storageKey);
+      els.manifestUrlInput.value = '';
+      els.versionInput.value = '';
+      els.packageTypeInput.value = 'installer';
+      els.downloadUrlInput.value = '';
+      els.shaInput.value = '';
+      els.sizeInput.value = '';
+      els.installerArgsInput.value = '/VERYSILENT /NORESTART';
+      els.notesInput.value = '';
+      updatePreview();
+      setStatus('Draft reset.');
+    }
+
+    async function copyManifest() {
+      const manifest = buildManifest();
+      const error = validateManifest(manifest);
+      if (error) {
+        setStatus(error, 'err');
+        return;
+      }
+      await copyText(JSON.stringify(manifest, null, 2));
+      setStatus('latest.json copied.', 'ok');
+    }
+
+    function downloadManifest() {
+      const manifest = buildManifest();
+      const error = validateManifest(manifest);
+      if (error) {
+        setStatus(error, 'err');
+        return;
+      }
+      downloadJson('latest.json', manifest);
+      setStatus('latest.json downloaded.', 'ok');
+    }
+
+    function downloadConfig() {
+      const config = buildUpdateConfig();
+      if (!/^https:\/\//i.test(config.manifestUrl || '')) {
+        setStatus('Stable manifest URL must use HTTPS.', 'err');
+        return;
+      }
+      downloadJson('update-config.json', config);
+      setStatus('update-config.json downloaded.', 'ok');
+    }
+
+    [
+      els.manifestUrlInput,
+      els.versionInput,
+      els.packageTypeInput,
+      els.downloadUrlInput,
+      els.shaInput,
+      els.sizeInput,
+      els.installerArgsInput,
+      els.notesInput
+    ].forEach(input => input.addEventListener('input', updatePreview));
+    els.fileInput.addEventListener('change', handleFileSelected);
+    els.copyManifestBtn.addEventListener('click', copyManifest);
+    els.downloadManifestBtn.addEventListener('click', downloadManifest);
+    els.downloadConfigBtn.addEventListener('click', downloadConfig);
+    els.resetBtn.addEventListener('click', resetDraft);
+
+    loadDraft();
+  </script>
+</body>
+</html>
