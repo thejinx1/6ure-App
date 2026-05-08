@@ -49,6 +49,40 @@ class DiscordIpcError(Exception):
     pass
 
 
+def _decode_ipc_payload(raw_payload: bytes) -> dict:
+    if not raw_payload:
+        return {}
+    try:
+        payload = json.loads(raw_payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise DiscordIpcError(f"Discord IPC returned invalid JSON: {error}") from error
+    return payload if isinstance(payload, dict) else {}
+
+
+def _read_exact_from_file(handle, length: int, name: str) -> bytes:
+    chunks: list[bytes] = []
+    remaining = max(0, int(length))
+    while remaining:
+        chunk = handle.read(remaining)
+        if not chunk:
+            raise DiscordIpcError(f"Discord IPC pipe closed while reading from {name}.")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def _recv_exact_from_socket(sock: socket.socket, length: int, name: str) -> bytes:
+    chunks: list[bytes] = []
+    remaining = max(0, int(length))
+    while remaining:
+        chunk = sock.recv(remaining)
+        if not chunk:
+            raise DiscordIpcError(f"Discord IPC socket closed while reading from {name}.")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
 def _clean_text(value: Any, limit: int = MAX_TEXT_LENGTH) -> str:
     text = str(value or "").replace("\x00", "").strip()
     return text[:limit]
@@ -179,6 +213,12 @@ class _FileTransport:
         self.handle.write(struct.pack("<II", opcode, len(raw_payload)) + raw_payload)
         self.handle.flush()
 
+    def recv(self) -> tuple[int, dict]:
+        header = _read_exact_from_file(self.handle, 8, self.name)
+        opcode, length = struct.unpack("<II", header)
+        raw_payload = _read_exact_from_file(self.handle, length, self.name)
+        return opcode, _decode_ipc_payload(raw_payload)
+
     def close(self) -> None:
         try:
             self.handle.close()
@@ -195,6 +235,13 @@ class _SocketTransport:
         raw_payload = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
         self.sock.sendall(struct.pack("<II", opcode, len(raw_payload)) + raw_payload)
 
+    def recv(self) -> tuple[int, dict]:
+        self.sock.settimeout(2.0)
+        header = _recv_exact_from_socket(self.sock, 8, self.name)
+        opcode, length = struct.unpack("<II", header)
+        raw_payload = _recv_exact_from_socket(self.sock, length, self.name)
+        return opcode, _decode_ipc_payload(raw_payload)
+
     def close(self) -> None:
         try:
             self.sock.close()
@@ -205,11 +252,11 @@ class _SocketTransport:
 def _open_windows_transport() -> _FileTransport:
     last_error: OSError | None = None
     for index in range(10):
-        pipe_name = fr"\\?\pipe\discord-ipc-{index}"
-        try:
-            return _FileTransport(open(pipe_name, "r+b", buffering=0), pipe_name)
-        except OSError as error:
-            last_error = error
+        for pipe_name in (fr"\\?\pipe\discord-ipc-{index}", fr"\\.\pipe\discord-ipc-{index}"):
+            try:
+                return _FileTransport(open(pipe_name, "r+b", buffering=0), pipe_name)
+            except OSError as error:
+                last_error = error
     raise DiscordIpcError(f"Discord IPC pipe was not found: {last_error}")
 
 
@@ -446,6 +493,13 @@ class DiscordPresenceManager:
 
     def _handshake(self, transport) -> None:
         transport.send(OP_HANDSHAKE, {"v": 1, "client_id": self.client_id})
+        opcode, payload = transport.recv()
+        if opcode != OP_FRAME:
+            raise DiscordIpcError(f"Discord IPC handshake returned opcode {opcode}.")
+        if str(payload.get("evt") or "").upper() == "ERROR":
+            data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+            message = data.get("message") or payload.get("message") or "Discord IPC handshake failed."
+            raise DiscordIpcError(str(message))
 
     def _send_pending(self, transport) -> None:
         with self._lock:
@@ -468,3 +522,13 @@ class DiscordPresenceManager:
             "nonce": uuid.uuid4().hex,
         }
         transport.send(OP_FRAME, payload)
+        for _ in range(4):
+            opcode, response = transport.recv()
+            if opcode != OP_FRAME:
+                raise DiscordIpcError(f"Discord IPC activity update returned opcode {opcode}.")
+            if str(response.get("evt") or "").upper() == "ERROR":
+                data = response.get("data") if isinstance(response.get("data"), dict) else {}
+                message = data.get("message") or response.get("message") or "Discord activity update failed."
+                raise DiscordIpcError(str(message))
+            if response.get("nonce") == payload["nonce"] or response.get("cmd") == "SET_ACTIVITY":
+                return

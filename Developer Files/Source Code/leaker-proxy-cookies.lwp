@@ -1,3 +1,9 @@
 #LWP-Cookies-2.0
 Set-Cookie3: __Host-next-auth.csrf-token="705e27858264945c898329899dc0db16493448de348efef32e8d2f987773e6cc%7C2a5c9d332a798ad14a3f9e83afd5b004ba70d4e631836822c9a62b1d8148d15a"; path="/"; domain="6ureleaks.com"; path_spec; secure; discard; HttpOnly=None; SameSite=Lax; version=0
 Set-Cookie3: __Secure-next-auth.callback-url="https%3A%2F%2F6ureleaks.com"; path="/"; domain="6ureleaks.com"; path_spec; secure; discard; HttpOnly=None; SameSite=Lax; version=0
+Set-Cookie3: cookieConsent=accepted; path="/"; domain=".6ureleaks.com"; path_spec; domain_dot; secure; expires="2031-05-07 19:49:49Z"; discard; HttpOnly=None; version=0
+Set-Cookie3: cookiesAccepted=true; path="/"; domain=".6ureleaks.com"; path_spec; domain_dot; secure; expires="2031-05-07 19:49:49Z"; discard; HttpOnly=None; version=0
+Set-Cookie3: cookie_consent=accepted; path="/"; domain=".6ureleaks.com"; path_spec; domain_dot; secure; expires="2031-05-07 19:49:49Z"; discard; HttpOnly=None; version=0
+Set-Cookie3: cookie_consent_accepted=true; path="/"; domain=".6ureleaks.com"; path_spec; domain_dot; secure; expires="2031-05-07 19:49:49Z"; discard; HttpOnly=None; version=0
+Set-Cookie3: CookieConsent=true; path="/"; domain=".6ureleaks.com"; path_spec; domain_dot; secure; expires="2031-05-07 19:49:49Z"; discard; HttpOnly=None; version=0
+Set-Cookie3: cc_cookie="%7B%22categories%22%3A%5B%22necessary%22%2C%22analytics%22%2C%22marketing%22%5D%2C%22level%22%3A%5B%22necessary%22%2C%22analytics%22%2C%22marketing%22%5D%2C%22revision%22%3A0%2C%22data%22%3Anull%7D"; path="/"; domain=".6ureleaks.com"; path_spec; domain_dot; secure; expires="2031-05-07 19:49:49Z"; discard; HttpOnly=None; version=0

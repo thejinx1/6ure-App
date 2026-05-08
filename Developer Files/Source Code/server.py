@@ -113,6 +113,10 @@ ALLOWED_EXTERNAL_HOSTS = {
     "www.tiktok.com",
     "vm.tiktok.com",
     "vt.tiktok.com",
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "youtu.be",
 }
 NETWORK_CHECK_HOSTS = (
     ("files.6ureleaks.com", 443),
@@ -120,20 +124,29 @@ NETWORK_CHECK_HOSTS = (
     ("discord.com", 443),
 )
 HLX_API_BASE_URL = os.environ.get("REYLI_HLX_API_BASE_URL", "https://api.hlx.li").strip().rstrip("/")
-HLX_API_TIMEOUT_SECONDS = float(os.environ.get("REYLI_HLX_API_TIMEOUT_SECONDS", "7.5"))
-HLX_API_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("REYLI_HLX_API_CONNECT_TIMEOUT_SECONDS", "2.5"))
+HLX_API_TIMEOUT_SECONDS = float(os.environ.get("REYLI_HLX_API_TIMEOUT_SECONDS", "5.5"))
+HLX_API_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("REYLI_HLX_API_CONNECT_TIMEOUT_SECONDS", "1.6"))
 HLX_API_RETRIES = int(os.environ.get("REYLI_HLX_API_RETRIES", "1"))
 HLX_TIKTOK_CACHE_SECONDS = float(os.environ.get("REYLI_HLX_TIKTOK_CACHE_SECONDS", "120"))
 HLX_TIKTOK_SEARCH_DEFAULT_RESULTS = int(os.environ.get("REYLI_HLX_TIKTOK_SEARCH_DEFAULT_RESULTS", "5"))
 HLX_TIKTOK_SEARCH_MAX_CANDIDATES = int(os.environ.get("REYLI_HLX_TIKTOK_SEARCH_MAX_CANDIDATES", "6"))
-HLX_TIKTOK_SEARCH_MAX_WORKERS = int(os.environ.get("REYLI_HLX_TIKTOK_SEARCH_MAX_WORKERS", "4"))
-HLX_TIKTOK_SEARCH_BUDGET_SECONDS = float(os.environ.get("REYLI_HLX_TIKTOK_SEARCH_BUDGET_SECONDS", "5.5"))
-HLX_TIKTOK_DETAIL_BUDGET_SECONDS = float(os.environ.get("REYLI_HLX_TIKTOK_DETAIL_BUDGET_SECONDS", "4.5"))
+HLX_TIKTOK_SEARCH_MAX_WORKERS = int(os.environ.get("REYLI_HLX_TIKTOK_SEARCH_MAX_WORKERS", "6"))
+HLX_TIKTOK_SEARCH_BUDGET_SECONDS = float(os.environ.get("REYLI_HLX_TIKTOK_SEARCH_BUDGET_SECONDS", "3.2"))
+HLX_TIKTOK_DETAIL_BUDGET_SECONDS = float(os.environ.get("REYLI_HLX_TIKTOK_DETAIL_BUDGET_SECONDS", "3.8"))
+HLX_YOUTUBE_SEARCH_DEFAULT_RESULTS = int(os.environ.get("REYLI_HLX_YOUTUBE_SEARCH_DEFAULT_RESULTS", "5"))
+HLX_YOUTUBE_SEARCH_MAX_CANDIDATES = int(os.environ.get("REYLI_HLX_YOUTUBE_SEARCH_MAX_CANDIDATES", "16"))
+HLX_YOUTUBE_SEARCH_MAX_WORKERS = int(os.environ.get("REYLI_HLX_YOUTUBE_SEARCH_MAX_WORKERS", "6"))
+HLX_YOUTUBE_SEARCH_BUDGET_SECONDS = float(os.environ.get("REYLI_HLX_YOUTUBE_SEARCH_BUDGET_SECONDS", "2.4"))
+HLX_YOUTUBE_DISCOVERY_CACHE_SECONDS = float(os.environ.get("REYLI_HLX_YOUTUBE_DISCOVERY_CACHE_SECONDS", "300"))
+HLX_YOUTUBE_DISCOVERY_TIMEOUT_SECONDS = float(os.environ.get("REYLI_HLX_YOUTUBE_DISCOVERY_TIMEOUT_SECONDS", "3.4"))
 HLX_TIKTOK_LOCK = threading.RLock()
 HLX_TIKTOK_CACHE: dict[str, dict] = {}
+HLX_YOUTUBE_DISCOVERY_LOCK = threading.RLock()
+HLX_YOUTUBE_DISCOVERY_CACHE: dict[str, dict] = {}
 HLX_API_KEY_LOCK = threading.RLock()
 HLX_API_KEY_CACHE = {"path": "", "mtime": 0.0, "key": ""}
 HLX_HTTP_LOCAL = threading.local()
+YOUTUBE_WEB_LOCAL = threading.local()
 MY_RESOURCES_UPLOADER_ID = os.environ.get("REYLI_RESOURCES_UPLOADER_ID", "1421177012814614548").strip()
 MY_RESOURCES_UPLOADER_ALIASES = tuple(
     alias.strip().casefold().lstrip("@")
@@ -244,6 +257,13 @@ def ensure_leaker_cookie_consent(*, save: bool = True) -> int:
             except Exception:
                 pass
     return synced
+
+
+def leaker_cookie_consent_response_headers() -> list[str]:
+    return [
+        f"{name}={value}; Path=/; Max-Age={LEAKER_COOKIE_CONSENT_MAX_AGE_SECONDS}; SameSite=Lax"
+        for name, value in LEAKER_COOKIE_CONSENT_COOKIES.items()
+    ]
 
 
 ensure_leaker_cookie_consent(save=True)
@@ -732,15 +752,17 @@ def normalize_app_auth_user(record, *, source: str = "") -> dict | None:
         "sub",
         "id",
     )
-    name_keys = (
+    username_keys = (
         "username",
+        "tag",
+    )
+    display_name_keys = (
         "global_name",
         "globalName",
         "displayName",
         "display_name",
         "discord_member_name",
         "name",
-        "tag",
     )
     avatar_keys = (
         "avatarUrl",
@@ -759,12 +781,20 @@ def normalize_app_auth_user(record, *, source: str = "") -> dict | None:
             break
 
     username = ""
-    for key in name_keys:
+    for key in username_keys:
         value = record.get(key)
         username = clean_discord_display_name(value)
         if username and username.lower() not in {"discord", "sign in", "login", "user"}:
             break
         username = ""
+
+    display_name = ""
+    for key in display_name_keys:
+        value = record.get(key)
+        display_name = clean_discord_display_name(value)
+        if display_name and display_name.lower() not in {"discord", "sign in", "login", "user"}:
+            break
+        display_name = ""
 
     avatar_url = ""
     for key in avatar_keys:
@@ -781,10 +811,10 @@ def normalize_app_auth_user(record, *, source: str = "") -> dict | None:
         if avatar_url:
             break
 
-    if not discord_id and not username:
+    if not discord_id and not username and not display_name:
         return None
 
-    display_name = username or discord_id
+    display_name = display_name or username or discord_id
     return {
         "id": discord_id,
         "username": username,
@@ -800,8 +830,10 @@ def score_app_auth_user(user: dict | None) -> int:
     score = 0
     if user.get("id"):
         score += 5
+    if user.get("displayName"):
+        score += 5
     if user.get("username"):
-        score += 4
+        score += 3
     if user.get("avatarUrl"):
         score += 1
     return score
@@ -866,8 +898,13 @@ def extract_app_auth_user_from_text(text: str, *, source: str = "") -> dict | No
         text,
         flags=re.IGNORECASE,
     )
-    name_match = re.search(
-        r'"(?:username|global_name|globalName|displayName|display_name|discord_member_name|name)"\s*:\s*"(?P<name>[^"\\]{1,80})"',
+    display_name_match = re.search(
+        r'"(?:global_name|globalName|displayName|display_name|discord_member_name|name)"\s*:\s*"(?P<name>[^"\\]{1,80})"',
+        text,
+        flags=re.IGNORECASE,
+    )
+    username_match = re.search(
+        r'"(?:username|tag)"\s*:\s*"(?P<name>[^"\\]{1,80})"',
         text,
         flags=re.IGNORECASE,
     )
@@ -882,14 +919,15 @@ def extract_app_auth_user_from_text(text: str, *, source: str = "") -> dict | No
             text,
             flags=re.IGNORECASE,
         )
-    if not id_match and not name_match and not avatar_match:
+    if not id_match and not display_name_match and not username_match and not avatar_match:
         return None
 
     avatar_value = html.unescape(avatar_match.group("avatar")).replace("\\/", "/") if avatar_match else ""
     avatar_id_match = re.search(r"/avatars/(?P<id>\d{6,24})/", avatar_value)
     record = {
         "id": id_match.group("id") if id_match else (avatar_id_match.group("id") if avatar_id_match else ""),
-        "username": name_match.group("name") if name_match else "",
+        "username": username_match.group("name") if username_match else "",
+        "displayName": display_name_match.group("name") if display_name_match else "",
         "avatar": avatar_value,
     }
     return normalize_app_auth_user(record, source=source)
@@ -1025,18 +1063,19 @@ def get_app_auth_status(*, refresh: bool = False) -> dict:
 
 def fallback_app_auth_user(*, source: str = "oauth-completed") -> dict:
     username = MY_RESOURCES_UPLOADER_ALIASES[0] if MY_RESOURCES_UPLOADER_ALIASES else "reyliar"
+    display_name = MY_RESOURCES_UPLOADER_ALIASES[1] if len(MY_RESOURCES_UPLOADER_ALIASES) > 1 else username
     user = normalize_app_auth_user(
         {
             "id": MY_RESOURCES_UPLOADER_ID,
             "username": username,
-            "displayName": username,
+            "displayName": display_name,
         },
         source=source,
     )
     return user or {
         "id": MY_RESOURCES_UPLOADER_ID,
         "username": username,
-        "displayName": username,
+        "displayName": display_name,
         "avatarUrl": "",
         "source": source,
     }
@@ -1058,17 +1097,17 @@ def current_resources_uploader() -> dict:
     user = snapshot.get("user") if snapshot.get("authenticated") else None
     if isinstance(user, dict) and (user.get("id") or user.get("username") or user.get("displayName")):
         aliases = resource_uploader_aliases_from_user(user)
-        display_name = user.get("username") or user.get("displayName") or "username"
+        display_name = user.get("displayName") or user.get("username") or "username"
         clean_display_name = clean_discord_display_name(display_name) or "username"
         return {
             "id": clean_discord_id(user.get("id")) or MY_RESOURCES_UPLOADER_ID,
             "aliases": aliases,
-            "displayName": f"@{clean_display_name}",
+            "displayName": clean_display_name,
         }
     return {
         "id": MY_RESOURCES_UPLOADER_ID,
         "aliases": MY_RESOURCES_UPLOADER_ALIASES,
-        "displayName": "@reyliar",
+        "displayName": "reyli",
     }
 
 
@@ -1357,6 +1396,17 @@ def hlx_http_session() -> requests.Session:
         session.mount("https://", adapter)
         session.mount("http://", adapter)
         HLX_HTTP_LOCAL.session = session
+    return session
+
+
+def youtube_web_session() -> requests.Session:
+    session = getattr(YOUTUBE_WEB_LOCAL, "session", None)
+    if session is None:
+        session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=4, pool_maxsize=4, max_retries=0)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        YOUTUBE_WEB_LOCAL.session = session
     return session
 
 
@@ -1704,7 +1754,8 @@ def get_hlx_tiktok_search_payload(
     result_limit = max(1, min(12, safe_int(result_limit, HLX_TIKTOK_SEARCH_DEFAULT_RESULTS)))
     workers = max(1, min(HLX_TIKTOK_SEARCH_MAX_WORKERS, len(candidates)))
     budget_seconds = max(1.5, min(15.0, HLX_TIKTOK_SEARCH_BUDGET_SECONDS))
-    deadline = time.monotonic() + budget_seconds
+    loop_started = time.monotonic()
+    deadline = loop_started + budget_seconds
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
     futures: dict[concurrent.futures.Future, str] = {
         executor.submit(fetch_hlx_tiktok_profile, candidate, limit=limit, refresh=refresh): candidate
@@ -1722,6 +1773,8 @@ def get_hlx_tiktok_search_payload(
                 return_when=concurrent.futures.FIRST_COMPLETED,
             )
             if not done:
+                if len(results) >= result_limit and time.monotonic() >= loop_started + min(1.2, budget_seconds):
+                    break
                 continue
             for future in done:
                 candidate = futures[future]
@@ -1805,6 +1858,882 @@ def get_hlx_tiktok_profile_payload(
         "profile": profile,
         "detailErrors": detail_errors[:4],
     }
+
+
+def normalize_youtube_identifier(value: str, *, max_length: int = 128) -> str:
+    text = str(value or "").strip().lstrip("@")
+    text = re.split(r"[\s/?#&]+", text, 1)[0]
+    text = re.sub(r"[^A-Za-z0-9._-]", "", text)
+    return text[:max_length]
+
+
+def youtube_handle_from_url(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        parsed = urllib.parse.urlsplit(text if "://" in text else f"https://{text}")
+    except ValueError:
+        return ""
+    path = parsed.path or ""
+    handle_match = re.search(r"/@([^/?#]+)", path)
+    if handle_match:
+        return normalize_youtube_identifier(handle_match.group(1))
+    parts = [part for part in path.split("/") if part]
+    if len(parts) >= 2 and parts[0].lower() in {"c", "user"}:
+        return normalize_youtube_identifier(parts[1])
+    return ""
+
+
+def normalize_youtube_channel_url(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if "://" in text or text.startswith("www.") or text.startswith("m.youtube.com") or text.startswith("youtube.com") or text.startswith("youtu.be"):
+        try:
+            parsed = urllib.parse.urlsplit(text if "://" in text else f"https://{text}")
+        except ValueError:
+            return ""
+        host = parsed.netloc.lower().split("@")[-1].split(":")[0]
+        path = parsed.path or ""
+        if host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+            parts = [part for part in path.split("/") if part]
+            if parts and parts[0].startswith("@"):
+                handle = normalize_youtube_identifier(parts[0][1:])
+                return f"https://www.youtube.com/@{handle}" if handle else ""
+            if len(parts) >= 2 and parts[0].lower() in {"channel", "c", "user"}:
+                identifier = re.sub(r"[^A-Za-z0-9._-]", "", parts[1])[:128]
+                return f"https://www.youtube.com/{parts[0]}/{identifier}" if identifier else ""
+        return text
+    clean = normalize_youtube_identifier(text)
+    if not clean:
+        return ""
+    if clean.upper().startswith("UC") and len(clean) >= 12:
+        return f"https://www.youtube.com/channel/{clean}"
+    return f"https://www.youtube.com/@{clean}"
+
+
+def youtube_channel_candidates(value: str) -> list[str]:
+    raw = str(value or "").strip()
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def add(candidate: str) -> None:
+        clean = normalize_youtube_channel_url(candidate)
+        key = clean.casefold()
+        if clean and key not in seen:
+            seen.add(key)
+            candidates.append(clean)
+
+    add(raw)
+    for token in re.split(r"[\s,;]+", raw):
+        add(token)
+
+    looks_like_url = "://" in raw or raw.startswith("www.") or raw.startswith("youtube.com") or raw.startswith("youtu.be")
+    handle = youtube_handle_from_url(raw) or ("" if looks_like_url else normalize_youtube_identifier(raw))
+    if handle:
+        add(f"https://www.youtube.com/@{handle}")
+        add(f"https://www.youtube.com/c/{handle}")
+        add(f"https://www.youtube.com/user/{handle}")
+        if handle.upper().startswith("UC") and len(handle) >= 12:
+            add(f"https://www.youtube.com/channel/{handle}")
+        for suffix in ("official", "tv", "channel", "videos"):
+            add(f"https://www.youtube.com/@{handle}{suffix}")
+
+    max_candidates = max(1, min(24, HLX_YOUTUBE_SEARCH_MAX_CANDIDATES))
+    return candidates[:max_candidates]
+
+
+def parse_social_count(value) -> int:
+    text = html.unescape(str(value or "")).replace("\xa0", " ").strip().casefold()
+    if not text:
+        return 0
+    compact_match = re.search(r"(\d+(?:[.,]\d+)?)\s*([kmb])\b", text, flags=re.IGNORECASE)
+    if compact_match:
+        number_text = compact_match.group(1).replace(",", ".")
+        multiplier = {"k": 1_000, "m": 1_000_000, "b": 1_000_000_000}.get(compact_match.group(2).casefold(), 1)
+        return int(safe_float(number_text) * multiplier)
+    number_match = re.search(r"\d[\d,.\s]*", text)
+    if not number_match:
+        return 0
+    digits = re.sub(r"[^\d]", "", number_match.group(0))
+    return safe_int(digits)
+
+
+def youtube_renderer_text(value) -> str:
+    if value in (None, False):
+        return ""
+    if isinstance(value, str):
+        return html.unescape(value).strip()
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return str(value)
+    if isinstance(value, list):
+        return "".join(youtube_renderer_text(item) for item in value).strip()
+    if not isinstance(value, dict):
+        return ""
+    for key in ("simpleText", "text", "label"):
+        text = value.get(key)
+        if isinstance(text, str) and text.strip():
+            return html.unescape(text).strip()
+    runs = value.get("runs")
+    if isinstance(runs, list):
+        text = "".join(youtube_renderer_text(run) for run in runs).strip()
+        if text:
+            return text
+    accessibility = value.get("accessibility")
+    if isinstance(accessibility, dict):
+        text = youtube_renderer_text(accessibility.get("accessibilityData"))
+        if text:
+            return text
+    return ""
+
+
+def extract_balanced_json_object(text: str, marker: str) -> dict:
+    source = str(text or "")
+    marker_index = source.find(marker)
+    if marker_index < 0:
+        return {}
+    start = source.find("{", marker_index)
+    if start < 0:
+        return {}
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(source)):
+        char = source[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    payload = json.loads(source[start:index + 1])
+                    return payload if isinstance(payload, dict) else {}
+                except ValueError:
+                    return {}
+    return {}
+
+
+def iter_youtube_channel_renderers(value):
+    if isinstance(value, dict):
+        renderer = value.get("channelRenderer")
+        if isinstance(renderer, dict):
+            yield renderer
+        for nested in value.values():
+            yield from iter_youtube_channel_renderers(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            yield from iter_youtube_channel_renderers(nested)
+
+
+def youtube_url_from_renderer(renderer: dict) -> str:
+    if not isinstance(renderer, dict):
+        return ""
+    browse = first_hlx_dict(
+        renderer.get("browseEndpoint"),
+        first_hlx_dict(renderer.get("navigationEndpoint")).get("browseEndpoint"),
+    )
+    path = str(browse.get("canonicalBaseUrl") or "").strip()
+    if not path:
+        path = str(
+            first_hlx_dict(first_hlx_dict(renderer.get("navigationEndpoint")).get("commandMetadata")).get("webCommandMetadata", {}).get("url")
+            or ""
+        ).strip()
+    if path:
+        if path.startswith("/"):
+            return normalize_youtube_channel_url(f"https://www.youtube.com{path}")
+        return normalize_youtube_channel_url(path)
+    channel_id = str(renderer.get("channelId") or browse.get("browseId") or "").strip()
+    if channel_id and channel_id.upper().startswith("UC"):
+        return normalize_youtube_channel_url(channel_id)
+    return ""
+
+
+def youtube_discovery_terms(value: str) -> list[str]:
+    raw = str(value or "").strip()
+    terms: list[str] = []
+    seen: set[str] = set()
+
+    def add(term: str) -> None:
+        clean = re.sub(r"\s+", " ", str(term or "").strip().lstrip("@"))
+        if not clean or len(clean) < 3:
+            return
+        key = clean.casefold()
+        if key not in seen:
+            seen.add(key)
+            terms.append(clean)
+
+    handle = youtube_handle_from_url(raw)
+    looks_like_url = "://" in raw or raw.startswith("www.") or raw.startswith("youtube.com") or raw.startswith("youtu.be")
+    identifier = handle or ("" if looks_like_url else normalize_youtube_identifier(raw))
+    add(identifier or raw)
+    if identifier:
+        add(re.sub(r"[_\-.]+", " ", identifier))
+        without_digits = re.sub(r"\d+$", "", identifier)
+        if without_digits != identifier:
+            add(without_digits)
+        without_suffix = re.sub(r"(official|channel|videos|music|tv)$", "", identifier, flags=re.IGNORECASE)
+        if without_suffix != identifier:
+            add(without_suffix)
+    return terms[:4]
+
+
+def sanitize_youtube_discovery_channel(renderer: dict, *, query: str = "") -> dict:
+    browse = first_hlx_dict(
+        renderer.get("browseEndpoint") if isinstance(renderer, dict) else None,
+        first_hlx_dict(renderer.get("navigationEndpoint") if isinstance(renderer, dict) else {}).get("browseEndpoint"),
+    )
+    channel_id = str((renderer or {}).get("channelId") or browse.get("browseId") or "").strip()
+    url = youtube_url_from_renderer(renderer)
+    handle = youtube_renderer_text((renderer or {}).get("subscriberCountText"))
+    if not handle.startswith("@"):
+        handle_from_url = youtube_handle_from_url(url)
+        handle = f"@{handle_from_url}" if handle_from_url else ""
+    username = normalize_youtube_identifier(handle) or normalize_youtube_identifier(youtube_handle_from_url(url)) or channel_id
+    title = (
+        youtube_renderer_text((renderer or {}).get("title"))
+        or youtube_renderer_text((renderer or {}).get("shortBylineText"))
+        or username
+        or "YouTube channel"
+    )
+    subscriber_text = youtube_renderer_text((renderer or {}).get("subscriberCountText"))
+    video_count_text = youtube_renderer_text((renderer or {}).get("videoCountText"))
+    thumbnail = best_hlx_thumbnail_url(first_hlx_dict((renderer or {}).get("thumbnail")).get("thumbnails") or "")
+    description = youtube_renderer_text((renderer or {}).get("descriptionSnippet"))
+    return {
+        "id": channel_id,
+        "username": username,
+        "handle": handle or (f"@{username}" if username and not username.upper().startswith("UC") else ""),
+        "nickname": sanitize_resource_description(title, limit=90),
+        "url": url or normalize_youtube_channel_url(channel_id or username),
+        "avatarUrl": thumbnail,
+        "signature": sanitize_resource_description(description, limit=260),
+        "verified": False,
+        "private": False,
+        "followerCount": parse_social_count(subscriber_text),
+        "followingCount": 0,
+        "heartCount": 0,
+        "videoCount": parse_social_count(video_count_text),
+        "diggCount": 0,
+        "platform": "youtube",
+        "videos": [],
+        "discovery": True,
+        "matchQuery": query,
+    }
+
+
+def youtube_profile_keys(profile: dict) -> set[str]:
+    keys: set[str] = set()
+    if not isinstance(profile, dict):
+        return keys
+    for key in ("id", "url", "username", "handle"):
+        value = str(profile.get(key) or "").strip()
+        if value:
+            keys.add(value.casefold())
+    url = str(profile.get("url") or "").strip()
+    handle = youtube_handle_from_url(url)
+    if handle:
+        keys.add(handle.casefold())
+        keys.add(f"@{handle}".casefold())
+    return keys
+
+
+def add_unique_youtube_profile(results: list[dict], seen: set[str], profile: dict) -> bool:
+    keys = youtube_profile_keys(profile)
+    if not keys:
+        return False
+    if keys & seen:
+        return False
+    seen.update(keys)
+    results.append(profile)
+    return True
+
+
+def youtube_profile_has_value(value) -> bool:
+    if value in ("", None, False):
+        return False
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return value != 0
+    if isinstance(value, list):
+        return bool(value)
+    return True
+
+
+def merge_youtube_profiles(base: dict, update: dict) -> dict:
+    merged = dict(base or {})
+    for key, value in (update or {}).items():
+        if youtube_profile_has_value(value):
+            merged[key] = value
+    if update and not update.get("discovery"):
+        merged.pop("discovery", None)
+    return merged
+
+
+def upsert_youtube_profile(results: list[dict], seen: set[str], profile: dict) -> bool:
+    keys = youtube_profile_keys(profile)
+    if not keys:
+        return False
+    for index, existing in enumerate(results):
+        if youtube_profile_keys(existing) & keys:
+            results[index] = merge_youtube_profiles(existing, profile)
+            seen.update(youtube_profile_keys(results[index]))
+            return False
+    seen.update(keys)
+    results.append(profile)
+    return True
+
+
+def discover_youtube_channels(query: str, *, limit: int = 12, refresh: bool = False) -> tuple[list[dict], list[dict]]:
+    clean_query = str(query or "").strip()
+    result_limit = max(1, min(24, safe_int(limit, 12)))
+    cache_key = f"youtube-discovery:{clean_query.casefold()}:{result_limit}"
+    now = time.time()
+    with HLX_YOUTUBE_DISCOVERY_LOCK:
+        cached_entry = HLX_YOUTUBE_DISCOVERY_CACHE.get(cache_key) or {}
+        if not refresh and float(cached_entry.get("expiresAt") or 0) > now:
+            return list(cached_entry.get("profiles") or []), list(cached_entry.get("errors") or [])
+
+    profiles: list[dict] = []
+    errors: list[dict] = []
+    seen: set[str] = set()
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "User-Agent": LEAKER_PROXY_USER_AGENT,
+    }
+    terms = youtube_discovery_terms(clean_query)
+
+    def fetch_discovery_term(term: str) -> tuple[str, list[dict], dict | None]:
+        try:
+            response = youtube_web_session().get(
+                "https://www.youtube.com/results",
+                params={"search_query": term, "sp": "EgIQAg==", "hl": "en", "gl": "US"},
+                headers=headers,
+                timeout=max(1.0, min(10.0, HLX_YOUTUBE_DISCOVERY_TIMEOUT_SECONDS)),
+            )
+            response.raise_for_status()
+            data = extract_balanced_json_object(response.text, "ytInitialData")
+            if not data:
+                raise ValueError("YouTube search payload could not be parsed.")
+            term_profiles = []
+            term_seen: set[str] = set()
+            for renderer in iter_youtube_channel_renderers(data):
+                profile = sanitize_youtube_discovery_channel(renderer, query=term)
+                if add_unique_youtube_profile(term_profiles, term_seen, profile) and len(term_profiles) >= result_limit:
+                    break
+            return term, term_profiles, None
+        except Exception as error:
+            return term, [], {"query": term, "message": str(error)}
+
+    workers = max(1, min(4, len(terms)))
+    term_results: dict[str, list[dict]] = {}
+    if terms:
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+        futures = {executor.submit(fetch_discovery_term, term): term for term in terms}
+        pending = set(futures)
+        try:
+            deadline = time.monotonic() + max(1.2, min(8.0, HLX_YOUTUBE_DISCOVERY_TIMEOUT_SECONDS + 0.8))
+            while pending:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                done, pending = concurrent.futures.wait(
+                    pending,
+                    timeout=min(0.35, remaining),
+                    return_when=concurrent.futures.FIRST_COMPLETED,
+                )
+                if not done:
+                    continue
+                for future in done:
+                    term = futures[future]
+                    try:
+                        result_term, result_profiles, result_error = future.result()
+                        term_results[result_term or term] = result_profiles
+                        if result_error:
+                            errors.append(result_error)
+                    except Exception as error:
+                        errors.append({"query": term, "message": str(error)})
+                preview_profiles: list[dict] = []
+                preview_seen: set[str] = set()
+                for term in terms:
+                    for profile in term_results.get(term, []):
+                        add_unique_youtube_profile(preview_profiles, preview_seen, profile)
+                        if len(preview_profiles) >= result_limit:
+                            break
+                    if len(preview_profiles) >= result_limit:
+                        break
+                if len(preview_profiles) >= result_limit and terms[0] in term_results:
+                    break
+            for future in pending:
+                errors.append({"query": futures[future], "message": "YouTube channel discovery timed out."})
+                future.cancel()
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+
+    for term in terms:
+        if len(profiles) >= result_limit:
+            break
+        for profile in term_results.get(term, []):
+            add_unique_youtube_profile(profiles, seen, profile)
+            if len(profiles) >= result_limit:
+                break
+
+    with HLX_YOUTUBE_DISCOVERY_LOCK:
+        HLX_YOUTUBE_DISCOVERY_CACHE[cache_key] = {
+            "profiles": profiles,
+            "errors": errors,
+            "expiresAt": time.time() + HLX_YOUTUBE_DISCOVERY_CACHE_SECONDS,
+        }
+    return list(profiles), list(errors)
+
+
+def best_hlx_thumbnail_url(value) -> str:
+    if isinstance(value, str):
+        return make_6ure_absolute_url(value)
+    if isinstance(value, dict):
+        return make_6ure_absolute_url(value.get("url") or value.get("src") or "")
+    if isinstance(value, list):
+        best = None
+        best_score = -1
+        for item in value:
+            if isinstance(item, str):
+                score = 0
+                url = item
+            elif isinstance(item, dict):
+                score = safe_int(item.get("width")) * safe_int(item.get("height"))
+                url = str(item.get("url") or item.get("src") or "").strip()
+            else:
+                continue
+            if url and score >= best_score:
+                best = url
+                best_score = score
+        return make_6ure_absolute_url(best or "")
+    return ""
+
+
+def youtube_video_url_from_id(video_id: str) -> str:
+    clean_id = re.sub(r"[^A-Za-z0-9_-]", "", str(video_id or ""))[:32]
+    return f"https://www.youtube.com/watch?v={clean_id}" if clean_id else ""
+
+
+def is_youtube_video_url(value: str) -> bool:
+    try:
+        parsed = urllib.parse.urlsplit(str(value or ""))
+    except ValueError:
+        return False
+    host = parsed.netloc.lower().split("@")[-1].split(":")[0]
+    path = parsed.path.lower()
+    if host == "youtu.be" and path.strip("/"):
+        return True
+    if host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+        return path == "/watch" and bool(urllib.parse.parse_qs(parsed.query).get("v"))
+    return False
+
+
+def youtube_channel_url_from_video_payload(payload: dict) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    url = str(
+        payload.get("channel_url")
+        or payload.get("channelUrl")
+        or payload.get("uploader_url")
+        or payload.get("uploaderUrl")
+        or payload.get("creator_url")
+        or ""
+    ).strip()
+    if url:
+        return url
+    channel_id = str(payload.get("channel_id") or payload.get("channelId") or payload.get("uploader_id") or "").strip()
+    if channel_id and channel_id.upper().startswith("UC"):
+        clean_channel_id = re.sub(r"[^A-Za-z0-9_-]", "", channel_id)[:128]
+        return f"https://www.youtube.com/channel/{clean_channel_id}"
+    handle = str(payload.get("channel_handle") or payload.get("handle") or payload.get("uploader_id") or "").strip()
+    if handle and not handle.upper().lstrip("@").startswith("UC"):
+        return normalize_youtube_channel_url(handle)
+    return ""
+
+
+def first_hlx_dict(*values) -> dict:
+    for value in values:
+        if isinstance(value, dict):
+            return value
+    return {}
+
+
+def unwrap_hlx_payload(payload: dict, *keys: str) -> dict:
+    current = payload if isinstance(payload, dict) else {}
+    for key in keys:
+        value = current.get(key)
+        if isinstance(value, dict):
+            return value
+    data = current.get("data")
+    if isinstance(data, dict):
+        for key in keys:
+            value = data.get(key)
+            if isinstance(value, dict):
+                return value
+        return data
+    return current
+
+
+def hlx_text_value(payload: dict, *keys: str) -> str:
+    for key in keys:
+        value = payload.get(key) if isinstance(payload, dict) else None
+        if isinstance(value, str):
+            text = value.strip()
+            if text:
+                return text
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return str(value)
+        if isinstance(value, dict):
+            nested = hlx_text_value(value, "name", "title", "text", "url")
+            if nested:
+                return nested
+    return ""
+
+
+def hlx_int_value(payload: dict, *keys: str) -> int:
+    for key in keys:
+        value = payload.get(key) if isinstance(payload, dict) else None
+        number = safe_int(value)
+        if number:
+            return number
+        if isinstance(value, dict):
+            nested = hlx_int_value(value, "count", "value", "total")
+            if nested:
+                return nested
+    return 0
+
+
+def sanitize_hlx_youtube_video(item: dict, detail: dict | None = None) -> dict:
+    source = unwrap_hlx_payload(item if isinstance(item, dict) else {}, "video", "entry")
+    detail = unwrap_hlx_payload(detail if isinstance(detail, dict) else {}, "video", "entry")
+    video_id = hlx_text_value(source, "id", "videoId", "video_id") or hlx_text_value(detail, "id", "videoId", "video_id")
+    url = (
+        hlx_text_value(source, "url", "webpage_url", "webpageUrl", "original_url")
+        or hlx_text_value(detail, "url", "webpage_url", "webpageUrl", "original_url")
+    )
+    if not url:
+        url = youtube_video_url_from_id(video_id)
+    title = hlx_text_value(source, "title", "name") or hlx_text_value(detail, "title", "name") or "YouTube video"
+    thumbnail = best_hlx_thumbnail_url(
+        source.get("thumbnail")
+        or source.get("thumbnailUrl")
+        or source.get("thumbnails")
+        or detail.get("thumbnail")
+        or detail.get("thumbnails")
+        or ""
+    )
+    return {
+        "id": video_id,
+        "url": url,
+        "title": sanitize_resource_description(title, limit=180),
+        "description": sanitize_resource_description(hlx_text_value(source, "description") or hlx_text_value(detail, "description") or title, limit=260),
+        "duration": hlx_int_value(source, "duration") or hlx_int_value(detail, "duration"),
+        "durationText": hlx_text_value(source, "duration_string", "durationText") or hlx_text_value(detail, "duration_string", "durationText"),
+        "coverUrl": thumbnail,
+        "dynamicCoverUrl": "",
+        "playUrl": "",
+        "viewCount": hlx_int_value(source, "view_count", "viewCount", "views") or hlx_int_value(detail, "view_count", "viewCount", "views"),
+        "likeCount": hlx_int_value(source, "like_count", "likeCount", "likes") or hlx_int_value(detail, "like_count", "likeCount", "likes"),
+        "commentCount": hlx_int_value(source, "comment_count", "commentCount", "comments") or hlx_int_value(detail, "comment_count", "commentCount", "comments"),
+        "shareCount": 0,
+        "createdAt": normalize_hlx_timestamp(source.get("timestamp") or detail.get("timestamp")),
+    }
+
+
+def sanitize_hlx_youtube_channel(payload: dict, *, include_videos: bool = True, fallback_url: str = "") -> dict:
+    root = unwrap_hlx_payload(payload if isinstance(payload, dict) else {}, "profile", "result")
+    channel = unwrap_hlx_payload(payload if isinstance(payload, dict) else {}, "channel")
+    if channel is payload:
+        channel = first_hlx_dict(root.get("channel"))
+    if not channel:
+        channel = root
+    if not any(key in channel for key in ("id", "channel_id", "channelId", "name", "title", "handle", "url")):
+        for value in channel.values():
+            if isinstance(value, dict) and any(key in value for key in ("channel_id", "channelId", "handle", "subscriber_count", "video_count")):
+                channel = value
+                break
+    stats = first_hlx_dict(channel.get("stats"), channel.get("statistics"), root.get("stats"), root.get("statistics"))
+    videos = channel.get("videos")
+    if not isinstance(videos, list):
+        videos = root.get("videos") if isinstance(root.get("videos"), list) else []
+    if not isinstance(videos, list):
+        videos = channel.get("entries") if isinstance(channel.get("entries"), list) else []
+    if not isinstance(videos, list) and isinstance(root.get("entries"), list):
+        videos = root.get("entries")
+    channel_id = hlx_text_value(channel, "id", "channel_id", "channelId", "ucid") or hlx_text_value(root, "id", "channel_id", "channelId", "ucid")
+    raw_handle = hlx_text_value(channel, "handle", "channel_handle", "uploader_id") or hlx_text_value(root, "handle", "channel_handle", "uploader_id")
+    clean_handle = normalize_youtube_identifier(raw_handle)
+    handle = raw_handle if raw_handle.startswith("@") else (f"@{clean_handle}" if clean_handle and not clean_handle.upper().startswith("UC") else "")
+    username = normalize_youtube_identifier(handle) or normalize_youtube_identifier(youtube_handle_from_url(fallback_url)) or channel_id
+    title = hlx_text_value(channel, "name", "uploader", "title") or hlx_text_value(root, "name", "uploader", "title") or username or "YouTube channel"
+    url = hlx_text_value(channel, "url", "channel_url", "channelUrl", "webpage_url") or hlx_text_value(root, "url", "channel_url", "channelUrl", "webpage_url") or fallback_url
+    if not url:
+        url = normalize_youtube_channel_url(handle or username)
+    return {
+        "id": channel_id,
+        "username": username,
+        "handle": handle or (f"@{username}" if username and not username.upper().startswith("UC") else ""),
+        "nickname": title,
+        "url": url,
+        "avatarUrl": best_hlx_thumbnail_url(
+            channel.get("thumbnail")
+            or channel.get("avatar")
+            or channel.get("avatarUrl")
+            or channel.get("thumbnails")
+            or root.get("thumbnail")
+            or root.get("thumbnails")
+            or ""
+        ),
+        "signature": sanitize_resource_description(hlx_text_value(channel, "description", "channel_description") or hlx_text_value(root, "description", "channel_description"), limit=260),
+        "bioLink": "",
+        "verified": bool(channel.get("verified") or channel.get("is_verified") or root.get("verified") or root.get("is_verified")),
+        "private": False,
+        "followerCount": (
+            hlx_int_value(channel, "subscriber_count", "subscriberCount", "subscribers")
+            or hlx_int_value(root, "subscriber_count", "subscriberCount", "subscribers")
+            or hlx_int_value(stats, "subscriber_count", "subscriberCount", "subscribers")
+        ),
+        "followingCount": 0,
+        "heartCount": (
+            hlx_int_value(channel, "view_count", "viewCount", "views")
+            or hlx_int_value(root, "view_count", "viewCount", "views")
+            or hlx_int_value(stats, "view_count", "viewCount", "views")
+        ),
+        "videoCount": (
+            hlx_int_value(channel, "video_count", "videoCount")
+            or hlx_int_value(root, "video_count", "videoCount")
+            or hlx_int_value(stats, "video_count", "videoCount")
+            or len(videos)
+        ),
+        "diggCount": 0,
+        "platform": "youtube",
+        "videos": [sanitize_hlx_youtube_video(item) for item in videos if isinstance(item, dict)] if include_videos else [],
+    }
+
+
+def fetch_hlx_youtube_channel(value: str, *, limit: int = 0, refresh: bool = False) -> dict:
+    channel_url = normalize_youtube_channel_url(value)
+    if not channel_url:
+        raise ValueError("Enter a YouTube channel handle or URL.")
+    if is_youtube_video_url(channel_url):
+        video_raw = hlx_tiktok_get("/youtube/video", {"url": channel_url})
+        resolved_channel_url = normalize_youtube_channel_url(youtube_channel_url_from_video_payload(video_raw))
+        if not resolved_channel_url:
+            raise ValueError("YouTube video loaded, but its channel URL could not be resolved.")
+        channel_url = resolved_channel_url
+    clean_limit = max(0, min(100, safe_int(limit, 0)))
+    cache_key = f"youtube-channel:{channel_url.casefold()}:{clean_limit}"
+    if not refresh:
+        cached_payload = hlx_cache_get(cache_key)
+        if cached_payload:
+            payload = dict(cached_payload)
+            payload["cached"] = True
+            return payload
+    started_at = time.time()
+    try:
+        raw = hlx_tiktok_get(
+            "/youtube/channel",
+            {
+                "url": channel_url,
+                "max_videos": clean_limit,
+                "sort": "newest",
+                "fast": "true",
+            },
+        )
+    except Exception as error:
+        cached_payload = hlx_cache_get(cache_key, allow_stale=True)
+        if cached_payload:
+            payload = dict(cached_payload)
+            payload["cached"] = True
+            payload["stale"] = True
+            payload["warning"] = str(error)
+            return payload
+        raise
+    profile = sanitize_hlx_youtube_channel(raw, include_videos=True, fallback_url=channel_url)
+    payload = {
+        "success": True,
+        "sourceUrl": f"{HLX_API_BASE_URL}/youtube/channel",
+        "profile": profile,
+        "rawSource": str(raw.get("source") or "").strip(),
+        "cached": False,
+        "durationMs": max(0, round((time.time() - started_at) * 1000)),
+        "updatedAt": int(time.time() * 1000),
+    }
+    hlx_cache_set(cache_key, payload)
+    return dict(payload)
+
+
+def fetch_hlx_youtube_video(url: str, *, refresh: bool = False) -> dict:
+    clean_url = str(url or "").strip()
+    if not clean_url:
+        raise ValueError("YouTube video URL is missing.")
+    cache_key = f"youtube-video:{clean_url}"
+    if not refresh:
+        cached_payload = hlx_cache_get(cache_key)
+        if cached_payload:
+            payload = dict(cached_payload)
+            payload["cached"] = True
+            return payload
+    raw = hlx_tiktok_get("/youtube/video", {"url": clean_url})
+    payload = {
+        "success": True,
+        "sourceUrl": f"{HLX_API_BASE_URL}/youtube/video",
+        "video": sanitize_hlx_youtube_video({"url": clean_url}, raw),
+        "cached": False,
+        "updatedAt": int(time.time() * 1000),
+    }
+    hlx_cache_set(cache_key, payload)
+    return dict(payload)
+
+
+def score_hlx_youtube_search_result(profile: dict, query: str, candidate_order: dict[str, int]) -> tuple:
+    query_key = normalize_youtube_identifier(youtube_handle_from_url(query) or query).casefold()
+    username_key = normalize_youtube_identifier(profile.get("username")).casefold()
+    handle_key = normalize_youtube_identifier(profile.get("handle")).casefold()
+    nickname_key = normalize_youtube_identifier(profile.get("nickname")).casefold()
+    url_key = str(profile.get("url") or "").casefold()
+    candidate_rank = min(
+        candidate_order.get(url_key, 999),
+        candidate_order.get(username_key, 999),
+        candidate_order.get(handle_key, 999),
+    )
+    subscriber_count = safe_int(profile.get("followerCount"))
+    discovery_rank = 1 if profile.get("discovery") else 0
+    if query_key and query_key in {username_key, handle_key}:
+        relation_rank = 0
+    elif query_key and (username_key.startswith(query_key) or handle_key.startswith(query_key)):
+        relation_rank = 1
+    elif query_key and (query_key in username_key or query_key in handle_key or query_key in nickname_key):
+        relation_rank = 2
+    else:
+        relation_rank = 3
+    return (relation_rank, discovery_rank, candidate_rank, -subscriber_count, username_key or nickname_key)
+
+
+def get_hlx_youtube_search_payload(
+    query: str,
+    *,
+    limit: int = 0,
+    result_limit: int = HLX_YOUTUBE_SEARCH_DEFAULT_RESULTS,
+    refresh: bool = False,
+) -> dict:
+    started_at = time.time()
+    result_limit = max(1, min(12, safe_int(result_limit, HLX_YOUTUBE_SEARCH_DEFAULT_RESULTS)))
+    discovery_limit = max(result_limit * 3, min(24, HLX_YOUTUBE_SEARCH_MAX_CANDIDATES))
+    discovered_profiles, discovery_errors = discover_youtube_channels(query, limit=discovery_limit, refresh=refresh)
+
+    candidates = youtube_channel_candidates(query)
+    seen_candidates = {candidate.casefold() for candidate in candidates}
+    for profile in discovered_profiles:
+        for value in (profile.get("url"), profile.get("handle"), profile.get("id")):
+            clean = normalize_youtube_channel_url(value)
+            key = clean.casefold()
+            if clean and key not in seen_candidates:
+                seen_candidates.add(key)
+                candidates.append(clean)
+                break
+        if len(candidates) >= max(1, min(24, HLX_YOUTUBE_SEARCH_MAX_CANDIDATES)):
+            break
+    if not candidates:
+        raise ValueError("Enter a YouTube channel handle or URL.")
+
+    results: list[dict] = []
+    errors: list[dict] = list(discovery_errors)
+    seen_results: set[str] = set()
+    for profile in discovered_profiles[:result_limit]:
+        upsert_youtube_profile(results, seen_results, profile)
+
+    workers = max(1, min(HLX_YOUTUBE_SEARCH_MAX_WORKERS, len(candidates)))
+    budget_seconds = max(1.5, min(18.0, HLX_YOUTUBE_SEARCH_BUDGET_SECONDS))
+    loop_started = time.monotonic()
+    deadline = loop_started + budget_seconds
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+    futures: dict[concurrent.futures.Future, str] = {
+        executor.submit(fetch_hlx_youtube_channel, candidate, limit=limit, refresh=refresh): candidate
+        for candidate in candidates
+    }
+    pending = set(futures)
+    try:
+        while pending:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            done, pending = concurrent.futures.wait(
+                pending,
+                timeout=min(0.35, remaining),
+                return_when=concurrent.futures.FIRST_COMPLETED,
+            )
+            min_fast_wait = min(0.55, budget_seconds)
+            if not done:
+                if len(results) >= result_limit and time.monotonic() >= loop_started + min_fast_wait:
+                    break
+                continue
+            for future in done:
+                candidate = futures[future]
+                try:
+                    profile_payload = future.result()
+                    profile = profile_payload.get("profile")
+                    if not isinstance(profile, dict):
+                        continue
+                    upsert_youtube_profile(results, seen_results, profile)
+                except Exception as error:
+                    errors.append({"url": candidate, "message": str(error)})
+            if len(results) >= result_limit and time.monotonic() >= loop_started + min_fast_wait:
+                break
+    finally:
+        for future in pending:
+            future.cancel()
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    for profile in discovered_profiles:
+        if len(results) >= result_limit:
+            break
+        upsert_youtube_profile(results, seen_results, profile)
+
+    partial = bool(pending) or any(profile.get("discovery") for profile in results)
+    candidate_order = {candidate.casefold(): index for index, candidate in enumerate(candidates)}
+    for index, candidate in enumerate(candidates):
+        handle = youtube_handle_from_url(candidate)
+        if handle:
+            candidate_order.setdefault(normalize_youtube_identifier(handle).casefold(), index)
+            candidate_order.setdefault(f"@{normalize_youtube_identifier(handle)}".casefold(), index)
+    for index, profile in enumerate(discovered_profiles):
+        for key in youtube_profile_keys(profile):
+            candidate_order.setdefault(key, index)
+    results.sort(key=lambda item: score_hlx_youtube_search_result(item, query, candidate_order))
+    return {
+        "success": True,
+        "sourceUrl": f"{HLX_API_BASE_URL}/youtube/channel",
+        "query": query,
+        "candidates": candidates,
+        "results": results[:result_limit],
+        "discovered": len(discovered_profiles),
+        "errors": errors[:4],
+        "partial": partial,
+        "durationMs": max(0, round((time.time() - started_at) * 1000)),
+        "updatedAt": int(time.time() * 1000),
+    }
+
+
+def get_hlx_youtube_channel_payload(
+    value: str,
+    *,
+    limit: int = 12,
+    refresh: bool = False,
+) -> dict:
+    return fetch_hlx_youtube_channel(value, limit=limit, refresh=refresh)
 
 
 def build_my_resources_stats(items: list[dict]) -> dict:
@@ -1900,7 +2829,7 @@ def get_my_resources_payload(*, refresh: bool = False) -> dict:
         "uploader": {
             "id": uploader_id,
             "aliases": list(uploader_aliases),
-            "displayName": str(uploader.get("displayName") or "@username"),
+            "displayName": str(uploader.get("displayName") or "username"),
         },
         "items": items,
         "stats": build_my_resources_stats(items),
@@ -4477,15 +5406,22 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         status: int,
         body: bytes,
         content_type: str = "application/json; charset=utf-8",
-        extra_headers: dict[str, str] | None = None,
+        extra_headers: dict[str, str | list[str] | tuple[str, ...]] | None = None,
     ) -> None:
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Cache-Control", "no-store")
-        for key, value in (extra_headers or {}).items():
-            self.send_header(key, value)
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Cache-Control", "no-store")
+            for key, value in (extra_headers or {}).items():
+                if isinstance(value, (list, tuple)):
+                    for item in value:
+                        self.send_header(key, str(item))
+                else:
+                    self.send_header(key, str(value))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            return
 
     def _send_json(self, status: int, payload: dict) -> None:
         self._send(status, json_bytes(payload))
@@ -4544,6 +5480,15 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/hlx/tiktok/video":
             self._hlx_tiktok_video(parsed.query)
+            return
+        if parsed.path == "/api/hlx/youtube/search":
+            self._hlx_youtube_search(parsed.query)
+            return
+        if parsed.path == "/api/hlx/youtube/channel":
+            self._hlx_youtube_channel(parsed.query)
+            return
+        if parsed.path == "/api/hlx/youtube/video":
+            self._hlx_youtube_video(parsed.query)
             return
         if parsed.path == "/api/leaker-mode/status":
             self._leaker_mode_status()
@@ -4743,7 +5688,7 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                 "cross-origin-embedder-policy",
                 "cross-origin-resource-policy",
             }
-            extra_headers: dict[str, str] = {}
+            extra_headers: dict[str, str | list[str]] = {}
             for key, value in response.headers.items():
                 lower = key.lower()
                 if lower in blocked_response_headers or lower == "content-type":
@@ -4762,6 +5707,7 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                 else:
                     extra_headers[key] = value
             extra_headers["X-6ure-Leaker-Proxy"] = "1"
+            extra_headers["Set-Cookie"] = leaker_cookie_consent_response_headers()
             self._send(response.status_code, response_body, content_type, extra_headers)
         except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
             return
@@ -5002,6 +5948,44 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         except Exception as error:
             self._send_json(400, {"success": False, "msg": f"TikTok video failed: {error}"})
 
+    def _hlx_youtube_search(self, query: str) -> None:
+        try:
+            params = urllib.parse.parse_qs(query or "", keep_blank_values=True)
+            search_query = str((params.get("url") or params.get("username") or params.get("q") or [""])[0]).strip()
+            limit = safe_int((params.get("limit") or ["0"])[0], 0)
+            result_limit = safe_int((params.get("resultLimit") or ["5"])[0], 5)
+            refresh = str(params.get("refresh", [""])[0]).strip().lower() in {"1", "true", "yes"}
+            self._send_json(
+                200,
+                get_hlx_youtube_search_payload(
+                    search_query,
+                    limit=limit,
+                    result_limit=result_limit,
+                    refresh=refresh,
+                ),
+            )
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": f"YouTube search failed: {error}"})
+
+    def _hlx_youtube_channel(self, query: str) -> None:
+        try:
+            params = urllib.parse.parse_qs(query or "", keep_blank_values=True)
+            url = str((params.get("url") or params.get("username") or [""])[0]).strip()
+            limit = safe_int((params.get("limit") or ["12"])[0], 12)
+            refresh = str(params.get("refresh", [""])[0]).strip().lower() in {"1", "true", "yes"}
+            self._send_json(200, get_hlx_youtube_channel_payload(url, limit=limit, refresh=refresh))
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": f"YouTube channel failed: {error}"})
+
+    def _hlx_youtube_video(self, query: str) -> None:
+        try:
+            params = urllib.parse.parse_qs(query or "", keep_blank_values=True)
+            url = str((params.get("url") or [""])[0]).strip()
+            refresh = str(params.get("refresh", [""])[0]).strip().lower() in {"1", "true", "yes"}
+            self._send_json(200, fetch_hlx_youtube_video(url, refresh=refresh))
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": f"YouTube video failed: {error}"})
+
     def _discord_presence_activity(self) -> None:
         try:
             payload = self._read_json()
@@ -5035,6 +6019,11 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             last_folder_paths = [str(state.get("lastFolderPath", "")).strip()]
         if not last_folder_names and state.get("lastFolderName"):
             last_folder_names = [str(state.get("lastFolderName", "")).strip()]
+        app_snapshot = get_app_auth_snapshot()
+        app_user = app_snapshot.get("user") if app_snapshot.get("authenticated") else None
+        app_display_name = ""
+        if isinstance(app_user, dict):
+            app_display_name = clean_discord_display_name(app_user.get("displayName") or app_user.get("username") or "")
         self._send_json(
             200,
             {
@@ -5046,7 +6035,8 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                 "lastFolderNames": last_folder_names,
                 "authenticated": authenticated,
                 "hasCredentials": authenticated,
-                "filesUsername": session["username"],
+                "cloudUsername": session["username"],
+                "filesUsername": app_display_name or session["username"],
                 "storagePath": str(DATA_ROOT),
             },
         )

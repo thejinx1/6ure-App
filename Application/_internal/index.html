@@ -746,11 +746,131 @@
     }
 
     .leaker-mode-actions {
+      position: relative;
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
       justify-content: flex-end;
+    }
+
+    .leaker-link-menu {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 4;
+    }
+
+    .leaker-link-menu-toggle {
+      width: 40px;
+      min-width: 40px;
+      min-height: 38px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border-color: rgba(82, 247, 255, 0.26);
+      color: #dffcff;
+      background:
+        linear-gradient(180deg, rgba(82, 247, 255, 0.11), rgba(139, 92, 246, 0.12)),
+        rgba(16, 14, 27, 0.94);
+      box-shadow: 0 0 22px rgba(82, 247, 255, 0.08);
+      transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    .leaker-link-menu-toggle svg {
+      width: 18px;
+      height: 18px;
+      filter: drop-shadow(0 0 10px rgba(82, 247, 255, 0.16));
+    }
+
+    .leaker-link-menu-toggle:hover,
+    .leaker-link-menu.is-open .leaker-link-menu-toggle {
+      border-color: rgba(82, 247, 255, 0.58);
+      background:
+        linear-gradient(135deg, rgba(82, 247, 255, 0.18), rgba(167, 139, 250, 0.18)),
+        rgba(18, 16, 31, 0.98);
+      box-shadow: 0 0 26px rgba(82, 247, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .leaker-link-menu-strip {
+      position: absolute;
+      top: 50%;
+      right: calc(100% + 8px);
+      min-height: 38px;
+      min-width: 238px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid rgba(82, 247, 255, 0.18);
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, rgba(11, 14, 24, 0.98), rgba(19, 16, 31, 0.98)),
+        rgba(8, 9, 16, 0.98);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34), 0 0 22px rgba(82, 247, 255, 0.08);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(12px, -50%) scaleX(0.96);
+      transform-origin: right center;
+      transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0.86, 0.2, 1), border-color 180ms ease;
+    }
+
+    .leaker-link-menu.is-open .leaker-link-menu-strip {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(0, -50%) scaleX(1);
+      border-color: rgba(82, 247, 255, 0.34);
+    }
+
+    .leaker-link-option {
+      min-width: 0;
+      flex: 1 1 0;
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 7px;
+      color: #f7f5ff;
+      background: rgba(255, 255, 255, 0.035);
+      font-size: 11px;
+      font-weight: 950;
+      line-height: 1;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .leaker-link-option::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      border-radius: 999px;
+      box-shadow: 0 0 12px currentColor;
+    }
+
+    .leaker-link-option.is-tiktok {
+      border-color: rgba(0, 242, 234, 0.26);
+    }
+
+    .leaker-link-option.is-tiktok::before {
+      background: linear-gradient(135deg, #00f2ea 0%, #00f2ea 45%, #ff0050 46%, #ff0050 100%);
+    }
+
+    .leaker-link-option.is-youtube {
+      border-color: rgba(255, 0, 51, 0.28);
+    }
+
+    .leaker-link-option.is-youtube::before {
+      background: #ff0033;
+    }
+
+    .leaker-link-option:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.07);
     }
 
     .leaker-login-panel,
@@ -875,46 +995,157 @@
 
     .leaker-links-overlay {
       position: absolute;
-      inset: 10px;
+      inset: 8px;
       z-index: 9;
+      --links-accent: #00e0a4;
+      --links-accent-soft: rgba(0, 224, 164, 0.16);
+      --links-accent-line: rgba(0, 224, 164, 0.34);
+      --links-accent-strong: #9df8d2;
+      --links-selected-bg: rgba(0, 224, 164, 0.08);
       display: grid;
       place-items: center;
-      padding: 10px;
-      background: rgba(3, 4, 10, 0.62);
-      backdrop-filter: blur(12px);
-      animation: leakerLinksFade 180ms ease both;
+      padding: 8px;
+      background: rgba(3, 4, 10, 0.68);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease, backdrop-filter 200ms ease;
+    }
+
+    .leaker-links-overlay.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .leaker-links-overlay.is-tiktok {
+      --links-accent: #00f2ea;
+      --links-accent-alt: #ff0050;
+      --links-accent-soft: rgba(0, 242, 234, 0.2);
+      --links-accent-line: rgba(0, 242, 234, 0.62);
+      --links-accent-strong: #00f2ea;
+      --links-selected-bg: #000000;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(255, 0, 80, 0.16), transparent 28%),
+        radial-gradient(circle at 86% 82%, rgba(0, 242, 234, 0.14), transparent 30%),
+        rgba(0, 0, 0, 0.78);
+    }
+
+    .leaker-links-overlay.is-tiktok .leaker-links-dialog {
+      border: 1px solid transparent;
+      background:
+        linear-gradient(#000000, #000000) padding-box,
+        linear-gradient(135deg, #00f2ea 0%, #ff0050 48%, #00f2ea 100%) border-box;
+      box-shadow:
+        0 24px 72px rgba(0, 0, 0, 0.64),
+        0 0 0 1px rgba(0, 0, 0, 0.74),
+        0 0 28px rgba(0, 242, 234, 0.22),
+        0 0 34px rgba(255, 0, 80, 0.16);
+    }
+
+    .leaker-links-overlay.is-tiktok .leaker-account-card,
+    .leaker-links-overlay.is-tiktok .leaker-profile-card,
+    .leaker-links-overlay.is-tiktok .leaker-video-card,
+    .leaker-links-overlay.is-tiktok .leaker-links-empty {
+      border-color: rgba(0, 242, 234, 0.18);
+      background:
+        linear-gradient(#050505, #050505) padding-box,
+        linear-gradient(135deg, rgba(0, 242, 234, 0.24), rgba(255, 0, 80, 0.18)) border-box;
+    }
+
+    .leaker-links-overlay.is-tiktok .leaker-links-title strong {
+      text-shadow: 1px 0 0 #ff0050, -1px 0 0 #00f2ea;
+    }
+
+    .leaker-links-overlay.is-tiktok .leaker-links-search input {
+      border-color: #00f2ea;
+      background:
+        linear-gradient(#000000, #000000) padding-box,
+        linear-gradient(90deg, #00f2ea, #ff0050) border-box;
+      color: #f7f5ff;
+      box-shadow: 0 0 18px rgba(0, 242, 234, 0.14);
+    }
+
+    .leaker-links-overlay.is-tiktok .leaker-links-search .primary-action,
+    .leaker-links-overlay.is-tiktok .leaker-profile-actions .primary-action {
+      border-color: #ff0050;
+      background: linear-gradient(135deg, #ff0050 0%, #ff0050 42%, #00f2ea 100%);
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.58);
+      box-shadow: 0 0 22px rgba(255, 0, 80, 0.22), 0 0 18px rgba(0, 242, 234, 0.14);
+    }
+
+    .leaker-links-overlay.is-tiktok .leaker-links-search .primary-action:hover,
+    .leaker-links-overlay.is-tiktok .leaker-profile-actions .primary-action:hover {
+      border-color: #00f2ea;
+      background: linear-gradient(135deg, #00f2ea 0%, #ff0050 58%, #ff0050 100%);
+      box-shadow: 0 0 24px rgba(0, 242, 234, 0.24), 0 0 20px rgba(255, 0, 80, 0.2);
+    }
+
+    .leaker-links-overlay.is-tiktok .leaker-account-card.is-selected {
+      border: 1px solid transparent;
+      background:
+        linear-gradient(#000000, #000000) padding-box,
+        linear-gradient(135deg, #00f2ea, #ff0050) border-box;
+      box-shadow: 0 0 20px rgba(0, 242, 234, 0.12), inset 0 0 0 1px rgba(255, 0, 80, 0.08);
+    }
+
+    .leaker-links-overlay.is-youtube {
+      --links-accent: #ff0033;
+      --links-accent-soft: rgba(255, 0, 51, 0.13);
+      --links-accent-line: rgba(255, 0, 51, 0.38);
+      --links-accent-strong: #ffb3bf;
+      --links-selected-bg: rgba(255, 0, 51, 0.08);
+      background:
+        radial-gradient(circle at 84% 22%, rgba(255, 0, 51, 0.12), transparent 28%),
+        radial-gradient(circle at 16% 82%, rgba(255, 255, 255, 0.045), transparent 30%),
+        rgba(3, 4, 10, 0.72);
     }
 
     .leaker-links-dialog {
-      width: min(980px, 100%);
-      height: min(700px, 100%);
+      width: min(920px, 100%);
+      height: min(660px, 100%);
       min-height: 0;
       display: grid;
       grid-template-rows: auto auto minmax(0, 1fr) auto;
-      gap: 12px;
-      padding: 14px;
-      border: 1px solid rgba(196, 181, 253, 0.2);
-      border-radius: 18px;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--links-accent-line);
+      border-radius: 8px;
       background:
-        radial-gradient(circle at 18% 0%, rgba(196, 181, 253, 0.12), transparent 34%),
-        linear-gradient(180deg, rgba(18, 12, 31, 0.98), rgba(6, 5, 12, 0.99));
-      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-      animation: leakerLinksIn 240ms cubic-bezier(0.2, 0.86, 0.2, 1) both;
+        linear-gradient(180deg, var(--links-accent-soft), transparent 18%),
+        rgba(8, 10, 18, 0.98);
+      box-shadow: 0 24px 72px rgba(0, 0, 0, 0.46), 0 0 34px var(--links-accent-soft), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      opacity: 0;
+      transform: translateY(12px) scale(0.985);
+      transition: opacity 220ms ease, transform 260ms cubic-bezier(0.2, 0.86, 0.2, 1);
+    }
+
+    .leaker-links-overlay.is-open .leaker-links-dialog {
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
 
     .leaker-links-head,
     .leaker-links-search {
       min-width: 0;
-      display: flex;
+      display: grid;
       align-items: center;
-      justify-content: space-between;
       gap: 10px;
+    }
+
+    .leaker-links-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .leaker-links-search {
+      grid-template-columns: minmax(0, 1fr) minmax(96px, 132px);
     }
 
     .leaker-links-title {
       min-width: 0;
-      display: grid;
-      gap: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
     .leaker-links-title strong {
@@ -924,7 +1155,6 @@
       font-weight: 950;
     }
 
-    .leaker-links-title span,
     .leaker-links-status {
       color: #a7a3c8;
       font-size: 11px;
@@ -933,15 +1163,42 @@
     }
 
     .leaker-links-search input {
-      min-height: 40px;
-      flex: 1 1 auto;
+      min-height: 38px;
+      border-color: var(--links-accent-line);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .leaker-links-search input:focus {
+      border-color: var(--links-accent);
+      box-shadow: 0 0 0 3px var(--links-accent-soft);
+    }
+
+    .leaker-links-search .primary-action,
+    .leaker-profile-actions .primary-action {
+      border-color: var(--links-accent-line);
+      background: linear-gradient(135deg, var(--links-accent-soft), rgba(19, 13, 32, 0.96));
+      color: #f7f5ff;
+    }
+
+    .leaker-links-search .primary-action:hover,
+    .leaker-profile-actions .primary-action:hover {
+      border-color: var(--links-accent);
+      background: linear-gradient(135deg, var(--links-accent-soft), rgba(32, 22, 48, 0.98));
+    }
+
+    .leaker-links-search .primary-action {
+      width: 100%;
+      min-width: 0;
+      min-height: 38px;
+      padding: 8px 12px;
+      justify-content: center;
     }
 
     .leaker-links-content {
       min-height: 0;
       display: grid;
-      grid-template-columns: 300px minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 10px;
     }
 
     .leaker-links-results,
@@ -950,12 +1207,18 @@
       min-height: 0;
       display: grid;
       align-content: start;
-      gap: 10px;
+      gap: 8px;
       overflow: auto;
       overscroll-behavior: contain;
       scrollbar-gutter: stable;
       contain: layout paint;
-      padding-right: 3px;
+      padding: 2px;
+      scrollbar-width: thin;
+    }
+
+    .leaker-links-results {
+      padding-right: 10px;
+      border-right: 1px solid rgba(255, 255, 255, 0.07);
     }
 
     .leaker-account-card,
@@ -963,27 +1226,31 @@
     .leaker-video-card,
     .leaker-links-empty {
       min-width: 0;
-      border: 1px solid rgba(167, 139, 250, 0.16);
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(19, 13, 32, 0.92), rgba(8, 7, 15, 0.96));
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+      border: 1px solid rgba(180, 211, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(14, 16, 26, 0.94);
+      box-shadow: none;
     }
 
     .leaker-account-card {
       width: 100%;
       display: grid;
-      grid-template-columns: 42px minmax(0, 1fr);
-      gap: 10px;
-      padding: 10px;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 9px;
+      align-items: center;
+      padding: 8px;
       text-align: left;
-      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      transition: border-color 160ms ease, background 160ms ease;
     }
 
-    .leaker-account-card:hover,
+    .leaker-account-card:hover {
+      border-color: rgba(82, 247, 255, 0.24);
+      background: rgba(18, 22, 34, 0.96);
+    }
+
     .leaker-account-card.is-selected {
-      transform: translateY(-1px);
-      border-color: rgba(216, 180, 254, 0.34);
-      background: linear-gradient(135deg, rgba(43, 30, 70, 0.94), rgba(13, 9, 22, 0.98));
+      border-color: var(--links-accent-line);
+      background: var(--links-selected-bg);
     }
 
     .leaker-account-avatar,
@@ -994,8 +1261,8 @@
     }
 
     .leaker-account-avatar {
-      width: 42px;
-      height: 42px;
+      width: 36px;
+      height: 36px;
     }
 
     .leaker-account-main,
@@ -1011,7 +1278,27 @@
       color: #f7f5ff;
       font-size: 12px;
       font-weight: 950;
+      line-height: 1.25;
       overflow-wrap: anywhere;
+    }
+
+    .leaker-account-name,
+    .leaker-profile-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .leaker-verified {
+      flex: 0 0 auto;
+      padding: 2px 5px;
+      border: 1px solid var(--links-accent-line);
+      border-radius: 5px;
+      color: var(--links-accent-strong);
+      font-size: 9px;
+      font-weight: 900;
+      line-height: 1;
     }
 
     .leaker-account-meta,
@@ -1025,21 +1312,21 @@
 
     .leaker-profile-card {
       display: grid;
-      gap: 12px;
-      padding: 12px;
+      gap: 10px;
+      padding: 10px;
     }
 
     .leaker-profile-top {
       min-width: 0;
       display: grid;
-      grid-template-columns: 72px minmax(0, 1fr);
-      gap: 12px;
+      grid-template-columns: 56px minmax(0, 1fr);
+      gap: 10px;
       align-items: center;
     }
 
     .leaker-profile-avatar {
-      width: 72px;
-      height: 72px;
+      width: 56px;
+      height: 56px;
     }
 
     .leaker-profile-stats,
@@ -1050,6 +1337,22 @@
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
+    }
+
+    .leaker-profile-actions .primary-action,
+    .leaker-profile-actions .chip-action,
+    .leaker-video-actions .chip-action {
+      min-width: 0;
+      min-height: 36px;
+      padding: 8px 14px;
+    }
+
+    .leaker-profile-stats .files-resource-pill {
+      padding: 4px 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.045);
+      color: #d9d6ec;
+      font-size: 10px;
     }
 
     .leaker-profile-bio {
@@ -1063,8 +1366,8 @@
 
     .leaker-videos-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(136px, 1fr));
+      gap: 8px;
     }
 
     .leaker-video-card {
@@ -1072,12 +1375,11 @@
       overflow: hidden;
       content-visibility: auto;
       contain-intrinsic-size: 220px 360px;
-      transition: transform 180ms ease, border-color 180ms ease;
+      transition: border-color 160ms ease;
     }
 
     .leaker-video-card:hover {
-      transform: translateY(-1px);
-      border-color: rgba(216, 180, 254, 0.3);
+      border-color: rgba(82, 247, 255, 0.22);
     }
 
     .leaker-video-thumb {
@@ -1089,7 +1391,7 @@
       color: #c4b5fd;
       font-size: 18px;
       font-weight: 950;
-      background: linear-gradient(135deg, rgba(36, 25, 60, 0.88), rgba(10, 8, 18, 0.94));
+      background: #0f111a;
     }
 
     .leaker-video-thumb img {
@@ -1105,16 +1407,27 @@
     .leaker-video-body {
       min-width: 0;
       display: grid;
-      gap: 8px;
-      padding: 10px;
+      gap: 6px;
+      padding: 8px;
     }
 
     .leaker-links-empty {
-      padding: 18px;
+      padding: 14px;
+      border-style: dashed;
+      background: rgba(255, 255, 255, 0.025);
       color: #a7a3c8;
       font-size: 11px;
       font-weight: 800;
       text-align: center;
+    }
+
+    .leaker-links-skeleton {
+      min-height: 58px;
+      border: 1px solid rgba(180, 211, 255, 0.08);
+      border-radius: 8px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+      background-size: 220% 100%;
+      animation: filesCheckingFade 980ms ease-in-out infinite;
     }
 
     .files-auth-gate {
@@ -1294,14 +1607,17 @@
     }
 
     .files-developer-corner {
-      position: absolute;
-      right: 16px;
-      bottom: 12px;
-      z-index: 1;
       margin: 0;
       color: var(--muted);
       font-size: 11px;
       font-weight: 800;
+    }
+
+    .footer .files-developer-credit {
+      margin-left: auto;
+      justify-content: flex-end;
+      color: #9b96bd;
+      white-space: nowrap;
     }
 
     .files-developer-link {
@@ -1659,6 +1975,80 @@
       animation: filesResultIn 260ms cubic-bezier(0.2, 0.86, 0.2, 1);
     }
 
+    .files-cloud-dialog.is-login {
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .files-cloud-login {
+      min-height: 0;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(82, 247, 255, 0.12);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(82, 247, 255, 0.12), transparent 34%),
+        rgba(8, 9, 16, 0.58);
+    }
+
+    .files-cloud-login-card {
+      width: min(420px, 100%);
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(82, 247, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(12, 14, 24, 0.96);
+      box-shadow: 0 22px 62px rgba(0, 0, 0, 0.36);
+    }
+
+    .files-cloud-login-title {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .files-cloud-login-title strong {
+      color: #f7f5ff;
+      font-size: 15px;
+      font-weight: 950;
+      line-height: 1.2;
+    }
+
+    .files-cloud-login-title span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .files-cloud-login-fields {
+      display: grid;
+      gap: 9px;
+    }
+
+    .files-cloud-login-fields input {
+      height: 40px;
+    }
+
+    .files-cloud-login-fields label {
+      display: grid;
+      gap: 6px;
+      color: #cfc9e9;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .files-cloud-login-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .files-protected-overlay {
       position: fixed;
       inset: 0;
@@ -1841,6 +2231,36 @@
       justify-content: space-between;
       gap: 10px;
       min-width: 0;
+    }
+
+    .files-protected-toolbar {
+      align-items: stretch;
+    }
+
+    .files-protected-search {
+      flex: 1 1 260px;
+      min-width: 180px;
+      height: 36px;
+      border: 1px solid rgba(255, 209, 102, 0.18);
+      border-radius: 8px;
+      outline: none;
+      padding: 0 12px;
+      border-color: rgba(255, 209, 102, 0.18);
+      background: rgba(255, 255, 255, 0.035);
+      color: #f7f5ff;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .files-protected-search::placeholder {
+      color: rgba(207, 201, 233, 0.58);
+    }
+
+    .files-protected-search:focus {
+      border-color: rgba(255, 209, 102, 0.52);
+      box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.09);
     }
 
     .files-protected-title {
@@ -3118,6 +3538,23 @@
         justify-content: flex-start;
       }
 
+      .leaker-link-menu {
+        justify-content: flex-start;
+      }
+
+      .leaker-link-menu-strip {
+        top: calc(100% + 7px);
+        right: auto;
+        left: 0;
+        min-width: min(238px, calc(100vw - 42px));
+        transform: translateY(-8px) scale(0.98);
+        transform-origin: left top;
+      }
+
+      .leaker-link-menu.is-open .leaker-link-menu-strip {
+        transform: translateY(0) scale(1);
+      }
+
       .leaker-links-overlay {
         inset: 6px;
         padding: 6px;
@@ -3130,12 +3567,25 @@
       .leaker-links-head,
       .leaker-links-search {
         align-items: stretch;
-        flex-direction: column;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .leaker-links-search .primary-action {
+        min-width: 0;
+        width: 100%;
       }
 
       .leaker-links-content,
       .leaker-profile-top {
         grid-template-columns: minmax(0, 1fr);
+      }
+
+      .leaker-links-results {
+        max-height: 172px;
+        padding-right: 2px;
+        padding-bottom: 10px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
       }
 
       .leaker-videos-grid {
@@ -4390,7 +4840,18 @@
                 </div>
               </div>
               <div class="leaker-mode-actions">
-                <button id="leakerLinksBtn" class="chip-action" type="button">TikTok Links</button>
+                <div id="leakerLinkMenu" class="leaker-link-menu">
+                  <button id="leakerLinkMenuBtn" class="chip-action leaker-link-menu-toggle" type="button" title="Links" aria-label="Open link tools" aria-expanded="false" aria-controls="leakerLinkMenuStrip">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M10.2 13.8a4.2 4.2 0 0 0 6 0l2.2-2.2a4.2 4.2 0 0 0-6-6L11.2 6.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+                      <path d="M13.8 10.2a4.2 4.2 0 0 0-6 0l-2.2 2.2a4.2 4.2 0 0 0 6 6l1.2-1.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                  </button>
+                  <div id="leakerLinkMenuStrip" class="leaker-link-menu-strip" aria-hidden="true">
+                    <button id="leakerLinksBtn" class="leaker-link-option is-tiktok" type="button">TikTok Links</button>
+                    <button id="youtubeLinksBtn" class="leaker-link-option is-youtube" type="button">YouTube Links</button>
+                  </div>
+                </div>
                 <button id="leakerModeReloadBtn" class="chip-action" type="button">Reload</button>
                 <button id="leakerModeExitBtn" class="chip-action danger" type="button">Exit Mode</button>
               </div>
@@ -4435,7 +4896,6 @@
               <div class="leaker-links-head">
                 <div class="leaker-links-title">
                   <strong id="leakerLinksTitle">TikTok Links</strong>
-                  <span id="leakerLinksSubtitle">HLX profile lookup</span>
                 </div>
                 <button id="leakerLinksCloseBtn" class="chip-action" type="button">Close</button>
               </div>
@@ -4502,7 +4962,26 @@
                 </div>
                 <button id="filesCloudCloseBtn" class="chip-action" type="button">Close</button>
               </div>
-              <div class="files-cloud-toolbar">
+              <form id="filesCloudLogin" class="files-cloud-login hidden" aria-hidden="true">
+                <div class="files-cloud-login-card">
+                  <div class="files-cloud-login-title">
+                    <strong>Cloud Manager</strong>
+                    <span>Sign in with your files.6ureleaks.com account.</span>
+                  </div>
+                  <div class="files-cloud-login-fields">
+                    <label>Username
+                      <input id="filesCloudUsernameInput" spellcheck="false" autocomplete="username" placeholder="Username">
+                    </label>
+                    <label>Password
+                      <input id="filesCloudPasswordInput" type="password" autocomplete="current-password" placeholder="Password">
+                    </label>
+                  </div>
+                  <div class="files-cloud-login-actions">
+                    <button id="filesCloudLoginBtn" class="primary-action" type="submit">Open Cloud</button>
+                  </div>
+                </div>
+              </form>
+              <div id="filesCloudToolbar" class="files-cloud-toolbar">
                 <div id="filesCloudCrumbs" class="files-cloud-crumbs"></div>
                 <div class="files-cloud-actions">
                   <button id="filesCloudUpBtn" class="chip-action" type="button">Up</button>
@@ -4524,6 +5003,7 @@
                 <button id="filesProtectedCloseBtn" class="chip-action" type="button">Close</button>
               </div>
               <div class="files-protected-toolbar">
+                <input id="filesProtectedSearchInput" class="files-protected-search" type="search" placeholder="Search protected names" autocomplete="off" spellcheck="false">
                 <button id="filesProtectedRefreshBtn" class="chip-action" type="button">Refresh</button>
               </div>
               <div id="filesProtectedList" class="files-protected-list"></div>
@@ -4554,7 +5034,7 @@
               <div class="files-hero">
                 <img src="/assets/6ure-logo.png" alt="">
                 <div>
-                  <h3 id="filesResourcesTitle">@username uploads</h3>
+                  <h3 id="filesResourcesTitle">username uploads</h3>
                   <p>Latest resources uploaded through 6ureleaks.com.</p>
                 </div>
               </div>
@@ -4630,13 +5110,6 @@
               </div>
             </div>
           </div>
-          <div class="files-developer-credit files-developer-corner">
-            <span>developed by</span>
-            <a class="files-developer-link" href="https://discord.com/users/1421177012814614548" data-external-url="https://discord.com/users/1421177012814614548" target="_blank" rel="noopener noreferrer">
-              <img class="files-developer-avatar" src="/assets/reyli-profile.jpg" alt="">
-              <span>reyli</span>
-            </a>
-          </div>
         </div>
         </div>
       </section>
@@ -4644,6 +5117,13 @@
 
     <footer class="footer">
       <span>6ure™ App</span>
+      <div class="files-developer-credit">
+        <span>developed by</span>
+        <a class="files-developer-link" href="https://discord.com/users/1421177012814614548" data-external-url="https://discord.com/users/1421177012814614548" target="_blank" rel="noopener noreferrer">
+          <img class="files-developer-avatar" src="/assets/reyli-profile.jpg" alt="">
+          <span>reyli</span>
+        </a>
+      </div>
     </footer>
   </div>
 
@@ -4701,8 +5181,12 @@
     let filesCloudPath = '/';
     let filesCloudEntries = [];
     let filesCloudBusy = false;
+    let filesCloudAuthenticated = false;
+    let filesCloudLoginBusy = false;
+    let filesCloudSavedUsername = '';
     let filesProtectedBusy = false;
     let filesProtectedUsers = [];
+    let filesProtectedSearchQuery = '';
     let filesResourcesBusy = false;
     let filesResourceDetailBusy = false;
     let filesResourceDetailId = '';
@@ -4714,11 +5198,23 @@
     let leakerOauthLastUrl = '';
     let leakerModeTransitioning = false;
     let leakerModeAuthToastShown = false;
+    let leakerUploadPresenceTimer = null;
+    let leakerUploadPresenceObserver = null;
+    let leakerUploadPresenceCleanup = [];
+    let leakerUploadPresenceLastKey = '';
+    let leakerUploadPresenceLastAt = 0;
+    let leakerUploadLastFieldLabel = '';
+    let leakerUploadLastFieldAt = 0;
+    let leakerLinksPlatform = 'tiktok';
     let leakerLinksBusy = false;
     let leakerLinksSelectedUsername = '';
     let leakerLinksSearchToken = 0;
     let leakerLinksProfileToken = 0;
     let leakerLinksResultProfiles = new Map();
+    let leakerLinksSearchController = null;
+    let leakerLinksProfileController = null;
+    let leakerLinksOverlayCloseTimer = null;
+    let leakerLinkMenuOpen = false;
     let appDiscordUser = null;
     let appDiscordLoginActive = false;
     let appDiscordAuthPollTimer = null;
@@ -4754,6 +5250,83 @@
     const LEAKER_LOGIN_URL = '/dashboard/upload';
     const LEAKER_CLOUD_URL = '/dashboard/resources';
     const LEAKER_UPLOAD_URL = '/dashboard/upload';
+    const LEAKER_LINKS_PLATFORMS = {
+      tiktok: {
+        key: 'tiktok',
+        title: 'TikTok Links',
+        placeholder: '@username or TikTok URL',
+        searchPath: '/api/hlx/tiktok/search',
+        detailPath: '/api/hlx/tiktok/profile',
+        detailParam: 'username',
+        emptySearch: 'Search a TikTok account.',
+        emptySelect: 'Select an account.',
+        exactHint: 'Try an exact TikTok username.',
+        searchingStatus: 'Searching TikTok accounts...',
+        emptyInput: 'Enter a TikTok username.',
+        searchError: 'TikTok search failed.',
+        detailError: 'TikTok profile could not be loaded.',
+        profileFallback: 'TikTok user',
+        videoFallback: 'TikTok video',
+        presence: 'TikTok lookup',
+        accountStats(profile) {
+          return [
+            `${formatTikTokCount(profile.followerCount)} followers`,
+            `${formatTikTokCount(profile.videoCount)} videos`
+          ];
+        },
+        detailStats(profile) {
+          return [
+            `${formatTikTokCount(profile.followerCount)} followers`,
+            `${formatTikTokCount(profile.heartCount)} likes`,
+            `${formatTikTokCount(profile.videoCount)} videos`,
+            `${formatTikTokCount(profile.followingCount)} following`
+          ];
+        },
+        profileUrl(profile, username) {
+          return String(profile.url || (username ? `https://www.tiktok.com/@${username}` : '')).trim();
+        },
+        displayHandle(profile, username) {
+          return `@${String(profile.handle || username || 'username').replace(/^@+/, '')}`;
+        }
+      },
+      youtube: {
+        key: 'youtube',
+        title: 'YouTube Links',
+        placeholder: '@handle, channel URL, or YouTube URL',
+        searchPath: '/api/hlx/youtube/search',
+        detailPath: '/api/hlx/youtube/channel',
+        detailParam: 'url',
+        emptySearch: 'Search a YouTube channel.',
+        emptySelect: 'Select a channel.',
+        exactHint: 'Try an exact YouTube handle or channel URL.',
+        searchingStatus: 'Searching YouTube channels...',
+        emptyInput: 'Enter a YouTube handle or channel URL.',
+        searchError: 'YouTube search failed.',
+        detailError: 'YouTube channel could not be loaded.',
+        profileFallback: 'YouTube channel',
+        videoFallback: 'YouTube video',
+        presence: 'YouTube lookup',
+        accountStats(profile) {
+          return [
+            `${formatTikTokCount(profile.followerCount)} subscribers`,
+            `${formatTikTokCount(profile.videoCount)} videos`
+          ];
+        },
+        detailStats(profile) {
+          return [
+            `${formatTikTokCount(profile.followerCount)} subscribers`,
+            `${formatTikTokCount(profile.heartCount)} views`,
+            `${formatTikTokCount(profile.videoCount)} videos`
+          ];
+        },
+        profileUrl(profile, username) {
+          return String(profile.url || (username ? `https://www.youtube.com/@${String(username).replace(/^@+/, '')}` : '')).trim();
+        },
+        displayHandle(profile, username) {
+          return String(profile.handle || (username ? `@${String(username).replace(/^@+/, '')}` : 'YouTube channel'));
+        }
+      }
+    };
     const APP_DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=948565930034749501&redirect_uri=https%3A%2F%2F6ureleaks.com%2Frequests%2Fapi%2Fauth%2Fdiscord%2Fcallback&response_type=code&scope=identify+guilds&state=eyJjYWxsYmFja1VybCI6Imh0dHBzOi8vNnVyZWxlYWtzLmNvbS8iLCJ0IjoxNzc4MjQzNzYzNTE0LCJuIjoiZWMxZGExMGIxNWFlOWQ1YmI0M2VjYzIxYTI5MzFlNTIifQ.c5eb5f8863df611a9d0216549dc3b0163f7a868471e4c7cc0b887ea4f69ad2bd';
     const LEAKER_DISCORD_OAUTH_RE = /^https:\/\/(?:(?:canary|ptb)\.)?(?:discord\.com|discordapp\.com)\/(?:api\/)?oauth2\/authorize\b/i;
     const OPENING_HINTS = [
@@ -4780,12 +5353,16 @@
       leakerModeTransitionStatus: $('#leakerModeTransitionStatus'),
       leakerModeView: $('#leakerModeView'),
       leakerModeStatus: $('#leakerModeStatus'),
+      leakerLinkMenu: $('#leakerLinkMenu'),
+      leakerLinkMenuBtn: $('#leakerLinkMenuBtn'),
+      leakerLinkMenuStrip: $('#leakerLinkMenuStrip'),
       leakerLinksBtn: $('#leakerLinksBtn'),
+      youtubeLinksBtn: $('#youtubeLinksBtn'),
       leakerLinksOverlay: $('#leakerLinksOverlay'),
       leakerLinksCloseBtn: $('#leakerLinksCloseBtn'),
       leakerLinksSearchInput: $('#leakerLinksSearchInput'),
       leakerLinksSearchBtn: $('#leakerLinksSearchBtn'),
-      leakerLinksSubtitle: $('#leakerLinksSubtitle'),
+      leakerLinksTitle: $('#leakerLinksTitle'),
       leakerLinksResults: $('#leakerLinksResults'),
       leakerLinksDetail: $('#leakerLinksDetail'),
       leakerLinksStatus: $('#leakerLinksStatus'),
@@ -4824,7 +5401,12 @@
       filesSelectionList: $('#filesSelectionList'),
       filesCloudOverlay: $('#filesCloudOverlay'),
       filesCloudCloseBtn: $('#filesCloudCloseBtn'),
+      filesCloudLogin: $('#filesCloudLogin'),
+      filesCloudUsernameInput: $('#filesCloudUsernameInput'),
+      filesCloudPasswordInput: $('#filesCloudPasswordInput'),
+      filesCloudLoginBtn: $('#filesCloudLoginBtn'),
       filesCloudPath: $('#filesCloudPath'),
+      filesCloudToolbar: $('#filesCloudToolbar'),
       filesCloudCrumbs: $('#filesCloudCrumbs'),
       filesCloudList: $('#filesCloudList'),
       filesCloudStatus: $('#filesCloudStatus'),
@@ -4833,6 +5415,7 @@
       filesProtectedOverlay: $('#filesProtectedOverlay'),
       filesProtectedCloseBtn: $('#filesProtectedCloseBtn'),
       filesProtectedRefreshBtn: $('#filesProtectedRefreshBtn'),
+      filesProtectedSearchInput: $('#filesProtectedSearchInput'),
       filesProtectedMeta: $('#filesProtectedMeta'),
       filesProtectedList: $('#filesProtectedList'),
       filesProtectedStatus: $('#filesProtectedStatus'),
@@ -5473,7 +6056,7 @@
       els.filesResourceDetailOverlay.setAttribute('aria-hidden', 'true');
       filesResourceDetailBusy = false;
       if (filesAuthenticated && !filesActiveJobId) {
-        updateDiscordPresence('Browsing resources', filesUsername || '@username');
+        updateDiscordPresence('Browsing resources', filesUsername || 'username');
       }
     }
 
@@ -5555,7 +6138,7 @@
     function renderMyResources(payload = {}) {
       const items = Array.isArray(payload.items) ? payload.items : [];
       setResourceStats(payload.stats || {});
-      const owner = String(payload.uploader?.displayName || filesUsername || '@username').trim() || '@username';
+      const owner = formatDiscordDisplayName(payload.uploader?.displayName || filesUsername || 'username');
       setResourcesOwnerLabel(owner);
 
       if (!els.filesResourcesList || !els.filesResourcesStatus) return;
@@ -5581,7 +6164,7 @@
 
     async function loadMyResources(refresh = false) {
       setResourcesBusy(true);
-      const owner = filesUsername || '@username';
+      const owner = filesUsername || 'username';
       if (els.filesResourcesStatus) {
         els.filesResourcesStatus.textContent = refresh
           ? `Refreshing ${owner} resources from 6ureleaks...`
@@ -6076,6 +6659,7 @@
           }
         });
       } catch (error) {
+        if (error?.name === 'AbortError') throw error;
         showConnectionScreen('Connection unavailable', 'The local 6ure™ App service could not be reached. Retry in a moment.');
         throw error;
       }
@@ -6098,12 +6682,12 @@
     }
 
     function formatDiscordDisplayName(user = appDiscordUser) {
-      const name = normalizeDiscordDisplayName(user?.username || user?.displayName || user?.id || filesUsername);
-      return `@${name}`;
+      if (typeof user === 'string') return normalizeDiscordDisplayName(user);
+      return normalizeDiscordDisplayName(user?.displayName || user?.username || user?.id || filesUsername);
     }
 
     function setResourcesOwnerLabel(label = filesUsername) {
-      const display = String(label || '@username').trim() || '@username';
+      const display = formatDiscordDisplayName(label || 'username');
       if (els.filesResourcesTitle) {
         els.filesResourcesTitle.textContent = `${display} uploads`;
       }
@@ -6146,7 +6730,7 @@
       return {
         id: '1421177012814614548',
         username: 'reyliar',
-        displayName: 'reyliar',
+        displayName: 'reyli',
         avatarUrl: '',
         source: 'oauth-completed-fallback'
       };
@@ -6325,6 +6909,14 @@
     async function updateDiscordPresence(details, state, options = {}) {
       const cleanDetails = String(details || '').trim();
       const cleanState = String(state || '').trim();
+      if (
+        !options.leakerUpload &&
+        !options.force &&
+        leakerModePhase === 'active' &&
+        leakerUploadPresenceObserver
+      ) {
+        return;
+      }
       const key = `${cleanDetails}|${cleanState}`;
       const now = Date.now();
       if (!options.force && key === lastDiscordPresenceKey && now - lastDiscordPresenceSentAt < 2500) {
@@ -6547,7 +7139,7 @@
         if (!silent && !filesActiveJobId) {
           updateDiscordPresence(
             'Browsing resources',
-            filesUsername || '@username'
+            filesUsername || 'username'
           );
         }
       }
@@ -6575,7 +7167,7 @@
         setUpdateButtonState();
         updateDiscordPresence(
           'Browsing resources',
-          filesUsername || '@username',
+          filesUsername || 'username',
           { force: true }
         );
         const message = getFriendlyFilesMessage(error.message, 'Update install could not be started.');
@@ -6749,22 +7341,117 @@
       if (message) {
         els.filesCloudStatus.textContent = message;
       }
-      els.filesCloudUpBtn.disabled = filesCloudBusy || filesCloudPath === '/';
-      els.filesCloudRefreshBtn.disabled = filesCloudBusy;
-      els.filesCloudBtn.disabled = filesCloudBusy || !filesAuthenticated || Boolean(filesActiveJobId);
+      const blocked = filesCloudBusy || filesCloudLoginBusy || Boolean(filesActiveJobId);
+      els.filesCloudUpBtn.disabled = blocked || filesCloudPath === '/' || !filesCloudAuthenticated;
+      els.filesCloudRefreshBtn.disabled = blocked || !filesCloudAuthenticated;
+      els.filesCloudBtn.disabled = blocked;
       els.filesCloudList.querySelectorAll('button').forEach(button => {
-        button.disabled = filesCloudBusy;
+        button.disabled = blocked;
       });
       els.filesCloudCrumbs.querySelectorAll('button').forEach(button => {
-        button.disabled = filesCloudBusy;
+        button.disabled = blocked;
       });
+    }
+
+    function setFilesCloudAuthenticated(authenticated, username = filesCloudSavedUsername) {
+      filesCloudAuthenticated = Boolean(authenticated);
+      filesCloudSavedUsername = String(username || '').trim();
+      if (els.filesCloudUsernameInput && filesCloudSavedUsername && !els.filesCloudUsernameInput.value.trim()) {
+        els.filesCloudUsernameInput.value = filesCloudSavedUsername;
+      }
+      if (!filesCloudAuthenticated) {
+        filesCloudPath = '/';
+        filesCloudEntries = [];
+        renderFilesCloudCrumbs([{ name: 'Cloud', path: '/' }]);
+        els.filesCloudList.innerHTML = '';
+      }
+      setFilesCloudBusy(filesCloudBusy);
+    }
+
+    function setFilesCloudLoginVisible(visible) {
+      const shouldShow = Boolean(visible);
+      const dialog = els.filesCloudOverlay?.querySelector?.('.files-cloud-dialog');
+      dialog?.classList.toggle('is-login', shouldShow);
+      els.filesCloudLogin.classList.toggle('hidden', !shouldShow);
+      els.filesCloudLogin.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+      els.filesCloudToolbar.classList.toggle('hidden', shouldShow);
+      els.filesCloudList.classList.toggle('hidden', shouldShow);
+      els.filesCloudPath.textContent = shouldShow ? 'Sign in' : filesCloudPath;
+      if (shouldShow) {
+        els.filesCloudStatus.textContent = filesCloudLoginBusy ? 'Checking credentials...' : 'Sign in to open Cloud Manager.';
+        if (filesCloudSavedUsername && !els.filesCloudUsernameInput.value.trim()) {
+          els.filesCloudUsernameInput.value = filesCloudSavedUsername;
+        }
+        setTimeout(() => {
+          const target = els.filesCloudUsernameInput.value.trim()
+            ? els.filesCloudPasswordInput
+            : els.filesCloudUsernameInput;
+          target?.focus?.();
+        }, 80);
+      }
+      setFilesCloudBusy(filesCloudBusy);
+    }
+
+    function setFilesCloudLoginBusy(active, message = '') {
+      filesCloudLoginBusy = Boolean(active);
+      if (message) {
+        els.filesCloudStatus.textContent = message;
+      }
+      els.filesCloudUsernameInput.disabled = filesCloudLoginBusy;
+      els.filesCloudPasswordInput.disabled = filesCloudLoginBusy;
+      els.filesCloudLoginBtn.disabled = filesCloudLoginBusy;
+      els.filesCloudLoginBtn.textContent = filesCloudLoginBusy ? 'Checking...' : 'Open Cloud';
+      setFilesCloudBusy(filesCloudBusy);
+    }
+
+    async function loadFilesCloudCredentialsState() {
+      try {
+        const last = await filesApi('/api/files/last', { method: 'GET' });
+        const hasCredentials = Boolean(last.hasCredentials ?? last.authenticated);
+        setFilesCloudAuthenticated(hasCredentials, last.cloudUsername || '');
+        return last;
+      } catch {
+        setFilesCloudAuthenticated(false, '');
+        return null;
+      }
+    }
+
+    async function submitFilesCloudLogin(event) {
+      event.preventDefault();
+      if (filesCloudLoginBusy) return;
+      const username = String(els.filesCloudUsernameInput.value || '').trim();
+      const password = String(els.filesCloudPasswordInput.value || '');
+      if (!username || !password) {
+        showToast('Cloud username and password are required.', 'err');
+        return;
+      }
+      setFilesCloudLoginBusy(true, 'Checking credentials...');
+      updateDiscordPresence('Cloud manager', 'Checking credentials', { force: true });
+      try {
+        const result = await filesApi('/api/files/login', {
+          method: 'POST',
+          body: JSON.stringify({ username, password })
+        });
+        setFilesCloudAuthenticated(true, result.username || username);
+        els.filesCloudPasswordInput.value = '';
+        setFilesCloudLoginVisible(false);
+        showToast('Cloud Manager opened.', 'ok');
+        await loadFilesCloudPath('/');
+      } catch (error) {
+        setFilesCloudAuthenticated(false, username);
+        const message = getFriendlyFilesMessage(error.message, 'Cloud credentials could not be checked.');
+        els.filesCloudStatus.textContent = message;
+        showToast(message, 'err');
+      } finally {
+        setFilesCloudLoginBusy(false);
+      }
     }
 
     function hideFilesCloudOverlay() {
       els.filesCloudOverlay.classList.add('hidden');
       els.filesCloudOverlay.setAttribute('aria-hidden', 'true');
       if (filesAuthenticated && !filesActiveJobId) {
-        updateDiscordPresence('Browsing resources', filesUsername || '@username');
+        updateDiscordPresence('Browsing resources', filesUsername || 'username');
       }
     }
 
@@ -6948,8 +7635,12 @@
     }
 
     async function loadFilesCloudPath(path = filesCloudPath) {
-      if (!requireFilesAuth()) return;
+      if (!filesCloudAuthenticated) {
+        setFilesCloudLoginVisible(true);
+        return;
+      }
       const cleanPath = normalizeCloudPath(path);
+      setFilesCloudLoginVisible(false);
       setFilesCloudBusy(true, `Loading ${cleanPath}...`);
       updateDiscordPresence('Cloud manager', cleanPath);
       try {
@@ -6962,7 +7653,8 @@
         els.filesCloudStatus.textContent = message;
         showToast(message, 'err');
         if (String(error.message || '').toLowerCase().includes('wrong username or password')) {
-          setFilesAuthState(false, '');
+          setFilesCloudAuthenticated(false, filesCloudSavedUsername);
+          setFilesCloudLoginVisible(true);
         }
       } finally {
         setFilesCloudBusy(false);
@@ -6970,11 +7662,17 @@
     }
 
     async function showFilesCloudOverlay() {
-      if (!requireFilesAuth()) return;
       hideFilesResultOverlay();
       els.filesCloudOverlay.classList.remove('hidden');
       els.filesCloudOverlay.setAttribute('aria-hidden', 'false');
       updateDiscordPresence('Cloud manager', 'Browsing files');
+      if (!filesCloudAuthenticated) {
+        await loadFilesCloudCredentialsState();
+      }
+      if (!filesCloudAuthenticated) {
+        setFilesCloudLoginVisible(true);
+        return;
+      }
       await loadFilesCloudPath(filesCloudPath || '/');
     }
 
@@ -6985,13 +7683,14 @@
       }
       els.filesProtectedBtn.disabled = filesProtectedBusy || Boolean(filesActiveJobId);
       els.filesProtectedRefreshBtn.disabled = filesProtectedBusy;
+      els.filesProtectedSearchInput.disabled = filesProtectedBusy && !filesProtectedUsers.length;
     }
 
     function hideFilesProtectedOverlay() {
       els.filesProtectedOverlay.classList.add('hidden');
       els.filesProtectedOverlay.setAttribute('aria-hidden', 'true');
       if (filesAuthenticated && !filesActiveJobId) {
-        updateDiscordPresence('Browsing resources', filesUsername || '@username');
+        updateDiscordPresence('Browsing resources', filesUsername || 'username');
       }
     }
 
@@ -7065,16 +7764,51 @@
       }
     }
 
+    function normalizeProtectedSearch(value) {
+      return String(value || '')
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/^@+/, '')
+        .trim();
+    }
+
+    function getProtectedSearchText(user) {
+      const aliases = Array.isArray(user.aliases) ? user.aliases : [];
+      return normalizeProtectedSearch([
+        user.name,
+        user.username,
+        user.displayName,
+        user.creatorName,
+        user.creatorPlatform,
+        user.socialLink,
+        user.creatorBioLink,
+        user.creatorBio,
+        ...aliases
+      ].filter(Boolean).join(' '));
+    }
+
     function renderFilesProtectedList() {
+      const query = normalizeProtectedSearch(filesProtectedSearchQuery);
+      const visibleUsers = query
+        ? filesProtectedUsers.filter(user => getProtectedSearchText(user).includes(query))
+        : filesProtectedUsers;
+      els.filesProtectedMeta.textContent = query
+        ? `${visibleUsers.length}/${filesProtectedUsers.length} protected names`
+        : `${filesProtectedUsers.length} protected names`;
       if (!filesProtectedUsers.length) {
         els.filesProtectedList.innerHTML = '<div class="files-protected-empty">No protected names were returned.</div>';
         return;
       }
-      els.filesProtectedList.innerHTML = filesProtectedUsers.map(user => {
+      if (!visibleUsers.length) {
+        els.filesProtectedList.innerHTML = '<div class="files-protected-empty">No protected names match your search.</div>';
+        return;
+      }
+      els.filesProtectedList.innerHTML = visibleUsers.map(user => {
         const aliases = Array.isArray(user.aliases) ? user.aliases.filter(Boolean) : [];
         const primaryAlias = aliases.find(alias => alias !== user.creatorName && alias !== user.username && alias !== user.displayName) || '';
         const details = [
-          user.username ? `Discord: ${user.username}` : '',
+          (user.displayName || user.username) ? `Discord: ${formatDiscordDisplayName(user.displayName || user.username)}` : '',
           primaryAlias ? `Alias: ${primaryAlias}` : '',
           user.subscriptionEndsAt ? `Protected until ${user.subscriptionEndsAt}` : ''
         ].filter(Boolean).join(' - ');
@@ -7113,7 +7847,6 @@
         const result = await filesApi('/api/protected/list', { method: 'GET' });
         filesProtectedUsers = Array.isArray(result.users) ? result.users : [];
         renderFilesProtectedList();
-        els.filesProtectedMeta.textContent = `${result.count || filesProtectedUsers.length} protected names`;
         els.filesProtectedStatus.textContent = `Source: ${result.sourceUrl || 'https://6ureleaks.com/requests/protected'}`;
       } catch (error) {
         filesProtectedUsers = [];
@@ -7132,6 +7865,7 @@
       els.filesProtectedOverlay.setAttribute('aria-hidden', 'false');
       updateDiscordPresence('Protected check', 'Reviewing names');
       await loadFilesProtectedList();
+      setTimeout(() => els.filesProtectedSearchInput?.focus?.(), 80);
     }
 
     function getUploadProtectedNameCandidates(editorName) {
@@ -7246,12 +7980,12 @@
 
     function setFilesAuthState(authenticated, username = filesUsername) {
       filesAuthenticated = Boolean(authenticated);
-      filesUsername = username ? formatDiscordDisplayName({ username }) : '@username';
+      filesUsername = username ? formatDiscordDisplayName(username) : 'username';
       els.filesView.classList.toggle('files-locked', !filesAuthenticated);
       els.filesAuthGate.setAttribute('aria-hidden', filesAuthenticated ? 'true' : 'false');
       els.filesLogoutBtn.classList.toggle('hidden', !filesAuthenticated);
-      els.filesCloudBtn.classList.add('hidden');
-      els.filesCloudBtn.disabled = !filesAuthenticated || filesCloudBusy || Boolean(filesActiveJobId);
+      els.filesCloudBtn.classList.remove('hidden');
+      els.filesCloudBtn.disabled = filesCloudBusy || filesCloudLoginBusy || Boolean(filesActiveJobId);
       els.filesProtectedBtn.disabled = filesProtectedBusy || Boolean(filesActiveJobId);
       if (els.filesLoginBtn) {
         els.filesLoginBtn.disabled = false;
@@ -7284,7 +8018,7 @@
       els.filesChooseBtn.disabled = Boolean(active);
       els.filesEditorInput.disabled = Boolean(active);
       els.filesFolderInput.disabled = Boolean(active);
-      els.filesCloudBtn.disabled = Boolean(active) || filesCloudBusy || !filesAuthenticated;
+      els.filesCloudBtn.disabled = Boolean(active) || filesCloudBusy || filesCloudLoginBusy;
       els.filesProtectedBtn.disabled = Boolean(active) || filesProtectedBusy;
       if (active) {
         els.filesUpdateBtn.disabled = true;
@@ -7317,6 +8051,8 @@
         filesActiveJobId = '';
         filesCloudPath = '/';
         filesCloudEntries = [];
+        setFilesCloudAuthenticated(false, filesCloudSavedUsername);
+        setFilesCloudLoginVisible(false);
         setFilesUploadControls(false);
         hideFilesResultOverlay();
         hideFilesCloudOverlay();
@@ -7340,6 +8076,7 @@
         const last = await filesApi('/api/files/last');
         clearFilesFields();
         const hasCredentials = Boolean(last.hasCredentials ?? last.authenticated);
+        setFilesCloudAuthenticated(hasCredentials, last.cloudUsername || '');
         setFilesAuthState(hasCredentials, last.filesUsername || '');
         setOpeningWelcome(last.filesUsername || '');
 
@@ -7366,7 +8103,7 @@
         });
         if (result.cancelled) {
           appendFilesStatus('Folder selection was cancelled.');
-          updateDiscordPresence('Browsing resources', filesUsername || '@username');
+          updateDiscordPresence('Browsing resources', filesUsername || 'username');
           return;
         }
         const folders = Array.isArray(result.folders) && result.folders.length
@@ -7384,7 +8121,7 @@
         updateDiscordPresence('Preparing upload', mergedFolders.length === 1 ? '1 folder selected' : `${mergedFolders.length} folders selected`);
       } catch (error) {
         appendFilesStatus(`The folder picker could not be opened: ${getFriendlyFilesMessage(error.message)}`);
-        updateDiscordPresence('Browsing resources', filesUsername || '@username');
+        updateDiscordPresence('Browsing resources', filesUsername || 'username');
       }
     }
 
@@ -7584,7 +8321,7 @@
         filesActiveJobId = '';
         setFilesUploadControls(false);
         setFilesStatus(`The upload could not be started.\nReason: ${getFriendlyFilesMessage(error.message)}`);
-        updateDiscordPresence('Browsing resources', filesUsername || '@username', { force: true });
+        updateDiscordPresence('Browsing resources', filesUsername || 'username', { force: true });
       }
     }
 
@@ -7640,9 +8377,9 @@
       return `${mins}:${String(secs).padStart(2, '0')}`;
     }
 
-    async function copyLeakerText(value, label = 'Copied') {
+    async function writeLeakerClipboardText(value) {
       const text = String(value || '').trim();
-      if (!text) return;
+      if (!text) return false;
       try {
         await navigator.clipboard.writeText(text);
       } catch {
@@ -7659,46 +8396,593 @@
           input.remove();
         }
       }
+      return true;
+    }
+
+    async function copyLeakerText(value, label = 'Copied') {
+      if (!await writeLeakerClipboardText(value)) return;
       showToast(label, 'ok');
       playNotifySound();
+    }
+
+    function setLeakerFormControlValue(control, value, frameWindow = window) {
+      if (!control) return false;
+      const cleanValue = String(value || '').trim();
+      try {
+        control.focus({ preventScroll: false });
+      } catch {
+        try { control.focus(); } catch {}
+      }
+      try {
+        const proto = control instanceof frameWindow.HTMLTextAreaElement
+          ? frameWindow.HTMLTextAreaElement.prototype
+          : frameWindow.HTMLInputElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (setter) {
+          setter.call(control, cleanValue);
+        } else {
+          control.value = cleanValue;
+        }
+      } catch {
+        control.value = cleanValue;
+      }
+      for (const type of ['input', 'change']) {
+        control.dispatchEvent(new frameWindow.Event(type, { bubbles: true, composed: true }));
+      }
+      return true;
+    }
+
+    function getLabelTextForControl(doc, control) {
+      const labels = [];
+      try {
+        if (control.id) {
+          const explicit = doc.querySelector(`label[for="${CSS.escape(control.id)}"]`);
+          if (explicit) labels.push(explicit.textContent || '');
+        }
+      } catch {}
+      try {
+        if (control.labels) {
+          for (const label of control.labels) labels.push(label.textContent || '');
+        }
+      } catch {}
+      return labels.join(' ');
+    }
+
+    function scoreCreatorSocialUrlControl(doc, control, frameWindow = window) {
+      if (!control || control.disabled || control.readOnly) return -1;
+      const tag = String(control.tagName || '').toLowerCase();
+      const type = String(control.getAttribute('type') || '').toLowerCase();
+      if (tag === 'input' && ['hidden', 'password', 'file', 'checkbox', 'radio', 'submit', 'button'].includes(type)) return -1;
+      try {
+        const style = frameWindow.getComputedStyle(control);
+        if (style.display === 'none' || style.visibility === 'hidden') return -1;
+      } catch {}
+
+      const attrs = [
+        control.id,
+        control.name,
+        control.placeholder,
+        control.getAttribute('aria-label'),
+        control.getAttribute('title'),
+        control.getAttribute('data-field'),
+        control.getAttribute('data-name')
+      ].join(' ').toLowerCase();
+      const labelText = getLabelTextForControl(doc, control).toLowerCase();
+      const context = String(control.closest('label, fieldset, form, div, section')?.textContent || '').toLowerCase().slice(0, 500);
+      const text = `${attrs} ${labelText} ${context}`;
+
+      let score = 0;
+      if (text.includes('creator social url')) score += 12;
+      if (text.includes('creator') && text.includes('social')) score += 8;
+      if (text.includes('social') && text.includes('url')) score += 7;
+      if (text.includes('tiktok or youtube url')) score += 10;
+      if (text.includes('tiktok') && text.includes('youtube')) score += 5;
+      if (attrs.includes('social') || attrs.includes('creator')) score += 2;
+      if (type === 'url') score += 2;
+      return score;
+    }
+
+    function findCreatorSocialUrlControlInDocument(doc, frameWindow = window) {
+      if (!doc) return null;
+      const controls = Array.from(doc.querySelectorAll('input, textarea'));
+      let best = null;
+      let bestScore = 0;
+      for (const control of controls) {
+        const score = scoreCreatorSocialUrlControl(doc, control, frameWindow);
+        if (score > bestScore) {
+          best = control;
+          bestScore = score;
+        }
+      }
+      return bestScore >= 7 ? best : null;
+    }
+
+    function fillCreatorSocialUrlInLeakerUpload(url) {
+      const cleanUrl = String(url || '').trim();
+      if (!cleanUrl) return false;
+      for (const frame of [els.leakerUploadFrame, els.leakerLoginFrame, els.leakerCloudFrame]) {
+        try {
+          const doc = frame?.contentDocument;
+          const frameWindow = frame?.contentWindow || window;
+          const control = findCreatorSocialUrlControlInDocument(doc, frameWindow);
+          if (!control) continue;
+          setLeakerFormControlValue(control, cleanUrl, frameWindow);
+          try { control.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch {}
+          return true;
+        } catch {}
+      }
+      return false;
+    }
+
+    async function pasteCreatorSocialUrl(url) {
+      const cleanUrl = String(url || '').trim();
+      if (!cleanUrl) return;
+      await writeLeakerClipboardText(cleanUrl);
+      if (fillCreatorSocialUrlInLeakerUpload(cleanUrl)) {
+        showToast('Profile link copied and added to Creator Social URL.', 'ok');
+        playNotifySound();
+        return;
+      }
+      showToast('Profile link copied. Open the upload form, then try Paste URL again.', 'err');
+    }
+
+    function normalizeLeakerUploadPresenceText(value, maxLength = 72) {
+      return String(value || '')
+        .replace(/\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, maxLength);
+    }
+
+    function getVisibleLeakerControl(frameWindow, control) {
+      if (!control || control.disabled) return false;
+      const tag = String(control.tagName || '').toLowerCase();
+      const type = String(control.getAttribute?.('type') || '').toLowerCase();
+      if (tag === 'input' && ['hidden', 'password', 'file', 'checkbox', 'radio', 'submit', 'button'].includes(type)) {
+        return false;
+      }
+      try {
+        const style = frameWindow.getComputedStyle(control);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        return true;
+      } catch {
+        return true;
+      }
+    }
+
+    function getLeakerUploadControlContext(doc, control) {
+      const parts = [];
+      const explicitLabel = normalizeLeakerUploadPresenceText(getLabelTextForControl(doc, control), 90);
+      if (explicitLabel) parts.push(explicitLabel);
+      try {
+        const labelledBy = String(control.getAttribute('aria-labelledby') || '').trim();
+        if (labelledBy) {
+          for (const id of labelledBy.split(/\s+/)) {
+            const labelNode = doc.getElementById(id);
+            const text = normalizeLeakerUploadPresenceText(labelNode?.textContent || '', 90);
+            if (text) parts.push(text);
+          }
+        }
+      } catch {}
+      const attrs = [
+        control.getAttribute?.('aria-label'),
+        control.getAttribute?.('title'),
+        control.getAttribute?.('placeholder'),
+        control.getAttribute?.('name'),
+        control.getAttribute?.('id'),
+        control.getAttribute?.('data-field'),
+        control.getAttribute?.('data-name')
+      ].filter(Boolean).join(' ');
+      if (attrs) parts.push(attrs);
+
+      let node = control.parentElement;
+      for (let depth = 0; node && depth < 4; depth += 1, node = node.parentElement) {
+        const text = String(node.innerText || node.textContent || '');
+        const lines = text
+          .split(/\n+/)
+          .map(line => normalizeLeakerUploadPresenceText(line, 90))
+          .filter(Boolean)
+          .filter(line => line !== normalizeLeakerUploadPresenceText(control.value, 90));
+        parts.push(...lines.slice(0, 4));
+      }
+      return parts.join(' ');
+    }
+
+    function getLeakerUploadKnownFieldLabel(text) {
+      const source = String(text || '').toLowerCase();
+      const knownFields = [
+        ['creator social url', 'Creator Social URL'],
+        ['creator name', 'Creator Name'],
+        ['resource name', 'Resource Name'],
+        ['product link', 'Product Link'],
+        ['thumbnail url', 'Thumbnail URL'],
+        ['category', 'Category'],
+        ['description', 'Description'],
+        ['price', 'Price'],
+        ['tags', 'Tags'],
+        ['file', 'File'],
+        ['asset', 'Asset'],
+        ['storage', 'Storage']
+      ];
+      for (const [needle, label] of knownFields) {
+        if (source.includes(needle)) return label;
+      }
+      return '';
+    }
+
+    function getLeakerUploadNearbyLabel(doc, control) {
+      try {
+        const controlRect = control.getBoundingClientRect();
+        let best = '';
+        let bestDistance = Number.POSITIVE_INFINITY;
+        const candidates = Array.from(doc.querySelectorAll('label, [class*="label"], [class*="title"], span, strong, p'));
+        for (const element of candidates) {
+          if (!element || element.contains(control)) continue;
+          const text = normalizeLeakerUploadPresenceText(element.innerText || element.textContent || '', 70);
+          if (!text || text.length > 70) continue;
+          const rect = element.getBoundingClientRect();
+          if (rect.width <= 2 || rect.height <= 2) continue;
+          const isAbove = rect.bottom <= controlRect.top + 10;
+          const overlaps = rect.right >= controlRect.left - 24 && rect.left <= controlRect.right + 24;
+          if (!isAbove || !overlaps) continue;
+          const distance = Math.abs(controlRect.top - rect.bottom) + Math.abs(controlRect.left - rect.left) * 0.1;
+          if (distance < bestDistance) {
+            best = text;
+            bestDistance = distance;
+          }
+        }
+        return best;
+      } catch {
+        return '';
+      }
+    }
+
+    function getLeakerUploadFieldLabel(doc, control) {
+      if (!doc || !control) return '';
+      const explicitLabel = normalizeLeakerUploadPresenceText(getLabelTextForControl(doc, control), 70);
+      const explicitKnown = getLeakerUploadKnownFieldLabel(explicitLabel);
+      if (explicitKnown) return explicitKnown;
+      if (explicitLabel) return explicitLabel;
+
+      const nearbyLabel = getLeakerUploadNearbyLabel(doc, control);
+      const nearbyKnown = getLeakerUploadKnownFieldLabel(nearbyLabel);
+      if (nearbyKnown) return nearbyKnown;
+      if (nearbyLabel) return nearbyLabel;
+
+      const valueText = normalizeLeakerUploadPresenceText(control.value, 90);
+      const placeholderText = normalizeLeakerUploadPresenceText(control.getAttribute?.('placeholder') || '', 90);
+      const rawContext = getLeakerUploadControlContext(doc, control);
+      const knownLabel = getLeakerUploadKnownFieldLabel(rawContext);
+      if (knownLabel) return knownLabel;
+      const lines = rawContext
+        .split(/\s{2,}|\n+/)
+        .map(line => normalizeLeakerUploadPresenceText(line, 56))
+        .filter(Boolean);
+      const blacklist = /continue|storage|dashboard|preview|free|uploaded by|select$/i;
+      const preferred = lines.find(line => (
+        line &&
+        line !== valueText &&
+        line !== placeholderText &&
+        !blacklist.test(line) &&
+        /name|link|url|thumbnail|category|description|price|file|asset|storage|tag|title|resource/i.test(line)
+      ));
+      if (preferred) return preferred;
+      const fallback = normalizeLeakerUploadPresenceText(
+        getLabelTextForControl(doc, control) ||
+        control.getAttribute?.('aria-label') ||
+        control.getAttribute?.('placeholder') ||
+        control.getAttribute?.('name') ||
+        control.getAttribute?.('id') ||
+        'Field',
+        56
+      );
+      return fallback && fallback !== valueText ? fallback : 'Field';
+    }
+
+    function scoreLeakerCreatorNameControl(doc, control, frameWindow = window) {
+      if (!getVisibleLeakerControl(frameWindow, control)) return -1;
+      const fieldLabel = getLeakerUploadFieldLabel(doc, control).toLowerCase();
+      const context = getLeakerUploadControlContext(doc, control).toLowerCase();
+      let score = 0;
+      if (fieldLabel === 'creator name') score += 28;
+      if (fieldLabel.includes('creator social url')) score -= 24;
+      if (context.includes('creator name')) score += 18;
+      if (context.includes('creator') && context.includes('name')) score += 12;
+      if (context.includes('e.g. n4vy.fx') || context.includes('n4vy.fx')) score += 8;
+      if (context.includes('resource name') || context.includes('product link') || context.includes('thumbnail')) score -= 8;
+      if (context.includes('social') || context.includes('url') || context.includes('link')) score -= 6;
+      return score;
+    }
+
+    function findLeakerCreatorNameControl(doc, frameWindow = window) {
+      if (!doc) return null;
+      let best = null;
+      let bestScore = 0;
+      for (const control of doc.querySelectorAll('input, textarea')) {
+        const score = scoreLeakerCreatorNameControl(doc, control, frameWindow);
+        if (score > bestScore) {
+          best = control;
+          bestScore = score;
+        }
+      }
+      return bestScore >= 10 ? best : null;
+    }
+
+    function getLeakerUploadActiveControl(doc, frameWindow = window) {
+      const active = doc?.activeElement;
+      if (!active) return null;
+      const selector = 'input, textarea, select, [contenteditable="true"], [role="textbox"]';
+      const control = active.matches?.(selector) ? active : active.closest?.(selector);
+      return getVisibleLeakerControl(frameWindow, control) ? control : null;
+    }
+
+    function parseLeakerUploadStepText(value) {
+      const lines = String(value || '')
+        .split(/\n+/)
+        .map(line => normalizeLeakerUploadPresenceText(line, 48))
+        .filter(Boolean);
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        const direct = line.match(/^step\s*(\d+)\s*(.*)$/i);
+        if (direct) {
+          const title = normalizeLeakerUploadPresenceText(direct[2] || lines[index + 1] || '', 40);
+          return title ? `Step ${direct[1]}: ${title}` : `Step ${direct[1]}`;
+        }
+        const match = line.match(/^step\s*(\d+)/i) || line.match(/\bstep\s*(\d+)\b/i);
+        if (!match) continue;
+        const number = match[1];
+        const afterStep = normalizeLeakerUploadPresenceText(line.replace(/.*?\bstep\s*\d+\b/i, ''), 40);
+        const title = afterStep || lines[index + 1] || '';
+        return title ? `Step ${number}: ${title}` : `Step ${number}`;
+      }
+      const compact = lines.join(' ');
+      const compactMatch = compact.match(/\bstep\s*(\d+)\s+([A-Za-z& ]{3,42})/i);
+      if (compactMatch) {
+        return `Step ${compactMatch[1]}: ${normalizeLeakerUploadPresenceText(compactMatch[2], 40)}`;
+      }
+      return '';
+    }
+
+    function inferLeakerUploadStepFromField(fieldLabel) {
+      const field = String(fieldLabel || '').toLowerCase();
+      if (/asset|storage|file|download|folder|cloud/.test(field)) return 'Step 2: Asset & Storage';
+      if (/review|publish|confirm|final/.test(field)) return 'Step 3: Final Review';
+      if (/resource|product|thumbnail|creator|category|description|price|tag|title|name|url|link/.test(field)) {
+        return 'Step 1: Resource Details';
+      }
+      return 'Upload Dashboard';
+    }
+
+    function getLeakerUploadStepLabel(doc, activeFieldLabel = '') {
+      if (!doc) return inferLeakerUploadStepFromField(activeFieldLabel);
+      const selectors = [
+        '[aria-current="step"]',
+        '[aria-current="page"]',
+        '[aria-selected="true"]',
+        '[data-state="active"]',
+        '[data-active="true"]',
+        '.active',
+        '.is-active',
+        '[class*="active"]',
+        '[role="tab"]'
+      ].join(',');
+      try {
+        for (const element of Array.from(doc.querySelectorAll(selectors)).slice(0, 80)) {
+          const text = String(element.innerText || element.textContent || '');
+          const step = parseLeakerUploadStepText(text);
+          if (step) return step;
+        }
+      } catch {}
+      return inferLeakerUploadStepFromField(activeFieldLabel);
+    }
+
+    function getLeakerUploadPresenceSnapshot() {
+      try {
+        const frame = els.leakerUploadFrame;
+        const doc = frame?.contentDocument;
+        const frameWindow = frame?.contentWindow || window;
+        if (!doc || !doc.body) return null;
+        const activeControl = getLeakerUploadActiveControl(doc, frameWindow);
+        let activeField = activeControl ? getLeakerUploadFieldLabel(doc, activeControl) : '';
+        if (activeField) {
+          leakerUploadLastFieldLabel = activeField;
+          leakerUploadLastFieldAt = Date.now();
+        } else if (leakerUploadLastFieldLabel && Date.now() - leakerUploadLastFieldAt < 15000) {
+          activeField = leakerUploadLastFieldLabel;
+        }
+        const creatorControl = findLeakerCreatorNameControl(doc, frameWindow);
+        const creatorName = normalizeLeakerUploadPresenceText(creatorControl?.value || '', 64);
+        const step = getLeakerUploadStepLabel(doc, activeField);
+        return {
+          creatorName,
+          step,
+          activeField
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    function applyLeakerUploadPresence(force = false) {
+      if (leakerModePhase !== 'active') return;
+      const snapshot = getLeakerUploadPresenceSnapshot();
+      if (!snapshot) return;
+      const details = snapshot.creatorName ? `Leaking ${snapshot.creatorName}` : 'Preparing leak';
+      const stateParts = [
+        snapshot.step || 'Upload Dashboard',
+        snapshot.activeField ? `Filling ${snapshot.activeField}` : ''
+      ].filter(Boolean);
+      const state = normalizeLeakerUploadPresenceText(stateParts.join(' - '), 120) || 'Upload dashboard';
+      const key = `${details}|${state}`;
+      const now = Date.now();
+      if (!force && now - leakerUploadPresenceLastAt < 1200) {
+        scheduleLeakerUploadPresenceUpdate(1240 - (now - leakerUploadPresenceLastAt));
+        return;
+      }
+      if (!force && key === leakerUploadPresenceLastKey && now - leakerUploadPresenceLastAt < 1400) return;
+      leakerUploadPresenceLastKey = key;
+      leakerUploadPresenceLastAt = now;
+      updateDiscordPresence(details, state, { force, leakerUpload: true });
+    }
+
+    function scheduleLeakerUploadPresenceUpdate(delay = 220, force = false) {
+      if (leakerUploadPresenceTimer) clearTimeout(leakerUploadPresenceTimer);
+      leakerUploadPresenceTimer = setTimeout(() => {
+        leakerUploadPresenceTimer = null;
+        applyLeakerUploadPresence(force);
+      }, Math.max(0, delay));
+    }
+
+    function cleanupLeakerUploadPresenceTracking() {
+      if (leakerUploadPresenceTimer) clearTimeout(leakerUploadPresenceTimer);
+      leakerUploadPresenceTimer = null;
+      if (leakerUploadPresenceObserver) {
+        try { leakerUploadPresenceObserver.disconnect(); } catch {}
+      }
+      leakerUploadPresenceObserver = null;
+      for (const cleanup of leakerUploadPresenceCleanup) {
+        try { cleanup(); } catch {}
+      }
+      leakerUploadPresenceCleanup = [];
+      leakerUploadLastFieldLabel = '';
+      leakerUploadLastFieldAt = 0;
+    }
+
+    function installLeakerUploadPresenceTracking(frame) {
+      cleanupLeakerUploadPresenceTracking();
+      if (!frame || leakerModePhase !== 'active') return false;
+      try {
+        const doc = frame.contentDocument;
+        const frameWindow = frame.contentWindow || window;
+        if (!doc || !doc.documentElement) return false;
+        const handleActivity = event => {
+          const selector = 'input, textarea, select, [contenteditable="true"], [role="textbox"]';
+          const control = event?.target?.matches?.(selector)
+            ? event.target
+            : event?.target?.closest?.(selector);
+          if (control && getVisibleLeakerControl(frameWindow, control)) {
+            const label = getLeakerUploadFieldLabel(doc, control);
+            if (label) {
+              leakerUploadLastFieldLabel = label;
+              leakerUploadLastFieldAt = Date.now();
+            }
+          }
+          scheduleLeakerUploadPresenceUpdate(event?.type === 'input' ? 360 : 180);
+        };
+        for (const type of ['focusin', 'input', 'change', 'keyup', 'click']) {
+          doc.addEventListener(type, handleActivity, true);
+          leakerUploadPresenceCleanup.push(() => doc.removeEventListener(type, handleActivity, true));
+        }
+        const PresenceMutationObserver = frameWindow.MutationObserver || MutationObserver;
+        leakerUploadPresenceObserver = new PresenceMutationObserver(() => scheduleLeakerUploadPresenceUpdate(420));
+        leakerUploadPresenceObserver.observe(doc.documentElement, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class', 'aria-current', 'aria-selected', 'data-state', 'data-active', 'hidden', 'style']
+        });
+        scheduleLeakerUploadPresenceUpdate(180, true);
+        return true;
+      } catch {
+        cleanupLeakerUploadPresenceTracking();
+        return false;
+      }
     }
 
     function setLeakerLinksBusy(active, message = '') {
       leakerLinksBusy = Boolean(active);
       if (els.leakerLinksSearchBtn) {
-        els.leakerLinksSearchBtn.disabled = leakerLinksBusy;
-        els.leakerLinksSearchBtn.textContent = leakerLinksBusy ? 'Searching...' : 'Search';
+        els.leakerLinksSearchBtn.disabled = false;
+        els.leakerLinksSearchBtn.setAttribute('aria-busy', leakerLinksBusy ? 'true' : 'false');
+        els.leakerLinksSearchBtn.textContent = leakerLinksBusy ? 'Searching' : 'Search';
       }
       if (els.leakerLinksSearchInput) {
-        els.leakerLinksSearchInput.disabled = leakerLinksBusy;
+        els.leakerLinksSearchInput.setAttribute('aria-busy', leakerLinksBusy ? 'true' : 'false');
       }
       if (message && els.leakerLinksStatus) {
         els.leakerLinksStatus.textContent = message;
       }
     }
 
+    function setLeakerLinkMenuOpen(open) {
+      leakerLinkMenuOpen = Boolean(open);
+      els.leakerLinkMenu?.classList.toggle('is-open', leakerLinkMenuOpen);
+      els.leakerLinkMenuBtn?.setAttribute('aria-expanded', leakerLinkMenuOpen ? 'true' : 'false');
+      els.leakerLinkMenuStrip?.setAttribute('aria-hidden', leakerLinkMenuOpen ? 'false' : 'true');
+    }
+
+    function toggleLeakerLinkMenu() {
+      setLeakerLinkMenuOpen(!leakerLinkMenuOpen);
+    }
+
+    function getLeakerLinksConfig(platform = leakerLinksPlatform) {
+      return LEAKER_LINKS_PLATFORMS[platform] || LEAKER_LINKS_PLATFORMS.tiktok;
+    }
+
+    function getLeakerProfileIdentity(profile = {}) {
+      return String(profile.url || profile.username || profile.handle || profile.id || '').trim();
+    }
+
+    function setLeakerLinksPlatform(platform = 'tiktok', reset = false) {
+      const config = getLeakerLinksConfig(platform);
+      const changed = leakerLinksPlatform !== config.key;
+      leakerLinksPlatform = config.key;
+      if (els.leakerLinksOverlay) {
+        els.leakerLinksOverlay.classList.toggle('is-tiktok', config.key === 'tiktok');
+        els.leakerLinksOverlay.classList.toggle('is-youtube', config.key === 'youtube');
+      }
+      if (els.leakerLinksTitle) els.leakerLinksTitle.textContent = config.title;
+      if (els.leakerLinksSearchInput) els.leakerLinksSearchInput.placeholder = config.placeholder;
+      if (reset || changed) {
+        abortLeakerLinksRequests();
+        leakerLinksSelectedUsername = '';
+        leakerLinksResultProfiles = new Map();
+        if (els.leakerLinksSearchInput) els.leakerLinksSearchInput.value = '';
+        if (els.leakerLinksResults) els.leakerLinksResults.innerHTML = `<div class="leaker-links-empty">${escapeHtml(config.emptySearch)}</div>`;
+        if (els.leakerLinksDetail) els.leakerLinksDetail.innerHTML = `<div class="leaker-links-empty">${escapeHtml(config.emptySelect)}</div>`;
+      }
+      setLeakerLinksBusy(false, 'Ready.');
+    }
+
+    function isAbortError(error) {
+      return error?.name === 'AbortError';
+    }
+
+    function abortLeakerLinksRequests() {
+      if (leakerLinksSearchController) {
+        leakerLinksSearchController.abort();
+        leakerLinksSearchController = null;
+      }
+      if (leakerLinksProfileController) {
+        leakerLinksProfileController.abort();
+        leakerLinksProfileController = null;
+      }
+      leakerLinksSearchToken += 1;
+      leakerLinksProfileToken += 1;
+    }
+
     function renderLeakerLinksSkeleton(target = els.leakerLinksResults, count = 3) {
       if (!target) return;
       target.innerHTML = Array.from({ length: count })
-        .map(() => '<div class="files-resource-skeleton" aria-hidden="true"></div>')
+        .map(() => '<div class="leaker-links-skeleton" aria-hidden="true"></div>')
         .join('');
     }
 
     function renderLeakerAccountCard(profile = {}) {
+      const config = getLeakerLinksConfig();
       const username = String(profile.username || '').trim();
-      const nickname = String(profile.nickname || username || 'TikTok user');
+      const nickname = String(profile.nickname || username || config.profileFallback);
       const avatar = String(profile.avatarUrl || '').trim() || makeFilesAvatarDataUri(nickname);
-      const stats = [
-        `${formatTikTokCount(profile.followerCount)} followers`,
-        `${formatTikTokCount(profile.videoCount)} videos`
-      ].join(' - ');
-      const selectedClass = username && username === leakerLinksSelectedUsername ? ' is-selected' : '';
+      const stats = config.accountStats(profile).join(' / ');
+      const verifiedBadge = profile.verified ? '<span class="leaker-verified">Verified</span>' : '';
+      const identity = getLeakerProfileIdentity(profile) || username;
+      const selectedClass = identity && identity === leakerLinksSelectedUsername ? ' is-selected' : '';
       return `
-        <button class="leaker-account-card${selectedClass}" type="button" data-tiktok-username="${escapeHtml(username)}">
+        <button class="leaker-account-card${selectedClass}" type="button" data-social-identity="${escapeHtml(identity)}">
           <img class="leaker-account-avatar" src="${escapeHtml(avatar)}" alt="">
           <span class="leaker-account-main">
-            <span class="leaker-account-name">${escapeHtml(nickname)}${profile.verified ? ' ✓' : ''}</span>
-            <span class="leaker-account-meta">@${escapeHtml(username || 'username')}</span>
+            <span class="leaker-account-name">${escapeHtml(nickname)}${verifiedBadge}</span>
+            <span class="leaker-account-meta">${escapeHtml(config.displayHandle(profile, username))}</span>
             <span class="leaker-account-meta">${escapeHtml(stats)}</span>
           </span>
         </button>
@@ -7706,7 +8990,8 @@
     }
 
     function renderLeakerVideoCard(video = {}) {
-      const title = String(video.title || video.description || 'TikTok video');
+      const config = getLeakerLinksConfig();
+      const title = String(video.title || video.description || config.videoFallback);
       const url = String(video.url || '').trim();
       const cover = String(video.coverUrl || video.dynamicCoverUrl || '').trim();
       const duration = formatTikTokDuration(video.duration, video.durationText);
@@ -7714,7 +8999,7 @@
         `${formatTikTokCount(video.viewCount)} views`,
         `${formatTikTokCount(video.likeCount)} likes`,
         duration
-      ].filter(Boolean).join(' - ');
+      ].filter(Boolean).join(' / ');
       const thumbHtml = cover
         ? `<img src="${escapeHtml(cover)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">`
         : '';
@@ -7737,17 +9022,14 @@
     }
 
     function renderLeakerProfileDetail(profile = {}, payload = {}) {
+      const config = getLeakerLinksConfig();
       const username = String(profile.username || '').trim();
-      const nickname = String(profile.nickname || username || 'TikTok user');
-      const profileUrl = String(profile.url || (username ? `https://www.tiktok.com/@${username}` : '')).trim();
+      const nickname = String(profile.nickname || username || config.profileFallback);
+      const profileUrl = config.profileUrl(profile, username);
       const avatar = String(profile.avatarUrl || '').trim() || makeFilesAvatarDataUri(nickname);
       const videos = Array.isArray(profile.videos) ? profile.videos : [];
-      const stats = [
-        `${formatTikTokCount(profile.followerCount)} followers`,
-        `${formatTikTokCount(profile.heartCount)} likes`,
-        `${formatTikTokCount(profile.videoCount)} videos`,
-        `${formatTikTokCount(profile.followingCount)} following`
-      ];
+      const stats = config.detailStats(profile);
+      const verifiedBadge = profile.verified ? '<span class="leaker-verified">Verified</span>' : '';
       const videoHtml = videos.length
         ? `<div class="leaker-videos-grid">${videos.map(renderLeakerVideoCard).join('')}</div>`
         : payload.partial
@@ -7759,8 +9041,8 @@
           <div class="leaker-profile-top">
             <img class="leaker-profile-avatar" src="${escapeHtml(avatar)}" alt="">
             <div class="leaker-profile-copy">
-              <div class="leaker-profile-name">${escapeHtml(nickname)}${profile.verified ? ' ✓' : ''}</div>
-              <div class="leaker-profile-meta">@${escapeHtml(username || 'username')}</div>
+              <div class="leaker-profile-name">${escapeHtml(nickname)}${verifiedBadge}</div>
+              <div class="leaker-profile-meta">${escapeHtml(config.displayHandle(profile, username))}</div>
               <div class="leaker-profile-stats">
                 ${stats.map(item => `<span class="files-resource-pill">${escapeHtml(item)}</span>`).join('')}
               </div>
@@ -7768,9 +9050,10 @@
           </div>
           ${profile.signature ? `<p class="leaker-profile-bio">${escapeHtml(profile.signature)}</p>` : ''}
           <div class="leaker-profile-actions">
-            ${profileUrl ? `<button class="primary-action" type="button" data-copy-value="${escapeHtml(profileUrl)}" data-copy-label="Profile link copied.">Copy Profile Link</button>` : ''}
-            ${username ? `<button class="chip-action" type="button" data-copy-value="@${escapeHtml(username)}" data-copy-label="Username copied.">Copy @username</button>` : ''}
-            ${profileUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(profileUrl)}">Open Profile</button>` : ''}
+            ${profileUrl ? `<button class="primary-action" type="button" data-fill-creator-social-url="${escapeHtml(profileUrl)}">Paste URL</button>` : ''}
+            ${profileUrl ? `<button class="primary-action" type="button" data-copy-value="${escapeHtml(profileUrl)}" data-copy-label="Profile link copied.">Copy link</button>` : ''}
+            ${username ? `<button class="chip-action" type="button" data-copy-value="@${escapeHtml(username)}" data-copy-label="Username copied.">Copy @</button>` : ''}
+            ${profileUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(profileUrl)}">Open</button>` : ''}
           </div>
         </section>
         ${videoHtml}
@@ -7783,66 +9066,76 @@
       els.leakerLinksStatus.textContent = payload.partial
         ? `${nickname} loaded. Details are still loading.`
         : `${nickname} loaded at ${updatedText}.`;
-      if (els.leakerLinksSubtitle) {
-        els.leakerLinksSubtitle.textContent = profileUrl || 'HLX profile lookup';
-      }
     }
 
     function renderLeakerSearchResults(payload = {}) {
+      const config = getLeakerLinksConfig();
       const results = Array.isArray(payload.results) ? payload.results : [];
       leakerLinksResultProfiles = new Map();
       if (!results.length) {
-        els.leakerLinksResults.innerHTML = '<div class="leaker-links-empty">No account was found.</div>';
-        els.leakerLinksDetail.innerHTML = '<div class="leaker-links-empty">Try an exact TikTok username.</div>';
-        if (els.leakerLinksSubtitle) els.leakerLinksSubtitle.textContent = 'No profile selected';
+        els.leakerLinksResults.innerHTML = payload.partial
+          ? '<div class="leaker-links-empty">No quick result was found.</div>'
+          : `<div class="leaker-links-empty">No ${config.key === 'youtube' ? 'channel' : 'account'} was found.</div>`;
+        els.leakerLinksDetail.innerHTML = `<div class="leaker-links-empty">${escapeHtml(config.exactHint)}</div>`;
         return;
       }
       for (const profile of results) {
-        const username = String(profile?.username || '').trim().toLowerCase();
-        if (username) leakerLinksResultProfiles.set(username, profile);
+        const identity = getLeakerProfileIdentity(profile).toLowerCase();
+        if (identity) leakerLinksResultProfiles.set(identity, profile);
       }
       els.leakerLinksResults.innerHTML = results.map(renderLeakerAccountCard).join('');
-      els.leakerLinksStatus.textContent = `${results.length} account result loaded in ${payload.durationMs || 0}ms.`;
+      const resultLabel = config.key === 'youtube' ? 'channel' : 'account';
+      els.leakerLinksStatus.textContent = payload.partial
+        ? `${results.length} ${resultLabel} result loaded in ${payload.durationMs || 0}ms.`
+        : `${results.length} ${resultLabel} result loaded in ${payload.durationMs || 0}ms.`;
       const firstProfile = results[0] || {};
-      const firstUsername = String(firstProfile.username || '').trim();
-      if (firstUsername) {
-        loadLeakerTikTokProfile(firstUsername, false, firstProfile);
+      const firstIdentity = getLeakerProfileIdentity(firstProfile);
+      if (firstIdentity) {
+        loadLeakerLinksProfile(firstIdentity, false, firstProfile);
       }
     }
 
-    async function loadLeakerTikTokProfile(username, refresh = false, fallbackProfile = null) {
-      const cleanUsername = String(username || '').trim().replace(/^@+/, '');
-      if (!cleanUsername) return;
+    async function loadLeakerLinksProfile(identity, refresh = false, fallbackProfile = null) {
+      const config = getLeakerLinksConfig();
+      const cleanIdentity = String(identity || '').trim();
+      if (!cleanIdentity) return;
       const token = ++leakerLinksProfileToken;
-      leakerLinksSelectedUsername = cleanUsername;
+      if (leakerLinksProfileController) leakerLinksProfileController.abort();
+      leakerLinksProfileController = new AbortController();
+      const requestController = leakerLinksProfileController;
+      leakerLinksSelectedUsername = cleanIdentity;
       if (els.leakerLinksResults) {
         els.leakerLinksResults.querySelectorAll('.leaker-account-card').forEach(card => {
-          card.classList.toggle('is-selected', card.dataset.tiktokUsername === cleanUsername);
+          card.classList.toggle('is-selected', card.dataset.socialIdentity === cleanIdentity);
         });
       }
-      const cachedProfile = fallbackProfile || leakerLinksResultProfiles.get(cleanUsername.toLowerCase()) || null;
+      const cachedProfile = fallbackProfile || leakerLinksResultProfiles.get(cleanIdentity.toLowerCase()) || null;
       if (cachedProfile) {
         renderLeakerProfileDetail(cachedProfile, { updatedAt: Date.now(), partial: true });
       } else {
         renderLeakerLinksSkeleton(els.leakerLinksDetail, 4);
       }
       if (els.leakerLinksStatus) {
-        els.leakerLinksStatus.textContent = `Loading @${cleanUsername} details...`;
+        els.leakerLinksStatus.textContent = `Loading ${config.title.replace(' Links', '').toLowerCase()} details...`;
       }
       try {
         const query = new URLSearchParams({
-          username: cleanUsername,
-          limit: '8',
-          previewLimit: '0',
+          [config.detailParam]: cleanIdentity,
+          limit: '6',
           ...(refresh ? { refresh: '1' } : {})
         });
-        const payload = await filesApi(`/api/hlx/tiktok/profile?${query.toString()}`, { method: 'GET' });
+        if (config.key === 'tiktok') query.set('previewLimit', '0');
+        const payload = await filesApi(`${config.detailPath}?${query.toString()}`, {
+          method: 'GET',
+          signal: requestController.signal
+        });
         if (token !== leakerLinksProfileToken) return;
         renderLeakerProfileDetail(payload.profile || {}, payload);
-        updateDiscordPresence('TikTok lookup', `@${payload.profile?.username || cleanUsername}`, { force: true });
+        updateDiscordPresence(config.presence, config.displayHandle(payload.profile || {}, payload.profile?.username || cleanIdentity), { force: true });
       } catch (error) {
+        if (isAbortError(error)) return;
         if (token !== leakerLinksProfileToken) return;
-        const message = getFriendlyFilesMessage(error.message, 'TikTok profile could not be loaded.');
+        const message = getFriendlyFilesMessage(error.message, config.detailError);
         if (cachedProfile) {
           renderLeakerProfileDetail(cachedProfile, { updatedAt: Date.now() });
           els.leakerLinksStatus.textContent = 'Basic profile is shown. Details can be refreshed later.';
@@ -7851,58 +9144,95 @@
         els.leakerLinksDetail.innerHTML = `<div class="leaker-links-empty">${escapeHtml(message)}</div>`;
         els.leakerLinksStatus.textContent = message;
         showToast(message, 'err');
+      } finally {
+        if (requestController === leakerLinksProfileController) {
+          leakerLinksProfileController = null;
+        }
       }
     }
 
-    async function searchLeakerTikTokLinks(refresh = false) {
+    async function searchLeakerLinks(refresh = false) {
+      const config = getLeakerLinksConfig();
       const queryText = String(els.leakerLinksSearchInput?.value || '').trim();
       if (!queryText) {
-        showToast('Enter a TikTok username.', 'err');
+        showToast(config.emptyInput, 'err');
         return;
       }
+      if (leakerLinksSearchController) leakerLinksSearchController.abort();
+      if (leakerLinksProfileController) {
+        leakerLinksProfileController.abort();
+        leakerLinksProfileController = null;
+      }
+      leakerLinksSearchController = new AbortController();
+      const requestController = leakerLinksSearchController;
       const token = ++leakerLinksSearchToken;
       leakerLinksProfileToken += 1;
       leakerLinksSelectedUsername = '';
       leakerLinksResultProfiles = new Map();
-      renderLeakerLinksSkeleton(els.leakerLinksResults, 6);
+      renderLeakerLinksSkeleton(els.leakerLinksResults, config.key === 'youtube' ? 5 : 4);
       els.leakerLinksDetail.innerHTML = '<div class="leaker-links-empty">Loading account.</div>';
-      if (els.leakerLinksSubtitle) els.leakerLinksSubtitle.textContent = 'Searching TikTok';
-      setLeakerLinksBusy(true, 'Searching similar TikTok accounts...');
+      setLeakerLinksBusy(true, config.searchingStatus);
       try {
         const params = new URLSearchParams({
-          username: queryText,
+          q: queryText,
           limit: '0',
-          resultLimit: '8',
+          resultLimit: '5',
           ...(refresh ? { refresh: '1' } : {})
         });
-        const payload = await filesApi(`/api/hlx/tiktok/search?${params.toString()}`, { method: 'GET' });
+        const payload = await filesApi(`${config.searchPath}?${params.toString()}`, {
+          method: 'GET',
+          signal: requestController.signal
+        });
         if (token !== leakerLinksSearchToken) return;
         renderLeakerSearchResults(payload);
       } catch (error) {
+        if (isAbortError(error)) return;
         if (token !== leakerLinksSearchToken) return;
-        const message = getFriendlyFilesMessage(error.message, 'TikTok search failed.');
+        const message = getFriendlyFilesMessage(error.message, config.searchError);
         els.leakerLinksResults.innerHTML = `<div class="leaker-links-empty">${escapeHtml(message)}</div>`;
         els.leakerLinksDetail.innerHTML = '<div class="leaker-links-empty">No account selected.</div>';
-        if (els.leakerLinksSubtitle) els.leakerLinksSubtitle.textContent = 'Search unavailable';
         els.leakerLinksStatus.textContent = message;
         showToast(message, 'err');
       } finally {
+        if (requestController === leakerLinksSearchController) {
+          leakerLinksSearchController = null;
+        }
         if (token === leakerLinksSearchToken) setLeakerLinksBusy(false);
       }
     }
 
-    function showLeakerLinksOverlay() {
+    function showLeakerLinksOverlay(platform = 'tiktok') {
+      if (leakerLinksOverlayCloseTimer) {
+        clearTimeout(leakerLinksOverlayCloseTimer);
+        leakerLinksOverlayCloseTimer = null;
+      }
+      setLeakerLinkMenuOpen(false);
+      setLeakerLinksPlatform(platform, false);
+      const config = getLeakerLinksConfig();
       els.leakerLinksOverlay.classList.remove('hidden');
+      els.leakerLinksOverlay.classList.remove('is-closing');
       els.leakerLinksOverlay.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => {
+        els.leakerLinksOverlay.classList.add('is-open');
+      });
       setLeakerLinksBusy(false, 'Ready.');
-      updateDiscordPresence('TikTok lookup', 'Ready', { force: true });
-      setTimeout(() => els.leakerLinksSearchInput?.focus(), 80);
+      updateDiscordPresence(config.presence, 'Ready', { force: true });
+      setTimeout(() => els.leakerLinksSearchInput?.focus(), 170);
     }
 
     function hideLeakerLinksOverlay() {
-      if (leakerLinksBusy) return;
-      els.leakerLinksOverlay.classList.add('hidden');
+      if (els.leakerLinksOverlay.classList.contains('hidden') && !els.leakerLinksOverlay.classList.contains('is-open')) return;
+      abortLeakerLinksRequests();
+      setLeakerLinksBusy(false);
+      if (leakerLinksOverlayCloseTimer) clearTimeout(leakerLinksOverlayCloseTimer);
+      els.leakerLinksOverlay.classList.remove('is-open');
+      els.leakerLinksOverlay.classList.add('is-closing');
       els.leakerLinksOverlay.setAttribute('aria-hidden', 'true');
+      leakerLinksOverlayCloseTimer = setTimeout(() => {
+        els.leakerLinksOverlay.classList.add('hidden');
+        els.leakerLinksOverlay.classList.remove('is-closing');
+        leakerLinksOverlayCloseTimer = null;
+      }, 230);
       if (leakerModePhase !== 'idle') {
         updateDiscordPresence('Leaker Mode', 'Upload dashboard', { force: true });
       }
@@ -8166,6 +9496,14 @@
       els.leakerModeView.classList.toggle('hidden', !visible);
       els.leakerModeView.setAttribute('aria-hidden', visible ? 'false' : 'true');
       if (!visible && els.leakerLinksOverlay) {
+        abortLeakerLinksRequests();
+        setLeakerLinksBusy(false);
+        setLeakerLinkMenuOpen(false);
+        if (leakerLinksOverlayCloseTimer) {
+          clearTimeout(leakerLinksOverlayCloseTimer);
+          leakerLinksOverlayCloseTimer = null;
+        }
+        els.leakerLinksOverlay.classList.remove('is-open', 'is-closing');
         els.leakerLinksOverlay.classList.add('hidden');
         els.leakerLinksOverlay.setAttribute('aria-hidden', 'true');
       }
@@ -8221,11 +9559,19 @@
         }
 
         const labels = [
+          'accept',
+          'accept cookies',
           'accept all',
+          'allow cookies',
           'allow all',
+          'allow optional',
           'agree',
           'i agree',
+          'i understand',
           'got it',
+          'ok',
+          'okay',
+          'continue',
           'kabul',
           'kabul et',
           'onayla',
@@ -8249,6 +9595,48 @@
             break;
           }
         }
+        const cookieBannerRe = /we use cookies for essential and optional features|change your preferences in settings|cookie preferences|cookie consent/i;
+        const cookieSelector = [
+          '[role="dialog"]',
+          '[role="alert"]',
+          '[role="status"]',
+          '[class*="cookie"]',
+          '[id*="cookie"]',
+          '[class*="consent"]',
+          '[id*="consent"]',
+          '[class*="banner"]',
+          '[class*="toast"]'
+        ].join(',');
+        for (const element of doc.querySelectorAll(cookieSelector)) {
+          if (!element || element === doc.body || element === doc.documentElement) continue;
+          const text = String(element.innerText || element.textContent || '').trim();
+          if (!cookieBannerRe.test(text) || text.length > 1600) continue;
+          try {
+            element.setAttribute('data-6ure-cookie-dismissed', '1');
+            element.style.setProperty('display', 'none', 'important');
+            element.style.setProperty('visibility', 'hidden', 'important');
+          } catch {}
+        }
+        for (const element of Array.from(doc.body?.querySelectorAll('div, section, aside, footer') || [])) {
+          if (!element || element === doc.body || element === doc.documentElement) continue;
+          const text = String(element.innerText || element.textContent || '').trim();
+          if (!cookieBannerRe.test(text) || text.length > 1200) continue;
+          let looksLikeBanner = false;
+          try {
+            const marker = `${element.id || ''} ${element.className || ''}`;
+            const style = frameWindow.getComputedStyle(element);
+            const zIndex = Number.parseInt(style.zIndex || '0', 10);
+            looksLikeBanner = /cookie|consent|banner|toast|notice|alert|privacy|settings/i.test(marker)
+              || ['fixed', 'sticky'].includes(style.position)
+              || zIndex >= 10;
+          } catch {}
+          if (!looksLikeBanner) continue;
+          try {
+            element.setAttribute('data-6ure-cookie-dismissed', '1');
+            element.style.setProperty('display', 'none', 'important');
+            element.style.setProperty('visibility', 'hidden', 'important');
+          } catch {}
+        }
         return true;
       } catch {
         return false;
@@ -8266,6 +9654,7 @@
     }
 
     function clearLeakerFrames() {
+      cleanupLeakerUploadPresenceTracking();
       for (const frame of [els.leakerLoginFrame, els.leakerCloudFrame, els.leakerUploadFrame]) {
         if (!frame) continue;
         frame.dataset.src = '';
@@ -8303,6 +9692,7 @@
     }
 
     function showLeakerLoginView(forceReload = false) {
+      cleanupLeakerUploadPresenceTracking();
       leakerModePhase = 'authenticating';
       leakerModeAuthToastShown = true;
       setLeakerModeViewVisible(true);
@@ -8345,7 +9735,9 @@
         setLeakerModeButtonState({ phase: leakerModePhase });
         await wait(480);
         showToast('Upload dashboard is active.', 'ok');
-        updateDiscordPresence('Leaker Mode', 'Upload dashboard', { force: true });
+        if (!installLeakerUploadPresenceTracking(els.leakerUploadFrame)) {
+          updateDiscordPresence('Leaker Mode', 'Upload dashboard', { force: true });
+        }
       } catch (error) {
         showToast(getFriendlyFilesMessage(error.message, 'Leaker Mode could not be opened.'), 'err');
       } finally {
@@ -8445,7 +9837,7 @@
       setLeakerModeButtonState({ phase: leakerModePhase });
       if (!silent) {
         showToast('Leaker Mode closed.', 'ok');
-        updateDiscordPresence('Browsing resources', filesUsername || '@username', { force: true });
+        updateDiscordPresence('Browsing resources', filesUsername || 'username', { force: true });
       }
     }
 
@@ -8473,6 +9865,7 @@
 
     function reloadLeakerMode() {
       if (leakerModePhase === 'active') {
+        cleanupLeakerUploadPresenceTracking();
         setLeakerFrame(els.leakerCloudFrame, 'about:blank', true);
         setLeakerFrame(els.leakerUploadFrame, LEAKER_UPLOAD_URL, true);
         return;
@@ -8560,13 +9953,19 @@
       els.filesCloudBtn.addEventListener('click', showFilesCloudOverlay);
       els.filesProtectedBtn.addEventListener('click', showFilesProtectedOverlay);
       els.filesLeakerModeBtn.addEventListener('click', startLeakerMode);
-      els.leakerLinksBtn.addEventListener('click', showLeakerLinksOverlay);
+      els.leakerLinkMenuBtn.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleLeakerLinkMenu();
+      });
+      els.leakerLinksBtn.addEventListener('click', () => showLeakerLinksOverlay('tiktok'));
+      els.youtubeLinksBtn.addEventListener('click', () => showLeakerLinksOverlay('youtube'));
       els.leakerLinksCloseBtn.addEventListener('click', hideLeakerLinksOverlay);
-      els.leakerLinksSearchBtn.addEventListener('click', () => searchLeakerTikTokLinks());
+      els.leakerLinksSearchBtn.addEventListener('click', () => searchLeakerLinks());
       els.leakerLinksSearchInput.addEventListener('keydown', event => {
         if (event.key === 'Enter') {
           event.preventDefault();
-          searchLeakerTikTokLinks();
+          searchLeakerLinks();
         }
       });
       els.leakerLinksOverlay.addEventListener('click', event => {
@@ -8574,11 +9973,17 @@
           hideLeakerLinksOverlay();
           return;
         }
-        const account = event.target.closest('[data-tiktok-username]');
+        const account = event.target.closest('[data-social-identity]');
         if (account) {
           event.preventDefault();
-          const username = account.dataset.tiktokUsername || '';
-          loadLeakerTikTokProfile(username, false, leakerLinksResultProfiles.get(String(username).trim().toLowerCase()));
+          const identity = account.dataset.socialIdentity || '';
+          loadLeakerLinksProfile(identity, false, leakerLinksResultProfiles.get(String(identity).trim().toLowerCase()));
+          return;
+        }
+        const fillSocialButton = event.target.closest('[data-fill-creator-social-url]');
+        if (fillSocialButton) {
+          event.preventDefault();
+          pasteCreatorSocialUrl(fillSocialButton.dataset.fillCreatorSocialUrl || '');
           return;
         }
         const copyButton = event.target.closest('[data-copy-value]');
@@ -8603,13 +10008,19 @@
       });
       els.leakerUploadFrame.addEventListener('load', () => {
         setLeakerFrameLoading(els.leakerUploadFrame, false);
+        acceptLeakerCookiesInFrame(els.leakerUploadFrame);
         installLeakerLoginOAuthBridge(els.leakerUploadFrame);
+        setTimeout(() => acceptLeakerCookiesInFrame(els.leakerUploadFrame), 160);
+        setTimeout(() => acceptLeakerCookiesInFrame(els.leakerUploadFrame), 700);
         if (leakerModePhase === 'active' && leakerFrameHasLoginSignals(els.leakerUploadFrame)) {
           showLeakerLoginView(true);
           return;
         }
         if (leakerModePhase === 'active' && isLeakerFrameDashboard(els.leakerUploadFrame)) {
           setLeakerModeStatus('Upload dashboard is open.');
+          if (!installLeakerUploadPresenceTracking(els.leakerUploadFrame)) {
+            updateDiscordPresence('Leaker Mode', 'Upload dashboard', { force: true });
+          }
         }
       });
       els.filesLogoutBtn.addEventListener('click', logoutFiles);
@@ -8636,6 +10047,7 @@
       });
       els.filesCloudRefreshBtn.addEventListener('click', () => loadFilesCloudPath(filesCloudPath));
       els.filesCloudUpBtn.addEventListener('click', () => loadFilesCloudPath(cloudParentPath(filesCloudPath)));
+      els.filesCloudLogin.addEventListener('submit', submitFilesCloudLogin);
       els.filesCloudList.addEventListener('click', handleFilesCloudListClick);
       els.filesCloudCrumbs.addEventListener('click', handleFilesCloudCrumbsClick);
       els.filesCloudOverlay.addEventListener('click', handleFilesCloudOverlayClick);
@@ -8656,6 +10068,10 @@
         if (!filesProtectedBusy) hideFilesProtectedOverlay();
       });
       els.filesProtectedRefreshBtn.addEventListener('click', loadFilesProtectedList);
+      els.filesProtectedSearchInput.addEventListener('input', () => {
+        filesProtectedSearchQuery = els.filesProtectedSearchInput.value;
+        renderFilesProtectedList();
+      });
       els.filesProtectedOverlay.addEventListener('click', handleFilesProtectedOverlayClick);
       els.filesResourceDetailCloseBtn.addEventListener('click', () => {
         if (!filesResourceDetailBusy) hideFilesResourceDetail();
@@ -8668,22 +10084,31 @@
           hideFilesResourceDetail();
         }
       });
+      document.addEventListener('click', event => {
+        if (!leakerLinkMenuOpen) return;
+        if (event.target.closest('#leakerLinkMenu')) return;
+        setLeakerLinkMenuOpen(false);
+      });
       els.updateMonitorCloseBtn.addEventListener('click', () => {
         updateMonitorDismissed = true;
         setUpdateMonitorVisible(false);
       });
       window.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
+        if (leakerLinkMenuOpen) {
+          setLeakerLinkMenuOpen(false);
+          return;
+        }
+        if (!els.leakerLinksOverlay.classList.contains('hidden')) {
+          hideLeakerLinksOverlay();
+          return;
+        }
         if (leakerModePhase !== 'idle') {
           exitLeakerMode();
           return;
         }
         if (!els.filesDialogOverlay.classList.contains('hidden')) {
           cancelFilesDialog();
-          return;
-        }
-        if (!els.leakerLinksOverlay.classList.contains('hidden')) {
-          hideLeakerLinksOverlay();
           return;
         }
         if (!els.filesResourceDetailOverlay.classList.contains('hidden') && !filesResourceDetailBusy) {
@@ -8710,13 +10135,14 @@
         stopLeakerModePolling();
         stopLeakerOauthPolling();
         stopAppDiscordAuthPolling();
+        abortLeakerLinksRequests();
         if (connectionPollTimer) clearInterval(connectionPollTimer);
       });
     }
 
     async function init() {
       bindEvents();
-      filesUsername = '@username';
+      filesUsername = 'username';
       setFilesAuthState(false, '');
       setFilesProgress(0);
       startOpeningScreen('');
@@ -8726,6 +10152,7 @@
       loadLeakerModeStatus().catch(() => {});
       checkForAppUpdate(true);
       startUpdatePolling();
+      await loadFilesCloudCredentialsState();
       await loadInitialAppAuth();
       await finishOpeningScreen();
     }
