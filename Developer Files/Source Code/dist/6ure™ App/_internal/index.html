@@ -3275,6 +3275,140 @@
       color: #b8faff;
     }
 
+    .update-prompt {
+      position: fixed;
+      inset: 0;
+      z-index: 64;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(82, 247, 255, 0.15), transparent 34%),
+        rgba(3, 4, 10, 0.74);
+      backdrop-filter: blur(12px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 240ms ease;
+    }
+
+    .update-prompt.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .update-prompt-card {
+      width: min(520px, calc(100vw - 34px));
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(82, 247, 255, 0.24);
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(82, 247, 255, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(16, 19, 32, 0.98), rgba(7, 10, 18, 0.98));
+      color: #f7f5ff;
+      box-shadow: 0 28px 86px rgba(0, 0, 0, 0.52), 0 0 44px rgba(82, 247, 255, 0.08);
+      opacity: 0;
+      transform: translateY(16px) scale(0.96);
+      transition: opacity 260ms ease, transform 300ms cubic-bezier(0.2, 0.86, 0.2, 1);
+    }
+
+    .update-prompt.show .update-prompt-card {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .update-prompt-head {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .update-prompt-icon {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(82, 247, 255, 0.28);
+      border-radius: 10px;
+      background: rgba(82, 247, 255, 0.08);
+      color: #b8faff;
+      box-shadow: 0 0 28px rgba(82, 247, 255, 0.12);
+    }
+
+    .update-prompt-icon svg {
+      width: 27px;
+      height: 27px;
+    }
+
+    .update-prompt-copy {
+      min-width: 0;
+      display: grid;
+      gap: 5px;
+    }
+
+    .update-prompt-copy h3 {
+      margin: 0;
+      color: #f7f5ff;
+      font-size: 18px;
+      line-height: 1.18;
+      font-weight: 950;
+      overflow-wrap: anywhere;
+    }
+
+    .update-prompt-copy p,
+    .update-prompt-notes {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .update-prompt-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .update-prompt-meta span {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+      padding: 10px;
+      border: 1px solid rgba(180, 211, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .update-prompt-meta strong {
+      color: #f7f5ff;
+      font-size: 12px;
+      text-transform: none;
+      overflow-wrap: anywhere;
+    }
+
+    .update-prompt-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 9px;
+      flex-wrap: wrap;
+    }
+
+    .update-prompt-actions .primary-action,
+    .update-prompt-actions .chip-action {
+      min-height: 36px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
     .toast.show {
       opacity: 1;
       transform: translate(-50%, 0);
@@ -5139,6 +5273,13 @@
                   <h4>Studio</h4>
                   <label class="files-setting-row">
                     <span class="files-setting-copy">
+                      <span>Auto update checks</span>
+                    </span>
+                    <input id="settingAutoUpdate" class="files-setting-toggle" type="checkbox" data-setting-key="autoUpdateCheck">
+                    <span class="files-setting-switch" aria-hidden="true"></span>
+                  </label>
+                  <label class="files-setting-row">
+                    <span class="files-setting-copy">
                       <span>Sound effects</span>
                     </span>
                     <input id="settingSoundEffects" class="files-setting-toggle" type="checkbox" data-setting-key="soundEffects">
@@ -5367,6 +5508,36 @@
     <div id="updateMonitorLog" class="update-monitor-log"></div>
   </div>
 
+  <div id="updatePrompt" class="update-prompt hidden" aria-hidden="true">
+    <div class="update-prompt-card" role="dialog" aria-modal="true" aria-labelledby="updatePromptTitle">
+      <div class="update-prompt-head">
+        <div class="update-prompt-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M20 12a8 8 0 0 1-14.6 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+            <path d="M4 12A8 8 0 0 1 18.6 7.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
+            <path d="M18.8 3.8v4h-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M5.2 20.2v-4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <div class="update-prompt-copy">
+          <h3 id="updatePromptTitle">Update available</h3>
+          <p id="updatePromptMessage">A newer 6ure App build is ready.</p>
+        </div>
+      </div>
+      <div class="update-prompt-meta">
+        <span>Current<strong id="updatePromptCurrent">-</strong></span>
+        <span>Latest<strong id="updatePromptLatest">-</strong></span>
+        <span>Package<strong id="updatePromptSize">-</strong></span>
+      </div>
+      <p id="updatePromptNotes" class="update-prompt-notes"></p>
+      <div class="update-prompt-actions">
+        <button id="updatePromptLaterBtn" class="chip-action" type="button">Later</button>
+        <button id="updatePromptSkipBtn" class="chip-action" type="button">Skip Version</button>
+        <button id="updatePromptInstallBtn" class="primary-action" type="button">Update</button>
+      </div>
+    </div>
+  </div>
+
   <div id="filesDialogOverlay" class="files-dialog-overlay hidden" aria-hidden="true">
     <div id="filesDialog" class="files-dialog" role="dialog" aria-modal="true" aria-labelledby="filesDialogTitle">
       <div class="files-dialog-icon" aria-hidden="true">
@@ -5460,6 +5631,7 @@
     let discordPresencePollTimer = null;
     let lastDiscordPresenceKey = '';
     let lastDiscordPresenceSentAt = 0;
+    let discordPresenceClearToken = 0;
     let openingStartedAt = Date.now();
     let openingFinished = false;
     let openingSoundCleanup = null;
@@ -5571,6 +5743,7 @@
       'Almost ready to move.'
     ];
     const FILES_SETTINGS_STORAGE_KEY = '6ure.files.settings.v1';
+    const UPDATE_SKIP_STORAGE_KEY = '6ure.files.update.skipVersion';
     const DEFAULT_FILES_SETTINGS = {
       discordPresenceEnabled: true,
       presenceResourceName: true,
@@ -5578,7 +5751,8 @@
       presenceField: true,
       soundEffects: true,
       leakerLaunchSound: true,
-      openingSound: true
+      openingSound: true,
+      autoUpdateCheck: true
     };
     let filesSettings = loadFilesSettings();
 
@@ -5646,6 +5820,7 @@
       settingPresenceResource: $('#settingPresenceResource'),
       settingPresenceStep: $('#settingPresenceStep'),
       settingPresenceField: $('#settingPresenceField'),
+      settingAutoUpdate: $('#settingAutoUpdate'),
       settingSoundEffects: $('#settingSoundEffects'),
       settingLeakerSound: $('#settingLeakerSound'),
       settingOpeningSound: $('#settingOpeningSound'),
@@ -5720,6 +5895,16 @@
       updateMonitorMeta: $('#updateMonitorMeta'),
       updateMonitorLog: $('#updateMonitorLog'),
       updateMonitorCloseBtn: $('#updateMonitorCloseBtn'),
+      updatePrompt: $('#updatePrompt'),
+      updatePromptTitle: $('#updatePromptTitle'),
+      updatePromptMessage: $('#updatePromptMessage'),
+      updatePromptCurrent: $('#updatePromptCurrent'),
+      updatePromptLatest: $('#updatePromptLatest'),
+      updatePromptSize: $('#updatePromptSize'),
+      updatePromptNotes: $('#updatePromptNotes'),
+      updatePromptLaterBtn: $('#updatePromptLaterBtn'),
+      updatePromptSkipBtn: $('#updatePromptSkipBtn'),
+      updatePromptInstallBtn: $('#updatePromptInstallBtn'),
       discordPresenceBadge: $('#discordPresenceBadge'),
       discordPresenceText: $('#discordPresenceText'),
       toast: $('#toast')
@@ -5773,6 +5958,7 @@
         [els.settingPresenceResource, 'presenceResourceName'],
         [els.settingPresenceStep, 'presenceStep'],
         [els.settingPresenceField, 'presenceField'],
+        [els.settingAutoUpdate, 'autoUpdateCheck'],
         [els.settingSoundEffects, 'soundEffects'],
         [els.settingLeakerSound, 'leakerLaunchSound'],
         [els.settingOpeningSound, 'openingSound']
@@ -5783,9 +5969,28 @@
     }
 
     async function clearDiscordPresenceActivity() {
+      const token = ++discordPresenceClearToken;
       try {
         await filesApi('/api/discord-presence/clear', { method: 'POST', body: JSON.stringify({}) });
       } catch {}
+      if (token !== discordPresenceClearToken && getFilesSetting('discordPresenceEnabled')) {
+        restoreDiscordPresenceActivity();
+      }
+      return token;
+    }
+
+    function restoreDiscordPresenceActivity() {
+      discordPresenceClearToken += 1;
+      if (!getFilesSetting('discordPresenceEnabled')) return;
+      if (leakerModePhase === 'active' && leakerUploadPresenceObserver) {
+        scheduleLeakerUploadPresenceUpdate(0, true);
+        return;
+      }
+      if (leakerModePhase === 'active') {
+        updateDiscordPresence('Leaker Mode', 'Upload dashboard', { force: true });
+        return;
+      }
+      updateDiscordPresence('Browsing resources', filesUsername || 'username', { force: true });
     }
 
     function renderDiscordPresenceDisabled() {
@@ -5806,6 +6011,11 @@
         if (options.clearPresence) clearDiscordPresenceActivity();
       } else if (options.refreshPresence) {
         startDiscordPresencePolling();
+        restoreDiscordPresenceActivity();
+      }
+      if (options.refreshUpdatePolling) {
+        if (getFilesSetting('autoUpdateCheck')) startUpdatePolling();
+        else stopUpdatePolling();
       }
     }
 
@@ -5820,6 +6030,16 @@
       if (key === 'discordPresenceEnabled') {
         showToast(filesSettings.discordPresenceEnabled ? 'Discord Presence enabled.' : 'Discord Presence disabled.', 'ok');
       }
+      if (key === 'autoUpdateCheck') {
+        if (filesSettings.autoUpdateCheck) {
+          startUpdatePolling();
+          runStartupUpdateCheck();
+        } else {
+          stopUpdatePolling();
+          hideUpdatePrompt();
+        }
+        showToast(filesSettings.autoUpdateCheck ? 'Auto update checks enabled.' : 'Auto update checks disabled.', 'ok');
+      }
       if (key.startsWith('presence') && leakerModePhase === 'active') {
         scheduleLeakerUploadPresenceUpdate(0, true);
       }
@@ -5828,7 +6048,7 @@
     function resetFilesSettings() {
       filesSettings = { ...DEFAULT_FILES_SETTINGS };
       saveFilesSettings();
-      applyFilesSettings({ refreshPresence: true });
+      applyFilesSettings({ refreshPresence: true, refreshUpdatePolling: true });
       setFilesSettingsStatus('Defaults restored.');
       showToast('Settings reset.', 'ok');
     }
@@ -7338,6 +7558,69 @@
       els.updateMonitor.classList.toggle('hidden', !visible);
     }
 
+    function getSkippedUpdateVersion() {
+      try {
+        return String(window.localStorage?.getItem(UPDATE_SKIP_STORAGE_KEY) || '').trim();
+      } catch {
+        return '';
+      }
+    }
+
+    function setSkippedUpdateVersion(version = '') {
+      try {
+        const cleanVersion = String(version || '').trim();
+        if (cleanVersion) {
+          window.localStorage?.setItem(UPDATE_SKIP_STORAGE_KEY, cleanVersion);
+        } else {
+          window.localStorage?.removeItem(UPDATE_SKIP_STORAGE_KEY);
+        }
+      } catch {}
+    }
+
+    function shouldShowUpdatePrompt(update = {}, force = false) {
+      const version = String(update?.version || '').trim();
+      if (!update?.updateAvailable || !version) return false;
+      if (force) return true;
+      return getSkippedUpdateVersion() !== version;
+    }
+
+    function showUpdatePrompt(result = {}, options = {}) {
+      const latest = result.latest || updateInfo || {};
+      if (!shouldShowUpdatePrompt(latest, Boolean(options.force))) return;
+      const currentVersion = String(result.currentVersion || latest.currentVersion || '').trim();
+      const latestVersion = String(latest.version || '').trim();
+      const sizeBytes = Number(latest.sizeBytes);
+      const notes = String(latest.notes || '').trim();
+      updateInfo = latest;
+      setUpdateButtonState();
+
+      els.updatePromptCurrent.textContent = currentVersion ? `v${currentVersion}` : '-';
+      els.updatePromptLatest.textContent = latestVersion ? `v${latestVersion}` : '-';
+      els.updatePromptSize.textContent = Number.isFinite(sizeBytes) && sizeBytes > 0 ? formatFilesBytes(sizeBytes) : latest.packageType || '-';
+      els.updatePromptTitle.textContent = latestVersion ? `Update v${latestVersion} available` : 'Update available';
+      els.updatePromptMessage.textContent = currentVersion
+        ? `You are running v${currentVersion}. A newer build is ready.`
+        : 'A newer 6ure App build is ready.';
+      els.updatePromptNotes.textContent = notes || 'Install the latest build to keep upload tools and Discord Presence fixes current.';
+      els.updatePrompt.classList.remove('hidden');
+      els.updatePrompt.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => els.updatePrompt.classList.add('show'));
+    }
+
+    function hideUpdatePrompt() {
+      if (!els.updatePrompt || els.updatePrompt.classList.contains('hidden')) return;
+      els.updatePrompt.classList.remove('show');
+      els.updatePrompt.setAttribute('aria-hidden', 'true');
+      setTimeout(() => els.updatePrompt.classList.add('hidden'), 240);
+    }
+
+    function skipCurrentUpdatePrompt() {
+      const version = String(updateInfo?.version || '').trim();
+      if (version) setSkippedUpdateVersion(version);
+      hideUpdatePrompt();
+      showToast(version ? `Skipped v${version}.` : 'Update skipped.', 'ok');
+    }
+
     function updateMonitorPhaseLabel(phase) {
       const value = String(phase || '').toLowerCase();
       if (value === 'check') return 'Checking';
@@ -7477,8 +7760,8 @@
       }
     }
 
-    async function checkForAppUpdate(silent = false) {
-      if (updateBusy) return;
+    async function checkForAppUpdate(silent = false, options = {}) {
+      if (updateBusy) return null;
       updateBusy = true;
       if (!silent) {
         resetUpdateMonitor('Checking for update', 'Loading update manifest...');
@@ -7495,7 +7778,7 @@
         if (!result.configured) {
           if (!silent) showToast('Update channel is not configured yet.', 'err');
           if (!silent) pushUpdateMonitorLine('Update channel is not configured.');
-          return;
+          return result;
         }
         if (result.updateAvailable) {
           const version = updateInfo?.version ? ` v${updateInfo.version}` : '';
@@ -7504,8 +7787,13 @@
             els.updateMonitorMessage.textContent = `Update${version} is available.`;
             pushUpdateMonitorLine(`Update${version} is available.`);
           }
-          showToast(`Update${version} is available.`, 'ok');
-          return;
+          if (!silent) showToast(`Update${version} is available.`, 'ok');
+          showUpdatePrompt(result, { force: !silent || Boolean(options.forcePrompt) });
+          return result;
+        }
+        if (result.latest?.version) {
+          const skipped = getSkippedUpdateVersion();
+          if (skipped && skipped !== String(result.latest.version || '').trim()) setSkippedUpdateVersion('');
         }
         if (!silent) {
           els.updateMonitorProgress.style.width = '100%';
@@ -7513,6 +7801,7 @@
           pushUpdateMonitorLine('You are on the latest version.');
           showToast('You are on the latest version.', 'ok');
         }
+        return result;
       } catch (error) {
         if (!silent) {
           const message = getFriendlyFilesMessage(error.message, 'Update check could not be completed.');
@@ -7521,6 +7810,7 @@
           pushUpdateMonitorLine(message);
           showToast(message, 'err');
         }
+        return null;
       } finally {
         updateBusy = false;
         setUpdateButtonState();
@@ -7536,6 +7826,7 @@
     async function installAppUpdate() {
       if (updateBusy) return;
       updateBusy = true;
+      hideUpdatePrompt();
       resetUpdateMonitor('Installing update', 'Starting update install...');
       updateDiscordPresence('Installing update', '6ure App', { force: true });
       startUpdateStatusPolling();
@@ -7586,9 +7877,15 @@
 
     function startUpdatePolling() {
       stopUpdatePolling();
+      if (!getFilesSetting('autoUpdateCheck')) return;
       updatePollTimer = setInterval(() => {
         checkForAppUpdate(true);
       }, 10 * 60 * 1000);
+    }
+
+    async function runStartupUpdateCheck() {
+      if (!getFilesSetting('autoUpdateCheck')) return;
+      await checkForAppUpdate(true);
     }
 
     function updateFilesAccountCard() {
@@ -10630,6 +10927,7 @@
         els.settingPresenceResource,
         els.settingPresenceStep,
         els.settingPresenceField,
+        els.settingAutoUpdate,
         els.settingSoundEffects,
         els.settingLeakerSound,
         els.settingOpeningSound
@@ -10776,6 +11074,12 @@
         updateMonitorDismissed = true;
         setUpdateMonitorVisible(false);
       });
+      els.updatePromptLaterBtn.addEventListener('click', hideUpdatePrompt);
+      els.updatePromptSkipBtn.addEventListener('click', skipCurrentUpdatePrompt);
+      els.updatePromptInstallBtn.addEventListener('click', installAppUpdate);
+      els.updatePrompt.addEventListener('click', event => {
+        if (event.target === els.updatePrompt) hideUpdatePrompt();
+      });
       window.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
         if (leakerLinkMenuOpen) {
@@ -10784,6 +11088,10 @@
         }
         if (!els.leakerLinksOverlay.classList.contains('hidden')) {
           hideLeakerLinksOverlay();
+          return;
+        }
+        if (!els.updatePrompt.classList.contains('hidden')) {
+          hideUpdatePrompt();
           return;
         }
         if (!els.filesSettingsOverlay.classList.contains('hidden')) {
@@ -10838,11 +11146,11 @@
       startDiscordPresencePolling();
       await loadUpdateStatus();
       loadLeakerModeStatus().catch(() => {});
-      checkForAppUpdate(true);
       startUpdatePolling();
       await loadFilesCloudCredentialsState();
       await loadInitialAppAuth();
       await finishOpeningScreen();
+      runStartupUpdateCheck().catch(() => {});
     }
 
     init();

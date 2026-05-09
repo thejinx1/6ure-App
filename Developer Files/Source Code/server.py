@@ -3836,7 +3836,7 @@ def download_update_package(update_info: dict) -> Path:
         extension = ".msi" if url_path.endswith(".msi") else ".exe"
     else:
         extension = ".zip"
-    package_path = UPDATE_DOWNLOAD_DIR / f"6ure-files-{version}{extension}"
+    package_path = UPDATE_DOWNLOAD_DIR / f"6ure-app-{version}{extension}"
     temp_path = UPDATE_DOWNLOAD_DIR / f"{package_path.name}.tmp"
     downloaded = 0
     declared_size = update_info.get("sizeBytes")
@@ -3933,7 +3933,7 @@ def write_windows_zip_update_script(package_path: Path) -> Path:
 
     UPDATE_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     UPDATE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    script_path = UPDATE_DOWNLOAD_DIR / "apply-6ure-files-update.ps1"
+    script_path = UPDATE_DOWNLOAD_DIR / "apply-6ure-app-update.ps1"
     exe_name = Path(sys.executable).name
     app_dir = APP_ROOT.resolve()
     exe_path = Path(sys.executable).resolve()
@@ -4050,7 +4050,7 @@ def write_windows_installer_update_script(package_path: Path, update_info: dict)
 
     UPDATE_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     UPDATE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    script_path = UPDATE_DOWNLOAD_DIR / "run-6ure-files-installer-update.ps1"
+    script_path = UPDATE_DOWNLOAD_DIR / "run-6ure-app-installer-update.ps1"
     app_dir = APP_ROOT.resolve()
     exe_path = Path(sys.executable).resolve()
     backup_root = UPDATE_BACKUP_DIR.resolve()
