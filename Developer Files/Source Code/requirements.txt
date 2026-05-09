@@ -1,4 +1,5 @@
 pywebview
 pyinstaller
 requests
+cryptography
 pyobjc; sys_platform == "darwin"

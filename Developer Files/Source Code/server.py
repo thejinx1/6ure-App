@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import atexit
+import base64
 import concurrent.futures
+import ctypes
 import http.cookiejar
 import http.cookies
 import html
@@ -28,6 +30,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import requests
+from cryptography.fernet import Fernet, InvalidToken
 
 from discord_presence import DiscordPresenceManager, load_presence_config
 
@@ -40,7 +43,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.4.0"
+DEFAULT_APP_VERSION = "1.4.2"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
@@ -93,6 +96,24 @@ CONFIG_PATH = DATA_ROOT / CONFIG_FILE_NAME
 CONFIG_BACKUP_PATH = DATA_ROOT / CONFIG_BACKUP_FILE_NAME
 CONFIG_TMP_PATH = DATA_ROOT / CONFIG_TMP_FILE_NAME
 PROTECTED_STATIC_NAMES = {CONFIG_PATH.name, CONFIG_BACKUP_PATH.name, CONFIG_TMP_PATH.name}
+APP_SETTINGS_FILE_NAME = os.environ.get("REYLI_APP_SETTINGS_FILE", "app-settings.json")
+APP_SETTINGS_PATH = DATA_ROOT / APP_SETTINGS_FILE_NAME
+APP_SETTINGS_TMP_PATH = DATA_ROOT / f"{APP_SETTINGS_FILE_NAME}.tmp"
+VAULT_FILE_NAME = os.environ.get("REYLI_VAULT_FILE", "6ure-secure-vault.json")
+VAULT_KEY_FILE_NAME = os.environ.get("REYLI_VAULT_KEY_FILE", "6ure-secure-vault.key")
+VAULT_PATH = DATA_ROOT / VAULT_FILE_NAME
+VAULT_KEY_PATH = DATA_ROOT / VAULT_KEY_FILE_NAME
+DEBUG_BUNDLE_DIR = DATA_ROOT / "debug-bundles"
+REPAIR_LOG_PATH = DATA_ROOT / "last-repair.json"
+PROTECTED_STATIC_NAMES.update(
+    {
+        APP_SETTINGS_PATH.name,
+        APP_SETTINGS_TMP_PATH.name,
+        VAULT_PATH.name,
+        VAULT_KEY_PATH.name,
+        REPAIR_LOG_PATH.name,
+    }
+)
 LEAKER_PROXY_COOKIE_PATH = DATA_ROOT / "leaker-proxy-cookies.lwp"
 PROTECTED_STATIC_NAMES.add(LEAKER_PROXY_COOKIE_PATH.name)
 HLX_API_KEY_FILE_NAME = os.environ.get("REYLI_HLX_API_KEY_FILE", "hlx-api-key.txt")
@@ -344,6 +365,263 @@ def read_state_file(path: Path | None) -> dict | None:
         return None
 
 
+DEFAULT_APP_SETTINGS = {
+    "encryptedVault": True,
+    "silentRepairMode": True,
+}
+APP_SETTINGS_LOCK = threading.RLock()
+VAULT_LOCK = threading.RLock()
+
+
+def bool_setting(value, default: bool = True) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on", "enabled"}
+    if isinstance(value, (int, float)):
+        return bool(value)
+    return default
+
+
+def load_app_settings() -> dict:
+    payload = read_state_file(APP_SETTINGS_PATH)
+    settings = dict(DEFAULT_APP_SETTINGS)
+    if isinstance(payload, dict):
+        for key, default in DEFAULT_APP_SETTINGS.items():
+            if key in payload:
+                settings[key] = bool_setting(payload.get(key), default)
+        for key in ("lastRepairAt", "lastRepairActions", "lastRepairSource"):
+            if key in payload:
+                settings[key] = payload[key]
+    return settings
+
+
+def save_app_settings(settings: dict) -> dict:
+    clean = dict(DEFAULT_APP_SETTINGS)
+    if isinstance(settings, dict):
+        for key, default in DEFAULT_APP_SETTINGS.items():
+            if key in settings:
+                clean[key] = bool_setting(settings.get(key), default)
+        for key in ("lastRepairAt", "lastRepairActions", "lastRepairSource"):
+            if key in settings:
+                clean[key] = settings[key]
+    with APP_SETTINGS_LOCK:
+        APP_SETTINGS_TMP_PATH.write_text(json.dumps(clean, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(APP_SETTINGS_TMP_PATH, APP_SETTINGS_PATH)
+    return clean
+
+
+def get_app_setting(key: str) -> bool:
+    settings = load_app_settings()
+    default = bool(DEFAULT_APP_SETTINGS.get(key, False))
+    return bool_setting(settings.get(key), default)
+
+
+def secure_file_permissions(path: Path) -> None:
+    if os.name == "nt":
+        return
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass
+
+
+class DATA_BLOB(ctypes.Structure):
+    _fields_ = [
+        ("cbData", ctypes.c_uint),
+        ("pbData", ctypes.POINTER(ctypes.c_char)),
+    ]
+
+
+def windows_dpapi_transform(data: bytes, *, protect: bool) -> bytes:
+    if os.name != "nt":
+        raise OSError("DPAPI is only available on Windows.")
+    crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    crypt32.CryptProtectData.argtypes = [
+        ctypes.POINTER(DATA_BLOB),
+        ctypes.c_wchar_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_uint,
+        ctypes.POINTER(DATA_BLOB),
+    ]
+    crypt32.CryptProtectData.restype = ctypes.c_bool
+    crypt32.CryptUnprotectData.argtypes = [
+        ctypes.POINTER(DATA_BLOB),
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_uint,
+        ctypes.POINTER(DATA_BLOB),
+    ]
+    crypt32.CryptUnprotectData.restype = ctypes.c_bool
+    kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+    kernel32.LocalFree.restype = ctypes.c_void_p
+    input_buffer = ctypes.create_string_buffer(data)
+    input_blob = DATA_BLOB(len(data), ctypes.cast(input_buffer, ctypes.POINTER(ctypes.c_char)))
+    output_blob = DATA_BLOB()
+    if protect:
+        ok = crypt32.CryptProtectData(
+            ctypes.byref(input_blob),
+            "6ure App Vault",
+            None,
+            None,
+            None,
+            0,
+            ctypes.byref(output_blob),
+        )
+    else:
+        ok = crypt32.CryptUnprotectData(
+            ctypes.byref(input_blob),
+            None,
+            None,
+            None,
+            None,
+            0,
+            ctypes.byref(output_blob),
+        )
+    if not ok:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        return ctypes.string_at(output_blob.pbData, output_blob.cbData)
+    finally:
+        kernel32.LocalFree(ctypes.cast(output_blob.pbData, ctypes.c_void_p))
+
+
+def load_or_create_vault_key(*, create: bool = True) -> bytes | None:
+    with VAULT_LOCK:
+        payload = read_state_file(VAULT_KEY_PATH)
+        if isinstance(payload, dict):
+            method = str(payload.get("method") or "").strip().lower()
+            encoded_key = str(payload.get("key") or "").strip()
+            if encoded_key:
+                raw_key = base64.b64decode(encoded_key.encode("ascii")) if method == "dpapi-fernet" else encoded_key.encode("ascii")
+                if method == "dpapi-fernet":
+                    return windows_dpapi_transform(raw_key, protect=False)
+                if method == "local-fernet":
+                    return raw_key
+        if not create:
+            return None
+
+        key = Fernet.generate_key()
+        if os.name == "nt":
+            try:
+                protected_key = windows_dpapi_transform(key, protect=True)
+                payload = {
+                    "version": 1,
+                    "method": "dpapi-fernet",
+                    "key": base64.b64encode(protected_key).decode("ascii"),
+                    "createdAt": int(time.time() * 1000),
+                }
+            except Exception:
+                payload = {
+                    "version": 1,
+                    "method": "local-fernet",
+                    "key": key.decode("ascii"),
+                    "createdAt": int(time.time() * 1000),
+                }
+        else:
+            payload = {
+                "version": 1,
+                "method": "local-fernet",
+                "key": key.decode("ascii"),
+                "createdAt": int(time.time() * 1000),
+            }
+        VAULT_KEY_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        secure_file_permissions(VAULT_KEY_PATH)
+        return key
+
+
+def vault_fernet(*, create: bool = True) -> Fernet | None:
+    key = load_or_create_vault_key(create=create)
+    return Fernet(key) if key else None
+
+
+def read_vault_payload() -> dict:
+    with VAULT_LOCK:
+        payload = read_state_file(VAULT_PATH)
+        if not isinstance(payload, dict):
+            return {}
+        token = str(payload.get("token") or "").strip()
+        if not token:
+            return {}
+        fernet = vault_fernet(create=False)
+        if fernet is None:
+            return {}
+        try:
+            raw = fernet.decrypt(token.encode("ascii"))
+            data = json.loads(raw.decode("utf-8"))
+        except (InvalidToken, ValueError, OSError, json.JSONDecodeError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+
+def write_vault_payload(payload: dict) -> None:
+    with VAULT_LOCK:
+        fernet = vault_fernet(create=True)
+        if fernet is None:
+            raise FilesAutomationError("Encrypted vault key could not be created.")
+        clean_payload = dict(payload) if isinstance(payload, dict) else {}
+        clean_payload["version"] = 1
+        clean_payload["updatedAt"] = int(time.time() * 1000)
+        token = fernet.encrypt(json.dumps(clean_payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+        VAULT_PATH.write_text(
+            json.dumps({"version": 1, "cipher": "fernet", "token": token.decode("ascii")}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        secure_file_permissions(VAULT_PATH)
+
+
+def save_vault_credentials(username: str, password: str) -> None:
+    clean_username = str(username or "").strip()
+    clean_password = str(password or "")
+    if not clean_username or not clean_password:
+        raise FilesAutomationError("Vault credentials are incomplete.")
+    payload = read_vault_payload()
+    payload["credentials"] = {
+        "username": clean_username,
+        "password": clean_password,
+        "updatedAt": int(time.time() * 1000),
+    }
+    write_vault_payload(payload)
+
+
+def load_vault_credentials() -> tuple[str, str]:
+    payload = read_vault_payload()
+    credentials = payload.get("credentials") if isinstance(payload, dict) else None
+    if not isinstance(credentials, dict):
+        return "", ""
+    username = str(credentials.get("username") or "").strip()
+    password = str(credentials.get("password") or "")
+    return (username, password) if username and password else ("", "")
+
+
+def clear_vault_credentials() -> None:
+    payload = read_vault_payload()
+    if isinstance(payload, dict) and payload:
+        payload.pop("credentials", None)
+        write_vault_payload(payload)
+
+
+def vault_status() -> dict:
+    method = ""
+    key_payload = read_state_file(VAULT_KEY_PATH)
+    if isinstance(key_payload, dict):
+        method = str(key_payload.get("method") or "")
+    username, password = load_vault_credentials()
+    return {
+        "enabled": get_app_setting("encryptedVault"),
+        "available": VAULT_PATH.exists(),
+        "hasCredentials": bool(username and password),
+        "username": username,
+        "method": method or ("dpapi-fernet" if os.name == "nt" else "local-fernet"),
+        "path": str(VAULT_PATH),
+    }
+
+
 def normalize_string_list(value) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -471,6 +749,13 @@ def get_files_state() -> dict:
 def save_files_state(**values) -> dict:
     state = load_persisted_state()
     files_state = state.setdefault("files", {})
+    pending_username = str(values.get("username") or files_state.get("username") or "").strip()
+    pending_password = str(values.get("password") or "")
+    if pending_password and get_app_setting("encryptedVault"):
+        save_vault_credentials(pending_username, pending_password)
+        values = dict(values)
+        values.pop("password", None)
+        files_state.pop("password", None)
     for key, value in values.items():
         if key in FILES_STATE_STRING_KEYS:
             text = str(value or "").strip()
@@ -544,6 +829,7 @@ def record_upload_batch_history(editor_name: str, folder_paths: list[Path]) -> d
 
 
 def clear_persisted_account_data() -> dict:
+    clear_vault_credentials()
     return save_persisted_state({"files": {}})
 
 
@@ -566,6 +852,11 @@ def sync_session_from_state(state: dict | None = None) -> dict:
     files_state = current_state.get("files", {}) if isinstance(current_state, dict) else {}
     username = str(files_state.get("username", "") or "").strip() if isinstance(files_state, dict) else ""
     password = str(files_state.get("password", "") or "") if isinstance(files_state, dict) else ""
+    if get_app_setting("encryptedVault"):
+        vault_username, vault_password = load_vault_credentials()
+        if vault_username and vault_password:
+            username = vault_username
+            password = vault_password
     authenticated = bool(username and password)
     with AUTH_LOCK:
         previous = (
@@ -4583,6 +4874,265 @@ def prepare_update_install() -> dict:
                 UPDATE_STATE["installing"] = False
 
 
+def migrate_credentials_to_vault() -> list[str]:
+    actions: list[str] = []
+    if not get_app_setting("encryptedVault"):
+        return actions
+    state = load_persisted_state()
+    files_state = state.setdefault("files", {})
+    username = str(files_state.get("username") or "").strip()
+    password = str(files_state.get("password") or "")
+    if username and password:
+        save_vault_credentials(username, password)
+        files_state.pop("password", None)
+        save_persisted_state(state)
+        actions.append("Moved saved cloud credentials into the encrypted vault.")
+    return actions
+
+
+def ensure_update_config_repair() -> list[str]:
+    actions: list[str] = []
+    config = load_update_config()
+    if get_update_manifest_url(config):
+        return actions
+    default_config = {
+        "manifestUrl": "https://github.com/thejinx1/6ure-App/releases/latest/download/latest.json",
+        "githubReleasesUrl": "https://github.com/thejinx1/6ure-App/releases",
+        "channel": "stable",
+        "allowInsecure": False,
+    }
+    target_path = DATA_ROOT / UPDATE_CONFIG_FILE_NAME
+    target_path.write_text(json.dumps(default_config, ensure_ascii=False, indent=2), encoding="utf-8")
+    actions.append("Restored the GitHub Releases update channel.")
+    return actions
+
+
+def repair_persisted_state_files() -> list[str]:
+    actions: list[str] = []
+    if CONFIG_TMP_PATH.exists():
+        try:
+            CONFIG_TMP_PATH.unlink()
+            actions.append("Removed a stale state temp file.")
+        except OSError:
+            pass
+
+    current = read_state_file(CONFIG_PATH)
+    backup = read_state_file(CONFIG_BACKUP_PATH)
+    if current is None and CONFIG_PATH.exists() and backup is not None:
+        CONFIG_PATH.write_text(json.dumps(sanitize_persisted_state(backup), ensure_ascii=False, indent=2), encoding="utf-8")
+        actions.append("Restored app state from backup.")
+    elif current is None and not CONFIG_PATH.exists():
+        save_persisted_state({"files": {}})
+        actions.append("Created a fresh app state file.")
+    elif current is not None and not CONFIG_BACKUP_PATH.exists():
+        CONFIG_BACKUP_PATH.write_text(json.dumps(sanitize_persisted_state(current), ensure_ascii=False, indent=2), encoding="utf-8")
+        actions.append("Recreated the state backup file.")
+    return actions
+
+
+def cleanup_stale_update_files() -> list[str]:
+    actions: list[str] = []
+    if not UPDATE_DOWNLOAD_DIR.exists():
+        return actions
+    cutoff = time.time() - 24 * 60 * 60
+    removed = 0
+    for path in UPDATE_DOWNLOAD_DIR.glob("*.tmp"):
+        try:
+            if path.stat().st_mtime < cutoff:
+                path.unlink()
+                removed += 1
+        except OSError:
+            continue
+    if removed:
+        actions.append(f"Removed {removed} stale update temp file(s).")
+    return actions
+
+
+def write_repair_log(source: str, actions: list[str]) -> dict:
+    payload = {
+        "source": str(source or "manual"),
+        "ranAt": int(time.time() * 1000),
+        "actions": actions,
+    }
+    REPAIR_LOG_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    settings = load_app_settings()
+    settings["lastRepairAt"] = payload["ranAt"]
+    settings["lastRepairActions"] = actions
+    settings["lastRepairSource"] = payload["source"]
+    save_app_settings(settings)
+    return payload
+
+
+def run_silent_repair(source: str = "manual") -> dict:
+    actions: list[str] = []
+    DATA_ROOT.mkdir(parents=True, exist_ok=True)
+    UPDATE_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    UPDATE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    DEBUG_BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
+    if not APP_SETTINGS_PATH.exists():
+        save_app_settings(load_app_settings())
+        actions.append("Created maintenance settings.")
+    actions.extend(repair_persisted_state_files())
+    actions.extend(ensure_update_config_repair())
+    actions.extend(migrate_credentials_to_vault())
+    actions.extend(cleanup_stale_update_files())
+    ensure_leaker_cookie_consent(save=True)
+    log_payload = write_repair_log(source, actions)
+    return {
+        "success": True,
+        "source": log_payload["source"],
+        "ranAt": log_payload["ranAt"],
+        "actions": actions,
+        "changed": bool(actions),
+    }
+
+
+def disable_encrypted_vault() -> None:
+    username, password = load_vault_credentials()
+    if username and password:
+        state = load_persisted_state()
+        files_state = state.setdefault("files", {})
+        files_state["username"] = username
+        files_state["password"] = password
+        save_persisted_state(state)
+    clear_vault_credentials()
+
+
+def update_security_settings(payload: dict) -> dict:
+    settings = load_app_settings()
+    previous_vault = bool_setting(settings.get("encryptedVault"), True)
+    for key in ("encryptedVault", "silentRepairMode"):
+        if key in payload:
+            settings[key] = bool_setting(payload.get(key), DEFAULT_APP_SETTINGS[key])
+    settings = save_app_settings(settings)
+    current_vault = bool_setting(settings.get("encryptedVault"), True)
+    actions: list[str] = []
+    if current_vault and not previous_vault:
+        actions.extend(migrate_credentials_to_vault())
+    elif previous_vault and not current_vault:
+        disable_encrypted_vault()
+        actions.append("Moved saved credentials back to app state.")
+    return security_status(extra_actions=actions)
+
+
+def security_status(extra_actions: list[str] | None = None) -> dict:
+    settings = load_app_settings()
+    repair_log = read_state_file(REPAIR_LOG_PATH) or {}
+    return {
+        "success": True,
+        "settings": {
+            "encryptedVault": bool_setting(settings.get("encryptedVault"), True),
+            "silentRepairMode": bool_setting(settings.get("silentRepairMode"), True),
+        },
+        "vault": vault_status(),
+        "repair": {
+            "lastRepairAt": settings.get("lastRepairAt") or repair_log.get("ranAt") or 0,
+            "lastRepairActions": settings.get("lastRepairActions") or repair_log.get("actions") or [],
+            "lastRepairSource": settings.get("lastRepairSource") or repair_log.get("source") or "",
+        },
+        "actions": extra_actions or [],
+    }
+
+
+def redact_debug_value(key: str, value):
+    lower_key = str(key or "").lower()
+    if any(word in lower_key for word in ("password", "token", "secret", "cookie", "key")):
+        return "[redacted]"
+    if isinstance(value, dict):
+        return {str(item_key): redact_debug_value(str(item_key), item_value) for item_key, item_value in value.items()}
+    if isinstance(value, list):
+        return [redact_debug_value(key, item) for item in value[:100]]
+    return value
+
+
+def sanitized_debug_state() -> dict:
+    state = load_persisted_state()
+    return redact_debug_value("state", state)
+
+
+def file_summary(path: Path) -> dict:
+    try:
+        stat = path.stat()
+        return {
+            "exists": True,
+            "path": str(path),
+            "sizeBytes": stat.st_size,
+            "modifiedAt": int(stat.st_mtime * 1000),
+        }
+    except OSError:
+        return {"exists": False, "path": str(path)}
+
+
+def write_debug_bundle_entry(bundle: zipfile.ZipFile, name: str, payload) -> None:
+    if isinstance(payload, (dict, list)):
+        text = json.dumps(payload, ensure_ascii=False, indent=2)
+    else:
+        text = str(payload)
+    bundle.writestr(name, text)
+
+
+def reveal_file(path: Path) -> None:
+    try:
+        if sys.platform.startswith("win"):
+            subprocess.Popen(["explorer.exe", f"/select,{str(path)}"], close_fds=True)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", str(path)], close_fds=True)
+        else:
+            subprocess.Popen(["xdg-open", str(path.parent)], close_fds=True)
+    except Exception:
+        pass
+
+
+def create_debug_bundle(*, reveal: bool = True) -> dict:
+    DEBUG_BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    bundle_path = DEBUG_BUNDLE_DIR / f"6ure-debug-{stamp}.zip"
+    metadata = {
+        "appVersion": APP_VERSION,
+        "createdAt": int(time.time() * 1000),
+        "platform": sys.platform,
+        "python": sys.version,
+        "frozen": bool(getattr(sys, "frozen", False)),
+        "root": str(ROOT),
+        "appRoot": str(APP_ROOT),
+        "dataRoot": str(DATA_ROOT),
+    }
+    paths = {
+        "config": file_summary(CONFIG_PATH),
+        "configBackup": file_summary(CONFIG_BACKUP_PATH),
+        "updateConfig": [file_summary(path) for path in update_config_paths()],
+        "presenceConfig": [file_summary(path) for path in discord_presence_config_paths()],
+        "vault": file_summary(VAULT_PATH),
+        "vaultKey": {"exists": VAULT_KEY_PATH.exists(), "path": str(VAULT_KEY_PATH)},
+        "repairLog": file_summary(REPAIR_LOG_PATH),
+    }
+    with zipfile.ZipFile(bundle_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+        write_debug_bundle_entry(bundle, "metadata.json", metadata)
+        write_debug_bundle_entry(bundle, "security-status.json", security_status())
+        write_debug_bundle_entry(bundle, "state-sanitized.json", sanitized_debug_state())
+        write_debug_bundle_entry(bundle, "paths.json", paths)
+        write_debug_bundle_entry(bundle, "update-status.json", redact_debug_value("update", get_update_status()))
+        write_debug_bundle_entry(bundle, "update-config.json", redact_debug_value("updateConfig", load_update_config()))
+        repair_payload = read_state_file(REPAIR_LOG_PATH)
+        if repair_payload:
+            write_debug_bundle_entry(bundle, "last-repair.json", repair_payload)
+        update_log = UPDATE_BACKUP_DIR / "last-update.log"
+        if update_log.exists():
+            try:
+                bundle.write(update_log, "last-update.log")
+            except OSError:
+                pass
+    if reveal:
+        reveal_file(bundle_path)
+    return {
+        "success": True,
+        "path": str(bundle_path),
+        "fileName": bundle_path.name,
+        "sizeBytes": bundle_path.stat().st_size,
+        "createdAt": int(time.time() * 1000),
+    }
+
+
 WINDOWS_INVALID_ZIP_NAME_CHARS = set('<>:"|?*')
 
 
@@ -5853,6 +6403,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/network/status":
             self._network_status()
             return
+        if parsed.path == "/api/security/status":
+            self._security_status()
+            return
         if parsed.path == "/api/app-auth/status":
             self._app_auth_status(parsed.query)
             return
@@ -5957,6 +6510,15 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/update/install":
             self._update_install()
+            return
+        if parsed.path == "/api/security/settings":
+            self._security_settings()
+            return
+        if parsed.path == "/api/security/repair":
+            self._security_repair()
+            return
+        if parsed.path == "/api/debug/bundle":
+            self._debug_bundle()
             return
         if parsed.path == "/api/discord-presence/activity":
             self._discord_presence_activity()
@@ -6273,6 +6835,33 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             payload["success"] = True
             payload["checkedAt"] = int(time.time() * 1000)
             self._send_json(200, payload)
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
+    def _security_status(self) -> None:
+        try:
+            self._send_json(200, security_status())
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
+    def _security_settings(self) -> None:
+        try:
+            payload = self._read_json()
+            self._send_json(200, update_security_settings(payload))
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
+    def _security_repair(self) -> None:
+        try:
+            self._send_json(200, run_silent_repair("manual"))
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
+    def _debug_bundle(self) -> None:
+        try:
+            payload = self._read_json()
+            reveal = payload.get("reveal", True) is not False
+            self._send_json(200, create_debug_bundle(reveal=reveal))
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
 
@@ -6725,6 +7314,8 @@ def main() -> None:
     server.serve_forever()
 
 
+if get_app_setting("silentRepairMode"):
+    run_silent_repair("startup")
 BOOT_STATE = clear_last_files_selection()
 sync_session_from_state(BOOT_STATE)
 refresh_discord_presence_from_session()

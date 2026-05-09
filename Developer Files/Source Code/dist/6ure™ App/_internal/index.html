@@ -5300,9 +5300,29 @@
                     <span class="files-setting-switch" aria-hidden="true"></span>
                   </label>
                 </section>
+
+                <section class="files-settings-group">
+                  <h4>Maintenance</h4>
+                  <label class="files-setting-row">
+                    <span class="files-setting-copy">
+                      <span>Local encrypted vault</span>
+                    </span>
+                    <input id="settingEncryptedVault" class="files-setting-toggle" type="checkbox" data-security-setting-key="encryptedVault">
+                    <span class="files-setting-switch" aria-hidden="true"></span>
+                  </label>
+                  <label class="files-setting-row">
+                    <span class="files-setting-copy">
+                      <span>Silent repair mode</span>
+                    </span>
+                    <input id="settingSilentRepair" class="files-setting-toggle" type="checkbox" data-security-setting-key="silentRepairMode">
+                    <span class="files-setting-switch" aria-hidden="true"></span>
+                  </label>
+                </section>
               </div>
 
               <div class="files-settings-actions">
+                <button id="filesDebugBundleBtn" class="chip-action" type="button">Debug Bundle</button>
+                <button id="filesRepairNowBtn" class="chip-action" type="button">Repair Now</button>
                 <button id="filesSettingsResetBtn" class="chip-action" type="button">Reset</button>
               </div>
             </div>
@@ -5815,6 +5835,8 @@
       filesSettingsOverlay: $('#filesSettingsOverlay'),
       filesSettingsCloseBtn: $('#filesSettingsCloseBtn'),
       filesSettingsResetBtn: $('#filesSettingsResetBtn'),
+      filesRepairNowBtn: $('#filesRepairNowBtn'),
+      filesDebugBundleBtn: $('#filesDebugBundleBtn'),
       filesSettingsStatus: $('#filesSettingsStatus'),
       settingDiscordPresence: $('#settingDiscordPresence'),
       settingPresenceResource: $('#settingPresenceResource'),
@@ -5824,6 +5846,8 @@
       settingSoundEffects: $('#settingSoundEffects'),
       settingLeakerSound: $('#settingLeakerSound'),
       settingOpeningSound: $('#settingOpeningSound'),
+      settingEncryptedVault: $('#settingEncryptedVault'),
+      settingSilentRepair: $('#settingSilentRepair'),
       filesSelectionOverlay: $('#filesSelectionOverlay'),
       filesSelectionCloseBtn: $('#filesSelectionCloseBtn'),
       filesSelectionMeta: $('#filesSelectionMeta'),
@@ -5968,6 +5992,79 @@
       }
     }
 
+    function syncSecurityControls(status = {}) {
+      const settings = status.settings || {};
+      if (els.settingEncryptedVault) els.settingEncryptedVault.checked = settings.encryptedVault !== false;
+      if (els.settingSilentRepair) els.settingSilentRepair.checked = settings.silentRepairMode !== false;
+      const vault = status.vault || {};
+      const repair = status.repair || {};
+      const repairCount = Array.isArray(repair.lastRepairActions) ? repair.lastRepairActions.length : 0;
+      const vaultLabel = vault.enabled === false ? 'Vault off' : vault.hasCredentials ? 'Vault locked.' : 'Vault ready.';
+      const repairLabel = repair.lastRepairAt ? `Repair checked${repairCount ? ` (${repairCount})` : ''}.` : 'Ready.';
+      setFilesSettingsStatus([vaultLabel, repairLabel].filter(Boolean).join(' '));
+    }
+
+    async function loadSecurityStatus() {
+      try {
+        const status = await filesApi('/api/security/status', { method: 'GET' });
+        syncSecurityControls(status);
+        return status;
+      } catch {
+        setFilesSettingsStatus('Security status unavailable.');
+        return null;
+      }
+    }
+
+    async function updateSecuritySetting(key, value) {
+      setFilesSettingsStatus('Saving...');
+      try {
+        const status = await filesApi('/api/security/settings', {
+          method: 'POST',
+          body: JSON.stringify({ [key]: Boolean(value) })
+        });
+        syncSecurityControls(status);
+        showToast(key === 'encryptedVault'
+          ? (value ? 'Encrypted vault enabled.' : 'Encrypted vault disabled.')
+          : (value ? 'Silent repair enabled.' : 'Silent repair disabled.'), 'ok');
+      } catch (error) {
+        await loadSecurityStatus();
+        showToast(getFriendlyFilesMessage(error.message, 'Security setting could not be saved.'), 'err');
+      }
+    }
+
+    async function runSecurityRepair() {
+      if (els.filesRepairNowBtn) els.filesRepairNowBtn.disabled = true;
+      setFilesSettingsStatus('Repairing...');
+      try {
+        const result = await filesApi('/api/security/repair', { method: 'POST', body: '{}' });
+        await loadSecurityStatus();
+        showToast(result.changed ? 'Repair completed.' : 'Repair check completed.', 'ok');
+      } catch (error) {
+        showToast(getFriendlyFilesMessage(error.message, 'Repair could not be completed.'), 'err');
+        setFilesSettingsStatus('Repair failed.');
+      } finally {
+        if (els.filesRepairNowBtn) els.filesRepairNowBtn.disabled = false;
+      }
+    }
+
+    async function createDebugBundle() {
+      if (els.filesDebugBundleBtn) els.filesDebugBundleBtn.disabled = true;
+      setFilesSettingsStatus('Creating debug bundle...');
+      try {
+        const result = await filesApi('/api/debug/bundle', {
+          method: 'POST',
+          body: JSON.stringify({ reveal: true })
+        });
+        setFilesSettingsStatus(result.fileName ? `Created ${result.fileName}.` : 'Debug bundle created.');
+        showToast('Debug bundle created.', 'ok');
+      } catch (error) {
+        showToast(getFriendlyFilesMessage(error.message, 'Debug bundle could not be created.'), 'err');
+        setFilesSettingsStatus('Debug bundle failed.');
+      } finally {
+        if (els.filesDebugBundleBtn) els.filesDebugBundleBtn.disabled = false;
+      }
+    }
+
     async function clearDiscordPresenceActivity() {
       const token = ++discordPresenceClearToken;
       try {
@@ -6058,6 +6155,7 @@
       setFilesSettingsStatus('Ready.');
       els.filesSettingsOverlay?.classList.remove('hidden');
       els.filesSettingsOverlay?.setAttribute('aria-hidden', 'false');
+      loadSecurityStatus();
     }
 
     function hideFilesSettingsOverlay() {
@@ -6067,6 +6165,11 @@
 
     function handleFilesSettingsChange(event) {
       const target = event.target;
+      const securityKey = target?.dataset?.securitySettingKey;
+      if (securityKey) {
+        updateSecuritySetting(securityKey, target.checked);
+        return;
+      }
       const settingKey = target?.dataset?.settingKey;
       if (!settingKey) return;
       updateFilesSetting(settingKey, target.checked);
@@ -7584,24 +7687,55 @@
       return getSkippedUpdateVersion() !== version;
     }
 
+    function getUpdatePlatformLabel(update = {}) {
+      const provided = String(update?.platformLabel || '').trim();
+      if (provided) return provided;
+      const platform = String(update?.platform || '').trim().toLowerCase();
+      if (platform === 'windows') return 'Windows';
+      if (platform === 'macos' || platform === 'darwin') return 'macOS';
+      if (platform === 'linux') return 'Linux';
+      return platform ? platform.toUpperCase() : '';
+    }
+
+    function getUpdateInstallMode(update = {}) {
+      return String(update?.installMode || '').trim().toLowerCase() === 'manual' ? 'manual' : 'automatic';
+    }
+
+    function getUpdateActionLabel(update = {}) {
+      return getUpdateInstallMode(update) === 'manual' ? 'Download Update' : 'Install Update';
+    }
+
+    function getUpdatePackageMeta(update = {}) {
+      const platformLabel = getUpdatePlatformLabel(update);
+      const sizeBytes = Number(update?.sizeBytes);
+      const sizeLabel = Number.isFinite(sizeBytes) && sizeBytes > 0 ? formatFilesBytes(sizeBytes) : '';
+      const packageName = String(update?.packageName || update?.packageType || '').trim();
+      return [platformLabel, sizeLabel || packageName].filter(Boolean).join(' - ') || '-';
+    }
+
     function showUpdatePrompt(result = {}, options = {}) {
       const latest = result.latest || updateInfo || {};
       if (!shouldShowUpdatePrompt(latest, Boolean(options.force))) return;
       const currentVersion = String(result.currentVersion || latest.currentVersion || '').trim();
       const latestVersion = String(latest.version || '').trim();
-      const sizeBytes = Number(latest.sizeBytes);
       const notes = String(latest.notes || '').trim();
+      const platformLabel = getUpdatePlatformLabel(latest);
       updateInfo = latest;
       setUpdateButtonState();
 
       els.updatePromptCurrent.textContent = currentVersion ? `v${currentVersion}` : '-';
       els.updatePromptLatest.textContent = latestVersion ? `v${latestVersion}` : '-';
-      els.updatePromptSize.textContent = Number.isFinite(sizeBytes) && sizeBytes > 0 ? formatFilesBytes(sizeBytes) : latest.packageType || '-';
-      els.updatePromptTitle.textContent = latestVersion ? `Update v${latestVersion} available` : 'Update available';
+      els.updatePromptSize.textContent = getUpdatePackageMeta(latest);
+      els.updatePromptTitle.textContent = latestVersion
+        ? `${platformLabel ? `${platformLabel} update` : 'Update'} v${latestVersion} available`
+        : `${platformLabel ? `${platformLabel} update` : 'Update'} available`;
       els.updatePromptMessage.textContent = currentVersion
-        ? `You are running v${currentVersion}. A newer build is ready.`
-        : 'A newer 6ure App build is ready.';
-      els.updatePromptNotes.textContent = notes || 'Install the latest build to keep upload tools and Discord Presence fixes current.';
+        ? `You are running v${currentVersion}. A newer ${platformLabel || '6ure App'} build is ready.`
+        : `A newer ${platformLabel || '6ure App'} build is ready.`;
+      els.updatePromptNotes.textContent = notes || (getUpdateInstallMode(latest) === 'manual'
+        ? `Download the ${platformLabel || 'platform'} package from GitHub Releases to install it.`
+        : 'Install the latest build to keep upload tools and Discord Presence fixes current.');
+      els.updatePromptInstallBtn.textContent = getUpdateActionLabel(latest);
       els.updatePrompt.classList.remove('hidden');
       els.updatePrompt.setAttribute('aria-hidden', 'false');
       requestAnimationFrame(() => els.updatePrompt.classList.add('show'));
@@ -7629,6 +7763,7 @@
       if (value === 'ready') return 'Ready';
       if (value === 'launch') return 'Launching installer';
       if (value === 'handoff') return 'Installer launched';
+      if (value === 'manual') return 'Download ready';
       if (value === 'error') return 'Update error';
       return 'Update status';
     }
@@ -7736,7 +7871,7 @@
         return;
       }
       if (updateInfo?.updateAvailable) {
-        setActionButtonLabel(els.filesUpdateBtn, 'Install Update');
+        setActionButtonLabel(els.filesUpdateBtn, getUpdateActionLabel(updateInfo));
         els.filesUpdateBtn.disabled = updateBusy || filesUploadActive;
         return;
       }
@@ -7827,16 +7962,34 @@
       if (updateBusy) return;
       updateBusy = true;
       hideUpdatePrompt();
-      resetUpdateMonitor('Installing update', 'Starting update install...');
-      updateDiscordPresence('Installing update', '6ure App', { force: true });
+      const manualDownload = getUpdateInstallMode(updateInfo || {}) === 'manual';
+      resetUpdateMonitor(
+        manualDownload ? 'Opening update download' : 'Installing update',
+        manualDownload ? 'Opening platform update package...' : 'Starting update install...'
+      );
+      updateDiscordPresence(manualDownload ? 'Downloading update' : 'Installing update', '6ure App', { force: true });
       startUpdateStatusPolling();
       setUpdateButtonState('installing');
       try {
-        await filesApi('/api/update/install', {
+        const result = await filesApi('/api/update/install', {
           method: 'POST',
           body: '{}'
         });
         els.updateMonitorProgress.style.width = '100%';
+        if (result.manualDownload) {
+          updateBusy = false;
+          stopUpdateStatusPolling();
+          els.updateMonitorMessage.textContent = 'Update download opened in your browser.';
+          pushUpdateMonitorLine('Update download opened in your browser.');
+          showToast('Update download opened.', 'ok');
+          setUpdateButtonState();
+          updateDiscordPresence(
+            'Browsing resources',
+            filesUsername || 'username',
+            { force: true }
+          );
+          return;
+        }
         els.updateMonitorMessage.textContent = 'Installer launched. The app will close now.';
         pushUpdateMonitorLine('Installer launched. The app will close now.');
         showToast('Installing update. The app will restart.', 'ok');
@@ -10919,6 +11072,8 @@
       els.filesSettingsBtn.addEventListener('click', showFilesSettingsOverlay);
       els.filesSettingsCloseBtn.addEventListener('click', hideFilesSettingsOverlay);
       els.filesSettingsResetBtn.addEventListener('click', resetFilesSettings);
+      els.filesRepairNowBtn?.addEventListener('click', runSecurityRepair);
+      els.filesDebugBundleBtn?.addEventListener('click', createDebugBundle);
       els.filesSettingsOverlay.addEventListener('click', event => {
         if (event.target === els.filesSettingsOverlay) hideFilesSettingsOverlay();
       });
@@ -10930,7 +11085,9 @@
         els.settingAutoUpdate,
         els.settingSoundEffects,
         els.settingLeakerSound,
-        els.settingOpeningSound
+        els.settingOpeningSound,
+        els.settingEncryptedVault,
+        els.settingSilentRepair
       ]) {
         control?.addEventListener('change', handleFilesSettingsChange);
       }

@@ -1,5 +1,6 @@
 param(
   [string]$Version = "",
+  [string]$SourceAppDir = "",
   [string]$OutputDir = "Setup Output",
   [switch]$KeepStaging
 )
@@ -10,27 +11,53 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $workspace = Resolve-Path (Join-Path $scriptDir "..\..")
 $sourceCodeDir = Join-Path $workspace "Developer Files\Source Code"
 $applicationDir = Join-Path $workspace "Application"
+$distAppDir = Join-Path $sourceCodeDir "dist\6ure$([char]0x2122) App"
 $outputRoot = Join-Path $workspace $OutputDir
-$stageRoot = Join-Path $outputRoot "staging"
+$stageRoot = Join-Path ([System.IO.Path]::GetTempPath()) "6ure-setup-staging-$PID"
 $appName = "6ure$([char]0x2122) App"
 $legacyAppName = "6ure Files"
 $exeName = "$appName.exe"
 $stageAppDir = Join-Path $stageRoot $appName
 $iconPath = Join-Path $sourceCodeDir "assets\6ure-logo.ico"
 
-if (-not (Test-Path -LiteralPath $applicationDir)) {
-  throw "Application folder was not found: $applicationDir"
+if (-not $SourceAppDir) {
+  if (Test-Path -LiteralPath $distAppDir) {
+    $SourceAppDir = $distAppDir
+  } else {
+    $SourceAppDir = $applicationDir
+  }
+}
+$resolvedSourceAppDir = (Resolve-Path -LiteralPath $SourceAppDir).Path
+if (-not (Test-Path -LiteralPath $resolvedSourceAppDir)) {
+  throw "Source application folder was not found: $resolvedSourceAppDir"
 }
 
 if (-not $Version) {
-  $serverPath = Join-Path $sourceCodeDir "server.py"
-  $serverText = Get-Content -Raw -LiteralPath $serverPath
-  $match = [regex]::Match($serverText, 'APP_VERSION\s*=\s*os\.environ\.get\("REYLI_APP_VERSION",\s*"([^"]+)"\)')
-  if (-not $match.Success) {
-    throw "Could not read APP_VERSION from server.py"
+  $versionCandidates = @(
+    (Join-Path $resolvedSourceAppDir "_internal\app-version.json"),
+    (Join-Path $resolvedSourceAppDir "app-version.json"),
+    (Join-Path $sourceCodeDir "app-version.json")
+  )
+  foreach ($candidate in $versionCandidates) {
+    if ($Version -or -not (Test-Path -LiteralPath $candidate)) {
+      continue
+    }
+    try {
+      $payload = Get-Content -Raw -LiteralPath $candidate | ConvertFrom-Json
+      $Version = [string]$payload.version
+    } catch {}
   }
-  $Version = $match.Groups[1].Value
+  if (-not $Version) {
+    $serverPath = Join-Path $sourceCodeDir "server.py"
+    $serverText = Get-Content -Raw -LiteralPath $serverPath
+    $match = [regex]::Match($serverText, 'DEFAULT_APP_VERSION\s*=\s*"([^"]+)"')
+    if (-not $match.Success) {
+      throw "Could not read DEFAULT_APP_VERSION from server.py"
+    }
+    $Version = $match.Groups[1].Value
+  }
 }
+$Version = $Version.Trim().TrimStart("v")
 
 $safeVersion = $Version -replace '[^0-9A-Za-z._-]', '-'
 $versionParts = @($Version -split '[^0-9]+' | Where-Object { $_ -ne "" } | Select-Object -First 4)
@@ -51,7 +78,7 @@ if (Test-Path -LiteralPath $stageRoot) {
 }
 New-Item -ItemType Directory -Force -Path $stageAppDir | Out-Null
 
-Get-ChildItem -LiteralPath $applicationDir -Force | Copy-Item -Destination $stageAppDir -Recurse -Force
+Get-ChildItem -LiteralPath $resolvedSourceAppDir -Force | Copy-Item -Destination $stageAppDir -Recurse -Force
 
 foreach ($required in @($exeName, "_internal", "update-config.json")) {
   if (-not (Test-Path -LiteralPath (Join-Path $stageAppDir $required))) {

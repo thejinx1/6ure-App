@@ -5300,9 +5300,29 @@
                     <span class="files-setting-switch" aria-hidden="true"></span>
                   </label>
                 </section>
+
+                <section class="files-settings-group">
+                  <h4>Maintenance</h4>
+                  <label class="files-setting-row">
+                    <span class="files-setting-copy">
+                      <span>Local encrypted vault</span>
+                    </span>
+                    <input id="settingEncryptedVault" class="files-setting-toggle" type="checkbox" data-security-setting-key="encryptedVault">
+                    <span class="files-setting-switch" aria-hidden="true"></span>
+                  </label>
+                  <label class="files-setting-row">
+                    <span class="files-setting-copy">
+                      <span>Silent repair mode</span>
+                    </span>
+                    <input id="settingSilentRepair" class="files-setting-toggle" type="checkbox" data-security-setting-key="silentRepairMode">
+                    <span class="files-setting-switch" aria-hidden="true"></span>
+                  </label>
+                </section>
               </div>
 
               <div class="files-settings-actions">
+                <button id="filesDebugBundleBtn" class="chip-action" type="button">Debug Bundle</button>
+                <button id="filesRepairNowBtn" class="chip-action" type="button">Repair Now</button>
                 <button id="filesSettingsResetBtn" class="chip-action" type="button">Reset</button>
               </div>
             </div>
@@ -5815,6 +5835,8 @@
       filesSettingsOverlay: $('#filesSettingsOverlay'),
       filesSettingsCloseBtn: $('#filesSettingsCloseBtn'),
       filesSettingsResetBtn: $('#filesSettingsResetBtn'),
+      filesRepairNowBtn: $('#filesRepairNowBtn'),
+      filesDebugBundleBtn: $('#filesDebugBundleBtn'),
       filesSettingsStatus: $('#filesSettingsStatus'),
       settingDiscordPresence: $('#settingDiscordPresence'),
       settingPresenceResource: $('#settingPresenceResource'),
@@ -5824,6 +5846,8 @@
       settingSoundEffects: $('#settingSoundEffects'),
       settingLeakerSound: $('#settingLeakerSound'),
       settingOpeningSound: $('#settingOpeningSound'),
+      settingEncryptedVault: $('#settingEncryptedVault'),
+      settingSilentRepair: $('#settingSilentRepair'),
       filesSelectionOverlay: $('#filesSelectionOverlay'),
       filesSelectionCloseBtn: $('#filesSelectionCloseBtn'),
       filesSelectionMeta: $('#filesSelectionMeta'),
@@ -5968,6 +5992,79 @@
       }
     }
 
+    function syncSecurityControls(status = {}) {
+      const settings = status.settings || {};
+      if (els.settingEncryptedVault) els.settingEncryptedVault.checked = settings.encryptedVault !== false;
+      if (els.settingSilentRepair) els.settingSilentRepair.checked = settings.silentRepairMode !== false;
+      const vault = status.vault || {};
+      const repair = status.repair || {};
+      const repairCount = Array.isArray(repair.lastRepairActions) ? repair.lastRepairActions.length : 0;
+      const vaultLabel = vault.enabled === false ? 'Vault off' : vault.hasCredentials ? 'Vault locked.' : 'Vault ready.';
+      const repairLabel = repair.lastRepairAt ? `Repair checked${repairCount ? ` (${repairCount})` : ''}.` : 'Ready.';
+      setFilesSettingsStatus([vaultLabel, repairLabel].filter(Boolean).join(' '));
+    }
+
+    async function loadSecurityStatus() {
+      try {
+        const status = await filesApi('/api/security/status', { method: 'GET' });
+        syncSecurityControls(status);
+        return status;
+      } catch {
+        setFilesSettingsStatus('Security status unavailable.');
+        return null;
+      }
+    }
+
+    async function updateSecuritySetting(key, value) {
+      setFilesSettingsStatus('Saving...');
+      try {
+        const status = await filesApi('/api/security/settings', {
+          method: 'POST',
+          body: JSON.stringify({ [key]: Boolean(value) })
+        });
+        syncSecurityControls(status);
+        showToast(key === 'encryptedVault'
+          ? (value ? 'Encrypted vault enabled.' : 'Encrypted vault disabled.')
+          : (value ? 'Silent repair enabled.' : 'Silent repair disabled.'), 'ok');
+      } catch (error) {
+        await loadSecurityStatus();
+        showToast(getFriendlyFilesMessage(error.message, 'Security setting could not be saved.'), 'err');
+      }
+    }
+
+    async function runSecurityRepair() {
+      if (els.filesRepairNowBtn) els.filesRepairNowBtn.disabled = true;
+      setFilesSettingsStatus('Repairing...');
+      try {
+        const result = await filesApi('/api/security/repair', { method: 'POST', body: '{}' });
+        await loadSecurityStatus();
+        showToast(result.changed ? 'Repair completed.' : 'Repair check completed.', 'ok');
+      } catch (error) {
+        showToast(getFriendlyFilesMessage(error.message, 'Repair could not be completed.'), 'err');
+        setFilesSettingsStatus('Repair failed.');
+      } finally {
+        if (els.filesRepairNowBtn) els.filesRepairNowBtn.disabled = false;
+      }
+    }
+
+    async function createDebugBundle() {
+      if (els.filesDebugBundleBtn) els.filesDebugBundleBtn.disabled = true;
+      setFilesSettingsStatus('Creating debug bundle...');
+      try {
+        const result = await filesApi('/api/debug/bundle', {
+          method: 'POST',
+          body: JSON.stringify({ reveal: true })
+        });
+        setFilesSettingsStatus(result.fileName ? `Created ${result.fileName}.` : 'Debug bundle created.');
+        showToast('Debug bundle created.', 'ok');
+      } catch (error) {
+        showToast(getFriendlyFilesMessage(error.message, 'Debug bundle could not be created.'), 'err');
+        setFilesSettingsStatus('Debug bundle failed.');
+      } finally {
+        if (els.filesDebugBundleBtn) els.filesDebugBundleBtn.disabled = false;
+      }
+    }
+
     async function clearDiscordPresenceActivity() {
       const token = ++discordPresenceClearToken;
       try {
@@ -6058,6 +6155,7 @@
       setFilesSettingsStatus('Ready.');
       els.filesSettingsOverlay?.classList.remove('hidden');
       els.filesSettingsOverlay?.setAttribute('aria-hidden', 'false');
+      loadSecurityStatus();
     }
 
     function hideFilesSettingsOverlay() {
@@ -6067,6 +6165,11 @@
 
     function handleFilesSettingsChange(event) {
       const target = event.target;
+      const securityKey = target?.dataset?.securitySettingKey;
+      if (securityKey) {
+        updateSecuritySetting(securityKey, target.checked);
+        return;
+      }
       const settingKey = target?.dataset?.settingKey;
       if (!settingKey) return;
       updateFilesSetting(settingKey, target.checked);
@@ -10969,6 +11072,8 @@
       els.filesSettingsBtn.addEventListener('click', showFilesSettingsOverlay);
       els.filesSettingsCloseBtn.addEventListener('click', hideFilesSettingsOverlay);
       els.filesSettingsResetBtn.addEventListener('click', resetFilesSettings);
+      els.filesRepairNowBtn?.addEventListener('click', runSecurityRepair);
+      els.filesDebugBundleBtn?.addEventListener('click', createDebugBundle);
       els.filesSettingsOverlay.addEventListener('click', event => {
         if (event.target === els.filesSettingsOverlay) hideFilesSettingsOverlay();
       });
@@ -10980,7 +11085,9 @@
         els.settingAutoUpdate,
         els.settingSoundEffects,
         els.settingLeakerSound,
-        els.settingOpeningSound
+        els.settingOpeningSound,
+        els.settingEncryptedVault,
+        els.settingSilentRepair
       ]) {
         control?.addEventListener('change', handleFilesSettingsChange);
       }
