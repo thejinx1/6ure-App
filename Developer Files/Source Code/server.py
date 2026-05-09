@@ -3571,15 +3571,75 @@ def load_update_config() -> dict:
     env_manifest_url = str(os.environ.get("REYLI_UPDATE_MANIFEST_URL", "") or "").strip()
     if env_manifest_url:
         config["manifestUrl"] = env_manifest_url
+    env_releases_url = str(os.environ.get("REYLI_GITHUB_RELEASES_URL", "") or "").strip()
+    if env_releases_url:
+        config["githubReleasesUrl"] = env_releases_url
     env_channel = str(os.environ.get("REYLI_UPDATE_CHANNEL", "") or "").strip()
     if env_channel:
         config["channel"] = env_channel
     return config
 
 
+def github_repo_from_url(url: str) -> tuple[str, str] | None:
+    parsed = urllib.parse.urlsplit(str(url or "").strip())
+    host = parsed.netloc.lower()
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+    if host in {"github.com", "www.github.com"} and len(parts) >= 2:
+        return parts[0], parts[1]
+    if host == "api.github.com" and len(parts) >= 4 and parts[0] == "repos":
+        return parts[1], parts[2]
+    return None
+
+
+def github_latest_manifest_url(url: str) -> str:
+    repo = github_repo_from_url(url)
+    if not repo:
+        return ""
+    owner, repo_name = repo
+    parsed = urllib.parse.urlsplit(str(url or "").strip())
+    host = parsed.netloc.lower()
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+    if host not in {"github.com", "www.github.com"}:
+        return ""
+    if len(parts) >= 3 and parts[2] == "releases":
+        return f"https://github.com/{owner}/{repo_name}/releases/latest/download/latest.json"
+    return ""
+
+
 def get_update_manifest_url(config: dict | None = None) -> str:
     current = config if isinstance(config, dict) else load_update_config()
-    return str(current.get("manifestUrl") or current.get("manifest_url") or "").strip()
+    configured_url = str(current.get("manifestUrl") or current.get("manifest_url") or "").strip()
+    github_manifest_url = github_latest_manifest_url(configured_url)
+    if github_manifest_url and not configured_url.lower().endswith(".json"):
+        return github_manifest_url
+    if configured_url:
+        return configured_url
+    releases_url = str(
+        current.get("githubReleasesUrl")
+        or current.get("github_releases_url")
+        or current.get("releasesUrl")
+        or current.get("releases_url")
+        or ""
+    ).strip()
+    return github_latest_manifest_url(releases_url) or releases_url
+
+
+def github_release_api_url(url: str) -> str:
+    parsed = urllib.parse.urlsplit(str(url or "").strip())
+    host = parsed.netloc.lower()
+    parts = [part for part in parsed.path.strip("/").split("/") if part]
+    if host == "api.github.com" and len(parts) >= 4 and parts[0] == "repos" and parts[3] == "releases":
+        return urllib.parse.urlunsplit(parsed._replace(query="", fragment=""))
+    repo = github_repo_from_url(url)
+    if not repo:
+        return ""
+    owner, repo_name = repo
+    if host in {"github.com", "www.github.com"} and len(parts) >= 5 and parts[2] == "releases" and parts[3] == "tag":
+        tag = urllib.parse.quote(parts[4], safe="")
+        return f"https://api.github.com/repos/{owner}/{repo_name}/releases/tags/{tag}"
+    if host in {"github.com", "www.github.com"} and len(parts) >= 3 and parts[2] == "releases":
+        return f"https://api.github.com/repos/{owner}/{repo_name}/releases/latest"
+    return ""
 
 
 def allow_insecure_update_url(config: dict | None = None) -> bool:
@@ -3606,6 +3666,200 @@ def file_url_to_path(url: str) -> Path:
     return Path(raw_path)
 
 
+def update_request_headers(accept: str = "application/json") -> dict[str, str]:
+    headers = {
+        "Cache-Control": "no-cache",
+        "User-Agent": f"6ure-app-updater/{APP_VERSION}",
+    }
+    if accept:
+        headers["Accept"] = accept
+    return headers
+
+
+def clean_github_asset_sha256(asset: dict) -> str:
+    digest = str(asset.get("digest") or "").strip().lower()
+    if digest.startswith("sha256:"):
+        digest = digest.split(":", 1)[1]
+    return digest if re.fullmatch(r"[a-f0-9]{64}", digest) else ""
+
+
+def github_asset_download_url(asset: dict) -> str:
+    return str(asset.get("browser_download_url") or "").strip()
+
+
+def package_type_from_asset_name(name: str) -> str:
+    lower_name = str(name or "").lower()
+    if lower_name.endswith((".exe", ".msi")):
+        return "installer"
+    if lower_name.endswith(".dmg"):
+        return "dmg"
+    if lower_name.endswith((".tar.gz", ".tgz")):
+        return "tar.gz"
+    if lower_name.endswith(".zip"):
+        return "zip"
+    if lower_name.endswith(".appimage"):
+        return "appimage"
+    if lower_name.endswith(".deb"):
+        return "deb"
+    if lower_name.endswith(".rpm"):
+        return "rpm"
+    return "package"
+
+
+def read_github_checksums(release: dict) -> dict[str, str]:
+    assets = release.get("assets") if isinstance(release.get("assets"), list) else []
+    checksum_asset = next(
+        (asset for asset in assets if isinstance(asset, dict) and str(asset.get("name") or "").lower() == "checksums.txt"),
+        None,
+    )
+    checksum_url = github_asset_download_url(checksum_asset or {})
+    if not checksum_url:
+        return {}
+    try:
+        response = requests.get(checksum_url, timeout=30, headers=update_request_headers("text/plain"))
+        if response.status_code != 200:
+            return {}
+    except requests.RequestException:
+        return {}
+
+    checksums: dict[str, str] = {}
+    for line in response.text.splitlines():
+        match = re.match(r"^\s*([a-fA-F0-9]{64})\s+\*?(.+?)\s*$", line)
+        if not match:
+            continue
+        name = posixpath.basename(match.group(2).replace("\\", "/")).lower()
+        if name:
+            checksums[name] = match.group(1).lower()
+    return checksums
+
+
+def find_release_asset(assets: list, *predicates) -> dict | None:
+    for predicate in predicates:
+        for asset in assets:
+            if not isinstance(asset, dict):
+                continue
+            name = str(asset.get("name") or "").lower()
+            if name and predicate(name):
+                return asset
+    return None
+
+
+def github_release_asset_payload(asset: dict | None, checksums: dict[str, str]) -> dict | None:
+    if not isinstance(asset, dict):
+        return None
+    name = str(asset.get("name") or "").strip()
+    url = github_asset_download_url(asset)
+    if not name or not url:
+        return None
+    size = asset.get("size")
+    payload: dict = {
+        "url": url,
+        "sha256": clean_github_asset_sha256(asset) or checksums.get(name.lower(), ""),
+        "packageType": package_type_from_asset_name(name),
+    }
+    if isinstance(size, int) and size >= 0:
+        payload["sizeBytes"] = size
+    if payload["packageType"] == "installer":
+        payload["installerArgs"] = "/S"
+        payload["successExitCodes"] = [0, 3010]
+    return payload
+
+
+def github_release_to_update_manifest(release: dict, config: dict) -> dict:
+    if not isinstance(release, dict):
+        raise FilesAutomationError("GitHub release payload is invalid.")
+    assets = release.get("assets") if isinstance(release.get("assets"), list) else []
+    latest_asset = find_release_asset(assets, lambda name: name == "latest.json")
+    latest_url = github_asset_download_url(latest_asset or {})
+    if latest_url:
+        try:
+            return read_http_update_json(latest_url, config, allow_github_fallback=False)
+        except Exception:
+            pass
+
+    tag_name = str(release.get("tag_name") or "").strip()
+    version = tag_name.lstrip("v") or parse_version_from_release_name(str(release.get("name") or ""))
+    if not version:
+        raise FilesAutomationError("GitHub release is missing a version.")
+
+    checksums = read_github_checksums(release)
+    windows_asset = find_release_asset(
+        assets,
+        lambda name: "windows" in name and "setup" in name and name.endswith(".exe"),
+        lambda name: "win" in name and "setup" in name and name.endswith(".exe"),
+        lambda name: "windows" in name and name.endswith(".exe"),
+        lambda name: "windows" in name and name.endswith(".zip"),
+        lambda name: "win" in name and name.endswith(".zip"),
+    )
+    macos_asset = find_release_asset(
+        assets,
+        lambda name: ("macos" in name or "darwin" in name or "osx" in name) and name.endswith(".dmg"),
+        lambda name: ("macos" in name or "darwin" in name or "osx" in name) and name.endswith(".zip"),
+    )
+    linux_asset = find_release_asset(
+        assets,
+        lambda name: "linux" in name and name.endswith((".tar.gz", ".tgz")),
+        lambda name: "linux" in name and name.endswith(".appimage"),
+        lambda name: "linux" in name and name.endswith((".deb", ".rpm", ".zip")),
+    )
+
+    manifest: dict = {
+        "version": version,
+        "notes": str(release.get("body") or release.get("name") or "").strip(),
+    }
+    for key, asset in (("windows", windows_asset), ("macos", macos_asset), ("linux", linux_asset)):
+        payload = github_release_asset_payload(asset, checksums)
+        if payload:
+            manifest[key] = payload
+    return manifest
+
+
+def parse_version_from_release_name(name: str) -> str:
+    match = re.search(r"\bv?(\d+(?:\.\d+){1,3})\b", str(name or ""), flags=re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def read_github_release_json(api_url: str, config: dict) -> dict:
+    ensure_update_url_allowed(api_url, config)
+    response = requests.get(api_url, timeout=30, headers=update_request_headers("application/vnd.github+json"))
+    if response.status_code != 200:
+        raise FilesAutomationError(f"GitHub release returned HTTP {response.status_code}.")
+    try:
+        payload = response.json()
+    except ValueError as error:
+        raise FilesAutomationError("GitHub release did not return valid JSON.") from error
+    return github_release_to_update_manifest(payload, config)
+
+
+def read_http_update_json(url: str, config: dict, *, allow_github_fallback: bool = True) -> dict:
+    api_url = github_release_api_url(url)
+    parsed = urllib.parse.urlsplit(url)
+    release_page_request = bool(
+        api_url
+        and parsed.netloc.lower() in {"github.com", "www.github.com"}
+        and parsed.path.rstrip("/").endswith("/releases")
+    )
+    if release_page_request:
+        return read_github_release_json(api_url, config)
+
+    response = requests.get(url, timeout=30, headers=update_request_headers())
+    if response.status_code != 200:
+        if allow_github_fallback and api_url:
+            return read_github_release_json(api_url, config)
+        raise FilesAutomationError(f"Update manifest returned HTTP {response.status_code}.")
+    try:
+        payload = response.json()
+    except ValueError as error:
+        if allow_github_fallback and api_url:
+            return read_github_release_json(api_url, config)
+        raise FilesAutomationError("Update manifest is not valid JSON.") from error
+    if not isinstance(payload, dict):
+        raise FilesAutomationError("Update manifest is invalid.")
+    if "tag_name" in payload and isinstance(payload.get("assets"), list):
+        return github_release_to_update_manifest(payload, config)
+    return payload
+
+
 def read_update_json(url: str, config: dict) -> dict:
     ensure_update_url_allowed(url, config)
     parsed = urllib.parse.urlsplit(url)
@@ -3614,17 +3868,7 @@ def read_update_json(url: str, config: dict) -> dict:
         if not isinstance(payload, dict):
             raise FilesAutomationError("Update manifest is invalid.")
         return payload
-
-    response = requests.get(url, timeout=30, headers={"Cache-Control": "no-cache"})
-    if response.status_code != 200:
-        raise FilesAutomationError(f"Update manifest returned HTTP {response.status_code}.")
-    try:
-        payload = response.json()
-    except ValueError as error:
-        raise FilesAutomationError("Update manifest is not valid JSON.") from error
-    if not isinstance(payload, dict):
-        raise FilesAutomationError("Update manifest is invalid.")
-    return payload
+    return read_http_update_json(url, config)
 
 
 def parse_version(value: str) -> tuple[int, ...]:
@@ -3651,13 +3895,80 @@ def current_update_platform_key() -> str:
     return "linux"
 
 
-def normalize_update_manifest(manifest: dict, manifest_url: str) -> dict:
-    platform_key = current_update_platform_key()
+def update_platform_label(platform_key: str) -> str:
+    labels = {
+        "windows": "Windows",
+        "macos": "macOS",
+        "linux": "Linux",
+    }
+    return labels.get(str(platform_key or "").lower(), str(platform_key or "").strip() or "Platform")
+
+
+def payload_package_type(payload: dict) -> str:
+    package_url = str(payload.get("url") or "").strip()
+    package_type = str(payload.get("packageType") or payload.get("type") or "").strip().lower()
+    if package_type:
+        return package_type
+    return package_type_from_asset_name(urllib.parse.urlsplit(package_url).path)
+
+
+def is_windows_setup_payload(payload: dict) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    package_type = payload_package_type(payload)
+    package_url = str(payload.get("url") or "").strip().lower()
+    return package_type in {"installer", "setup", "exe", "msi"} or package_url.endswith((".exe", ".msi"))
+
+
+def merge_update_payload_defaults(parent: dict, child: dict) -> dict:
+    merged = {
+        key: value
+        for key, value in parent.items()
+        if key not in {"setup", "installer", "exe", "msi", "zip", "portable", "archive"}
+    }
+    merged.update(child)
+    return merged
+
+
+def select_platform_update_payload(manifest: dict, platform_key: str) -> dict:
     platform_payload = manifest.get(platform_key)
     if not isinstance(platform_payload, dict) and platform_key == "macos":
         platform_payload = manifest.get("darwin")
-    if not isinstance(platform_payload, dict):
-        platform_payload = manifest.get("package") if isinstance(manifest.get("package"), dict) else manifest
+
+    if platform_key == "windows":
+        top_level_setup_keys = ("windowsSetup", "windowsInstaller", "winSetup", "winInstaller")
+        for key in top_level_setup_keys:
+            payload = manifest.get(key)
+            if isinstance(payload, dict) and is_windows_setup_payload(payload):
+                return payload
+
+        if isinstance(platform_payload, dict):
+            for key in ("setup", "installer", "exe", "msi"):
+                payload = platform_payload.get(key)
+                if isinstance(payload, dict) and is_windows_setup_payload(payload):
+                    return merge_update_payload_defaults(platform_payload, payload)
+            if is_windows_setup_payload(platform_payload):
+                return platform_payload
+            for key in ("zip", "portable", "archive"):
+                payload = platform_payload.get(key)
+                if isinstance(payload, dict):
+                    return merge_update_payload_defaults(platform_payload, payload)
+
+    if isinstance(platform_payload, dict):
+        return platform_payload
+
+    has_platform_payloads = any(
+        isinstance(manifest.get(key), dict) for key in ("windows", "windowsSetup", "windowsInstaller", "macos", "darwin", "linux")
+    )
+    if has_platform_payloads:
+        return {}
+    package_payload = manifest.get("package")
+    return package_payload if isinstance(package_payload, dict) else manifest
+
+
+def normalize_update_manifest(manifest: dict, manifest_url: str) -> dict:
+    platform_key = current_update_platform_key()
+    platform_payload = select_platform_update_payload(manifest, platform_key)
 
     version = str(platform_payload.get("version") or manifest.get("version") or "").strip().lstrip("v")
     package_url = str(platform_payload.get("url") or manifest.get("url") or "").strip()
@@ -3670,8 +3981,22 @@ def normalize_update_manifest(manifest: dict, manifest_url: str) -> dict:
     ).strip().lower()
     package_url = urllib.parse.urljoin(manifest_url, package_url) if package_url else ""
     package_path = urllib.parse.urlsplit(package_url).path.lower() if package_url else ""
-    if package_type not in {"zip", "installer"}:
-        package_type = "installer" if package_path.endswith((".exe", ".msi")) else "zip"
+    known_package_types = {"zip", "installer", "dmg", "tar.gz", "tgz", "appimage", "deb", "rpm"}
+    if package_type not in known_package_types:
+        if package_path.endswith((".exe", ".msi")):
+            package_type = "installer"
+        elif package_path.endswith(".dmg"):
+            package_type = "dmg"
+        elif package_path.endswith((".tar.gz", ".tgz")):
+            package_type = "tar.gz"
+        elif package_path.endswith(".appimage"):
+            package_type = "appimage"
+        elif package_path.endswith(".deb"):
+            package_type = "deb"
+        elif package_path.endswith(".rpm"):
+            package_type = "rpm"
+        else:
+            package_type = "zip"
 
     installer_args = platform_payload.get("installerArgs", manifest.get("installerArgs", ""))
     if isinstance(installer_args, list):
@@ -3697,9 +4022,12 @@ def normalize_update_manifest(manifest: dict, manifest_url: str) -> dict:
     update_available = is_newer_version(version)
     if update_available:
         if not package_url:
-            raise FilesAutomationError("Update manifest is missing a package URL.")
+            raise FilesAutomationError(f"Update manifest is missing a {update_platform_label(platform_key)} package URL.")
         if not re.fullmatch(r"[a-f0-9]{64}", sha256):
             raise FilesAutomationError("Update manifest is missing a valid SHA-256 checksum.")
+
+    package_name = posixpath.basename(urllib.parse.urlsplit(package_url).path) if package_url else ""
+    install_mode = "automatic" if platform_key == "windows" and package_type == "installer" else "manual"
 
     return {
         "version": version,
@@ -3712,6 +4040,9 @@ def normalize_update_manifest(manifest: dict, manifest_url: str) -> dict:
         "successExitCodes": clean_success_exit_codes,
         "sizeBytes": size_bytes if isinstance(size_bytes, int) and size_bytes >= 0 else None,
         "platform": platform_key,
+        "platformLabel": update_platform_label(platform_key),
+        "packageName": urllib.parse.unquote(package_name),
+        "installMode": install_mode,
         "updateAvailable": update_available,
     }
 
@@ -4150,12 +4481,16 @@ def launch_windows_update_installer(package_path: Path, update_info: dict) -> No
     )
 
 
-def prepare_update_install() -> dict:
-    if not sys.platform.startswith("win"):
-        raise FilesAutomationError("Automatic update install is currently supported on Windows only.")
-    if not getattr(sys, "frozen", False):
-        raise FilesAutomationError("Automatic update install is only available in the packaged app.")
+def open_update_download(update_info: dict) -> None:
+    package_url = str(update_info.get("url", "") or "").strip()
+    if not package_url:
+        raise FilesAutomationError("Update package URL is missing.")
+    ensure_update_url_allowed(package_url, load_update_config())
+    if not webbrowser.open(package_url):
+        raise FilesAutomationError("Update download could not be opened.")
 
+
+def prepare_update_install() -> dict:
     with UPDATE_STATE_LOCK:
         if UPDATE_STATE["installing"]:
             raise FilesAutomationError("Update install is already running.")
@@ -4171,6 +4506,19 @@ def prepare_update_install() -> dict:
         if not isinstance(latest, dict) or not latest.get("updateAvailable"):
             raise FilesAutomationError("No update is available.")
 
+        auto_install_supported = sys.platform.startswith("win") and getattr(sys, "frozen", False)
+        if str(latest.get("installMode") or "").lower() == "manual" or not auto_install_supported:
+            platform_label = str(latest.get("platformLabel") or update_platform_label(latest.get("platform", ""))).strip()
+            set_update_install_status("manual", f"Opening {platform_label} update download.", progress=100)
+            open_update_download(latest)
+            return {
+                "currentVersion": APP_VERSION,
+                "latest": latest,
+                "downloadUrl": str(latest.get("url", "") or ""),
+                "manualDownload": True,
+                "restarting": False,
+            }
+
         set_update_install_status("download", f"Starting update v{latest.get('version', '')}.", progress=6)
         package_path = download_update_package(latest)
         set_update_install_status("launch", "Launching installer and closing app.", progress=94)
@@ -4180,6 +4528,8 @@ def prepare_update_install() -> dict:
             "currentVersion": APP_VERSION,
             "latest": latest,
             "packagePath": str(package_path),
+            "manualDownload": False,
+            "restarting": True,
         }
     except Exception as error:
         with UPDATE_STATE_LOCK:
@@ -6300,9 +6650,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         try:
             payload = prepare_update_install()
             payload["success"] = True
-            payload["restarting"] = True
             self._send_json(200, payload)
-            threading.Thread(target=self._close_for_update, daemon=True).start()
+            if payload.get("restarting"):
+                threading.Thread(target=self._close_for_update, daemon=True).start()
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
 

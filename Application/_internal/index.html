@@ -7584,24 +7584,55 @@
       return getSkippedUpdateVersion() !== version;
     }
 
+    function getUpdatePlatformLabel(update = {}) {
+      const provided = String(update?.platformLabel || '').trim();
+      if (provided) return provided;
+      const platform = String(update?.platform || '').trim().toLowerCase();
+      if (platform === 'windows') return 'Windows';
+      if (platform === 'macos' || platform === 'darwin') return 'macOS';
+      if (platform === 'linux') return 'Linux';
+      return platform ? platform.toUpperCase() : '';
+    }
+
+    function getUpdateInstallMode(update = {}) {
+      return String(update?.installMode || '').trim().toLowerCase() === 'manual' ? 'manual' : 'automatic';
+    }
+
+    function getUpdateActionLabel(update = {}) {
+      return getUpdateInstallMode(update) === 'manual' ? 'Download Update' : 'Install Update';
+    }
+
+    function getUpdatePackageMeta(update = {}) {
+      const platformLabel = getUpdatePlatformLabel(update);
+      const sizeBytes = Number(update?.sizeBytes);
+      const sizeLabel = Number.isFinite(sizeBytes) && sizeBytes > 0 ? formatFilesBytes(sizeBytes) : '';
+      const packageName = String(update?.packageName || update?.packageType || '').trim();
+      return [platformLabel, sizeLabel || packageName].filter(Boolean).join(' - ') || '-';
+    }
+
     function showUpdatePrompt(result = {}, options = {}) {
       const latest = result.latest || updateInfo || {};
       if (!shouldShowUpdatePrompt(latest, Boolean(options.force))) return;
       const currentVersion = String(result.currentVersion || latest.currentVersion || '').trim();
       const latestVersion = String(latest.version || '').trim();
-      const sizeBytes = Number(latest.sizeBytes);
       const notes = String(latest.notes || '').trim();
+      const platformLabel = getUpdatePlatformLabel(latest);
       updateInfo = latest;
       setUpdateButtonState();
 
       els.updatePromptCurrent.textContent = currentVersion ? `v${currentVersion}` : '-';
       els.updatePromptLatest.textContent = latestVersion ? `v${latestVersion}` : '-';
-      els.updatePromptSize.textContent = Number.isFinite(sizeBytes) && sizeBytes > 0 ? formatFilesBytes(sizeBytes) : latest.packageType || '-';
-      els.updatePromptTitle.textContent = latestVersion ? `Update v${latestVersion} available` : 'Update available';
+      els.updatePromptSize.textContent = getUpdatePackageMeta(latest);
+      els.updatePromptTitle.textContent = latestVersion
+        ? `${platformLabel ? `${platformLabel} update` : 'Update'} v${latestVersion} available`
+        : `${platformLabel ? `${platformLabel} update` : 'Update'} available`;
       els.updatePromptMessage.textContent = currentVersion
-        ? `You are running v${currentVersion}. A newer build is ready.`
-        : 'A newer 6ure App build is ready.';
-      els.updatePromptNotes.textContent = notes || 'Install the latest build to keep upload tools and Discord Presence fixes current.';
+        ? `You are running v${currentVersion}. A newer ${platformLabel || '6ure App'} build is ready.`
+        : `A newer ${platformLabel || '6ure App'} build is ready.`;
+      els.updatePromptNotes.textContent = notes || (getUpdateInstallMode(latest) === 'manual'
+        ? `Download the ${platformLabel || 'platform'} package from GitHub Releases to install it.`
+        : 'Install the latest build to keep upload tools and Discord Presence fixes current.');
+      els.updatePromptInstallBtn.textContent = getUpdateActionLabel(latest);
       els.updatePrompt.classList.remove('hidden');
       els.updatePrompt.setAttribute('aria-hidden', 'false');
       requestAnimationFrame(() => els.updatePrompt.classList.add('show'));
@@ -7629,6 +7660,7 @@
       if (value === 'ready') return 'Ready';
       if (value === 'launch') return 'Launching installer';
       if (value === 'handoff') return 'Installer launched';
+      if (value === 'manual') return 'Download ready';
       if (value === 'error') return 'Update error';
       return 'Update status';
     }
@@ -7736,7 +7768,7 @@
         return;
       }
       if (updateInfo?.updateAvailable) {
-        setActionButtonLabel(els.filesUpdateBtn, 'Install Update');
+        setActionButtonLabel(els.filesUpdateBtn, getUpdateActionLabel(updateInfo));
         els.filesUpdateBtn.disabled = updateBusy || filesUploadActive;
         return;
       }
@@ -7827,16 +7859,34 @@
       if (updateBusy) return;
       updateBusy = true;
       hideUpdatePrompt();
-      resetUpdateMonitor('Installing update', 'Starting update install...');
-      updateDiscordPresence('Installing update', '6ure App', { force: true });
+      const manualDownload = getUpdateInstallMode(updateInfo || {}) === 'manual';
+      resetUpdateMonitor(
+        manualDownload ? 'Opening update download' : 'Installing update',
+        manualDownload ? 'Opening platform update package...' : 'Starting update install...'
+      );
+      updateDiscordPresence(manualDownload ? 'Downloading update' : 'Installing update', '6ure App', { force: true });
       startUpdateStatusPolling();
       setUpdateButtonState('installing');
       try {
-        await filesApi('/api/update/install', {
+        const result = await filesApi('/api/update/install', {
           method: 'POST',
           body: '{}'
         });
         els.updateMonitorProgress.style.width = '100%';
+        if (result.manualDownload) {
+          updateBusy = false;
+          stopUpdateStatusPolling();
+          els.updateMonitorMessage.textContent = 'Update download opened in your browser.';
+          pushUpdateMonitorLine('Update download opened in your browser.');
+          showToast('Update download opened.', 'ok');
+          setUpdateButtonState();
+          updateDiscordPresence(
+            'Browsing resources',
+            filesUsername || 'username',
+            { force: true }
+          );
+          return;
+        }
         els.updateMonitorMessage.textContent = 'Installer launched. The app will close now.';
         pushUpdateMonitorLine('Installer launched. The app will close now.');
         showToast('Installing update. The app will restart.', 'ok');

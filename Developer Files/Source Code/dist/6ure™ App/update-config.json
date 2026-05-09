@@ -1,5 +1,6 @@
 {
-  "manifestUrl": "https://thejinx1.github.io/6ure-files-updates/latest.json",
+  "manifestUrl": "https://github.com/thejinx1/6ure-App/releases/latest/download/latest.json",
+  "githubReleasesUrl": "https://github.com/thejinx1/6ure-App/releases",
   "channel": "stable",
   "allowInsecure": false
 }
