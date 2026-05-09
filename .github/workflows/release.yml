@@ -117,12 +117,19 @@ jobs:
           $iconPath = (Resolve-Path -LiteralPath "assets\6ure-logo.ico").Path
           $setupPath = Join-Path $env:GITHUB_WORKSPACE "${{ env.WIN_SETUP }}"
           $nsiPath = Join-Path $env:GITHUB_WORKSPACE "6ure-app-setup-windows-x64.nsi"
+          $stageRoot = Join-Path $env:RUNNER_TEMP "6ure-nsis-stage"
+          $stageAppDir = Join-Path $stageRoot "app"
 
           foreach ($outputPath in @($setupPath, $nsiPath)) {
             if (Test-Path -LiteralPath $outputPath) {
               Remove-Item -LiteralPath $outputPath -Force
             }
           }
+          if (Test-Path -LiteralPath $stageRoot) {
+            Remove-Item -LiteralPath $stageRoot -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force -Path $stageAppDir | Out-Null
+          Get-ChildItem -LiteralPath $distFullPath -Force | Copy-Item -Destination $stageAppDir -Recurse -Force
 
           $nsis = @"
           Unicode true
@@ -151,7 +158,7 @@ jobs:
 
           Section "Install"
             SetOutPath "`$INSTDIR"
-            File /r "$distFullPath\*"
+            File /r "$stageAppDir\*"
             WriteUninstaller "`$INSTDIR\Uninstall.exe"
             Delete "`$DESKTOP\$legacyAppName.lnk"
             Delete "`$SMPROGRAMS\$legacyAppName\$legacyAppName.lnk"
@@ -182,7 +189,7 @@ jobs:
           SectionEnd
           "@
 
-          Set-Content -LiteralPath $nsiPath -Value $nsis -Encoding UTF8
+          Set-Content -LiteralPath $nsiPath -Value $nsis -Encoding utf8BOM
 
           $makensisCandidates = @(
             "C:\Program Files (x86)\NSIS\makensis.exe",
