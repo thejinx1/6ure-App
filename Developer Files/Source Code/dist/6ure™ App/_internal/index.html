@@ -5278,27 +5278,6 @@
                     <input id="settingAutoUpdate" class="files-setting-toggle" type="checkbox" data-setting-key="autoUpdateCheck">
                     <span class="files-setting-switch" aria-hidden="true"></span>
                   </label>
-                  <label class="files-setting-row">
-                    <span class="files-setting-copy">
-                      <span>Sound effects</span>
-                    </span>
-                    <input id="settingSoundEffects" class="files-setting-toggle" type="checkbox" data-setting-key="soundEffects">
-                    <span class="files-setting-switch" aria-hidden="true"></span>
-                  </label>
-                  <label class="files-setting-row">
-                    <span class="files-setting-copy">
-                      <span>Leaker launch sound</span>
-                    </span>
-                    <input id="settingLeakerSound" class="files-setting-toggle" type="checkbox" data-setting-key="leakerLaunchSound">
-                    <span class="files-setting-switch" aria-hidden="true"></span>
-                  </label>
-                  <label class="files-setting-row">
-                    <span class="files-setting-copy">
-                      <span>Opening sound</span>
-                    </span>
-                    <input id="settingOpeningSound" class="files-setting-toggle" type="checkbox" data-setting-key="openingSound">
-                    <span class="files-setting-switch" aria-hidden="true"></span>
-                  </label>
                 </section>
 
                 <section class="files-settings-group">
@@ -5776,9 +5755,6 @@
       presenceResourceName: true,
       presenceStep: true,
       presenceField: true,
-      soundEffects: true,
-      leakerLaunchSound: true,
-      openingSound: true,
       autoUpdateCheck: true
     };
     let filesSettings = loadFilesSettings();
@@ -5850,9 +5826,6 @@
       settingPresenceStep: $('#settingPresenceStep'),
       settingPresenceField: $('#settingPresenceField'),
       settingAutoUpdate: $('#settingAutoUpdate'),
-      settingSoundEffects: $('#settingSoundEffects'),
-      settingLeakerSound: $('#settingLeakerSound'),
-      settingOpeningSound: $('#settingOpeningSound'),
       settingEncryptedVault: $('#settingEncryptedVault'),
       settingSilentRepair: $('#settingSilentRepair'),
       filesSelectionOverlay: $('#filesSelectionOverlay'),
@@ -5989,10 +5962,7 @@
         [els.settingPresenceResource, 'presenceResourceName'],
         [els.settingPresenceStep, 'presenceStep'],
         [els.settingPresenceField, 'presenceField'],
-        [els.settingAutoUpdate, 'autoUpdateCheck'],
-        [els.settingSoundEffects, 'soundEffects'],
-        [els.settingLeakerSound, 'leakerLaunchSound'],
-        [els.settingOpeningSound, 'openingSound']
+        [els.settingAutoUpdate, 'autoUpdateCheck']
       ];
       for (const [control, key] of map) {
         if (control) control.checked = getFilesSetting(key);
@@ -6062,8 +6032,9 @@
           method: 'POST',
           body: JSON.stringify({ reveal: true })
         });
-        setFilesSettingsStatus(result.fileName ? `Created ${result.fileName}.` : 'Debug bundle created.');
-        showToast('Debug bundle created.', 'ok');
+        const locationLabel = result.savedToDesktop ? ' on Desktop' : '';
+        setFilesSettingsStatus(result.fileName ? `Created ${result.fileName}${locationLabel}.` : `Debug bundle created${locationLabel}.`);
+        showToast(`Debug bundle saved${locationLabel}.`, 'ok');
       } catch (error) {
         showToast(getFriendlyFilesMessage(error.message, 'Debug bundle could not be created.'), 'err');
         setFilesSettingsStatus('Debug bundle failed.');
@@ -6184,8 +6155,6 @@
 
     function playSound(audio, volume = 0.72) {
       if (!audio) return;
-      if (!getFilesSetting('soundEffects')) return;
-      if (audio === els.openingSound && !getFilesSetting('openingSound')) return;
       try {
         audio.pause();
         audio.volume = Math.max(0, Math.min(1, Number(volume) || 0.72));
@@ -6207,7 +6176,6 @@
     function playLeakerModeSoundUntilDone() {
       const audio = els.leakerModeSound;
       if (!audio) return wait(LEAKER_TRANSITION_MIN_MS);
-      if (!getFilesSetting('soundEffects') || !getFilesSetting('leakerLaunchSound')) return wait(LEAKER_TRANSITION_MIN_MS);
 
       return new Promise(resolve => {
         let resolved = false;
@@ -6285,7 +6253,6 @@
     function playOpeningSound() {
       const audio = els.openingSound;
       if (!audio) return;
-      if (!getFilesSetting('soundEffects') || !getFilesSetting('openingSound')) return;
       cleanupOpeningSoundFallback();
       const isOpeningWindow = () => document.body.classList.contains('files-opening-active');
       const attemptPlay = (restart = false) => {
@@ -7351,12 +7318,15 @@
 
     async function filesApi(path, options = {}) {
       let response;
+      const requestId = (window.crypto?.randomUUID && window.crypto.randomUUID())
+        || `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       try {
         response = await fetch(path, {
           cache: 'no-store',
           ...options,
           headers: {
             'Content-Type': 'application/json',
+            'X-Request-Id': requestId,
             ...(options.headers || {})
           }
         });
@@ -7373,7 +7343,11 @@
         data = { msg: text };
       }
       if (!response.ok || (data.success === false && !data.cancelled)) {
-        throw new Error(data.msg || `HTTP ${response.status}`);
+        const error = new Error(data.msg || `HTTP ${response.status}`);
+        error.status = response.status;
+        error.requestId = data.requestId || response.headers.get('X-6ure-Request-Id') || requestId;
+        error.payload = data;
+        throw error;
       }
       return data;
     }
@@ -11245,9 +11219,6 @@
         els.settingPresenceStep,
         els.settingPresenceField,
         els.settingAutoUpdate,
-        els.settingSoundEffects,
-        els.settingLeakerSound,
-        els.settingOpeningSound,
         els.settingEncryptedVault,
         els.settingSilentRepair
       ]) {

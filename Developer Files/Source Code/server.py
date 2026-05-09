@@ -43,7 +43,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.4.3"
+DEFAULT_APP_VERSION = "1.4.4"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
@@ -5084,10 +5084,126 @@ def reveal_file(path: Path) -> None:
         pass
 
 
-def create_debug_bundle(*, reveal: bool = True) -> dict:
+def windows_known_desktop_dir() -> Path | None:
+    if not sys.platform.startswith("win"):
+        return None
+    try:
+        from ctypes import wintypes
+
+        class GUID(ctypes.Structure):
+            _fields_ = [
+                ("Data1", wintypes.DWORD),
+                ("Data2", wintypes.WORD),
+                ("Data3", wintypes.WORD),
+                ("Data4", ctypes.c_ubyte * 8),
+            ]
+
+        desktop_guid = uuid.UUID("B4BFCC3A-DB2C-424C-B029-7FE99A87C641")
+        folder_id = GUID(
+            desktop_guid.time_low,
+            desktop_guid.time_mid,
+            desktop_guid.time_hi_version,
+            (ctypes.c_ubyte * 8).from_buffer_copy(desktop_guid.bytes[8:]),
+        )
+        path_ptr = ctypes.c_void_p()
+        result = ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(folder_id), 0, None, ctypes.byref(path_ptr))
+        if result != 0 or not path_ptr.value:
+            return None
+        try:
+            return Path(ctypes.wstring_at(path_ptr.value))
+        finally:
+            ctypes.windll.ole32.CoTaskMemFree(path_ptr)
+    except Exception:
+        return None
+
+
+def linux_xdg_desktop_dir() -> Path | None:
+    if not sys.platform.startswith("linux"):
+        return None
+    try:
+        config_root = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+        user_dirs_path = config_root / "user-dirs.dirs"
+        if not user_dirs_path.is_file():
+            return None
+        for line in user_dirs_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            clean = line.strip()
+            if not clean.startswith("XDG_DESKTOP_DIR="):
+                continue
+            value = clean.split("=", 1)[1].strip().strip('"')
+            value = value.replace("$HOME", str(Path.home()))
+            if value:
+                return Path(value).expanduser()
+    except Exception:
+        return None
+    return None
+
+
+def desktop_dir_candidates() -> list[Path]:
+    candidates: list[Path] = []
+    override = os.environ.get("REYLI_DEBUG_DESKTOP_DIR")
+    if override:
+        candidates.append(Path(override).expanduser())
+    known_desktop = windows_known_desktop_dir()
+    if known_desktop:
+        candidates.append(known_desktop)
+    xdg_desktop = linux_xdg_desktop_dir()
+    if xdg_desktop:
+        candidates.append(xdg_desktop)
+    try:
+        home = Path.home()
+        candidates.extend(
+            [
+                home / "Desktop",
+                home / "Masa\u00fcst\u00fc",
+                home / "Masaustu",
+            ]
+        )
+    except Exception:
+        pass
+
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            key = str(candidate.expanduser().resolve(strict=False)).lower()
+        except Exception:
+            key = str(candidate).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(candidate)
+    return unique
+
+
+def resolve_debug_desktop_dir() -> tuple[Path, bool]:
+    for candidate in desktop_dir_candidates():
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            if candidate.is_dir():
+                return candidate.resolve(), True
+        except OSError:
+            continue
     DEBUG_BUNDLE_DIR.mkdir(parents=True, exist_ok=True)
+    return DEBUG_BUNDLE_DIR.resolve(), False
+
+
+def unique_debug_bundle_path(output_dir: Path, file_name: str) -> Path:
+    target = output_dir / file_name
+    if not target.exists():
+        return target
+    stem = target.stem
+    suffix = target.suffix
+    for index in range(2, 1000):
+        candidate = output_dir / f"{stem}-{index}{suffix}"
+        if not candidate.exists():
+            return candidate
+    return output_dir / f"{stem}-{uuid.uuid4().hex[:8]}{suffix}"
+
+
+def create_debug_bundle(*, reveal: bool = True) -> dict:
+    output_dir, saved_to_desktop = resolve_debug_desktop_dir()
     stamp = time.strftime("%Y%m%d-%H%M%S")
-    bundle_path = DEBUG_BUNDLE_DIR / f"6ure-debug-{stamp}.zip"
+    bundle_path = unique_debug_bundle_path(output_dir, f"6ure-debug-{stamp}.zip")
     metadata = {
         "appVersion": APP_VERSION,
         "createdAt": int(time.time() * 1000),
@@ -5097,6 +5213,8 @@ def create_debug_bundle(*, reveal: bool = True) -> dict:
         "root": str(ROOT),
         "appRoot": str(APP_ROOT),
         "dataRoot": str(DATA_ROOT),
+        "outputDir": str(output_dir),
+        "savedToDesktop": saved_to_desktop,
     }
     paths = {
         "config": file_summary(CONFIG_PATH),
@@ -5128,9 +5246,11 @@ def create_debug_bundle(*, reveal: bool = True) -> dict:
     return {
         "success": True,
         "path": str(bundle_path),
+        "directory": str(bundle_path.parent),
         "fileName": bundle_path.name,
         "sizeBytes": bundle_path.stat().st_size,
         "createdAt": int(time.time() * 1000),
+        "savedToDesktop": saved_to_desktop,
     }
 
 
@@ -6343,6 +6463,18 @@ def start_files_job(editor_name: str, folder_paths) -> FilesUploadJob:
 class FilesAppHandler(BaseHTTPRequestHandler):
     server_version = "6ureFilesLocal/1.0"
 
+    def _request_id(self) -> str:
+        request_id = getattr(self, "_6ure_request_id", "")
+        if request_id:
+            return request_id
+        inbound = str(self.headers.get("X-Request-Id", "") or "").strip()
+        if re.fullmatch(r"[A-Za-z0-9._:-]{6,96}", inbound):
+            request_id = inbound[:96]
+        else:
+            request_id = uuid.uuid4().hex
+        self._6ure_request_id = request_id
+        return request_id
+
     def _send(
         self,
         status: int,
@@ -6353,7 +6485,11 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         try:
             self.send_response(status)
             self.send_header("Content-Type", content_type)
-            self.send_header("Cache-Control", "no-store")
+            self.send_header("Cache-Control", "no-store, max-age=0")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-6ure-Request-Id", self._request_id())
             for key, value in (extra_headers or {}).items():
                 if isinstance(value, (list, tuple)):
                     for item in value:
@@ -6366,17 +6502,54 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             return
 
     def _send_json(self, status: int, payload: dict) -> None:
-        self._send(status, json_bytes(payload))
+        if not isinstance(payload, dict):
+            payload = {"data": payload}
+        response_payload = dict(payload)
+        response_payload.setdefault("success", 200 <= status < 400)
+        response_payload.setdefault("requestId", self._request_id())
+        if status >= 400:
+            response_payload.setdefault("errorType", "api_error")
+            response_payload.setdefault("path", urllib.parse.urlsplit(self.path).path)
+            response_payload.setdefault("msg", self.responses.get(status, ("Request failed.",))[0])
+        self._send(status, json_bytes(response_payload))
 
     def _read_json(self) -> dict:
-        length = int(self.headers.get("Content-Length", "0"))
+        raw_length = str(self.headers.get("Content-Length", "0") or "0").strip()
+        try:
+            length = int(raw_length)
+        except ValueError as error:
+            raise ValueError("Invalid Content-Length header.") from error
+        if length < 0:
+            raise ValueError("Invalid Content-Length header.")
         if length > MAX_BODY_BYTES:
             raise ValueError("Request body is too large.")
-        raw = self.rfile.read(length).decode("utf-8") if length else "{}"
-        return json.loads(raw or "{}")
+        raw = self.rfile.read(length) if length else b""
+        if not raw:
+            return {}
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError as error:
+            raise ValueError("Request body must be valid UTF-8 JSON.") from error
+        try:
+            payload = json.loads(text or "{}")
+        except json.JSONDecodeError as error:
+            raise ValueError(f"Invalid JSON body at line {error.lineno}, column {error.colno}.") from error
+        if not isinstance(payload, dict):
+            raise ValueError("JSON body must be an object.")
+        return payload
 
     def do_OPTIONS(self) -> None:
-        self._send(204, b"", "text/plain; charset=utf-8")
+        self._send(
+            204,
+            b"",
+            "text/plain; charset=utf-8",
+            {
+                "Allow": "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+                "Access-Control-Allow-Methods": "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, X-Request-Id",
+                "Access-Control-Max-Age": "600",
+            },
+        )
 
     def do_GET(self) -> None:
         parsed = urllib.parse.urlsplit(self.path)
