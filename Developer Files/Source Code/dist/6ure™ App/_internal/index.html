@@ -5205,6 +5205,8 @@
     let leakerUploadPresenceLastAt = 0;
     let leakerUploadLastFieldLabel = '';
     let leakerUploadLastFieldAt = 0;
+    let leakerUploadLastCreatorName = '';
+    let leakerUploadLastCreatorAt = 0;
     let leakerLinksPlatform = 'tiktok';
     let leakerLinksBusy = false;
     let leakerLinksSelectedUsername = '';
@@ -8743,6 +8745,58 @@
       return '';
     }
 
+    function getLeakerUploadStepNumber(stepLabel) {
+      const match = String(stepLabel || '').match(/\bstep\s*(\d+)\b/i);
+      return match ? match[1] : '';
+    }
+
+    function scoreLeakerUploadStepElement(element, rawText, step, inferredStep) {
+      const role = String(element.getAttribute?.('role') || '').toLowerCase();
+      const ariaSelected = String(element.getAttribute?.('aria-selected') || '').toLowerCase();
+      if (role === 'tab' && ariaSelected && ariaSelected !== 'true') return -1;
+      try {
+        const view = element.ownerDocument?.defaultView || window;
+        const style = view.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        if (style.display === 'none' || style.visibility === 'hidden' || rect.width <= 1 || rect.height <= 1) return -1;
+      } catch {}
+
+      const ariaCurrent = String(element.getAttribute?.('aria-current') || '').toLowerCase();
+      const dataState = String(element.getAttribute?.('data-state') || '').toLowerCase();
+      const dataActive = String(element.getAttribute?.('data-active') || '').toLowerCase();
+      const classText = Array.from(element.classList || []).join(' ').toLowerCase();
+      const activeClass = /(^|[\s_-])(active|selected|current)([\s_-]|$)/.test(classText);
+      const inactiveClass = /(^|[\s_-])(inactive|disabled|muted|pending)([\s_-]|$)/.test(classText);
+      const completedClass = /(^|[\s_-])(complete|completed|done|visited|checked|success)([\s_-]|$)/.test(classText);
+      const activeState = /^(active|selected|current|on|open)$/.test(dataState);
+      const hasActiveSignal = (
+        ariaSelected === 'true' ||
+        ['step', 'page', 'true'].includes(ariaCurrent) ||
+        dataActive === 'true' ||
+        activeState ||
+        activeClass
+      );
+      if (!hasActiveSignal) return -1;
+
+      let score = 0;
+      if (ariaSelected === 'true') score += 90;
+      if (['step', 'page', 'true'].includes(ariaCurrent)) score += 90;
+      if (dataActive === 'true') score += 80;
+      if (activeState) score += 75;
+      if (activeClass) score += 55;
+      if (role === 'tab') score += 8;
+      if (inactiveClass) score -= 70;
+      if (completedClass) score -= 35;
+      if (String(element.getAttribute?.('aria-disabled') || '').toLowerCase() === 'true' || element.hasAttribute?.('disabled')) score -= 70;
+
+      const stepNumber = getLeakerUploadStepNumber(step);
+      const inferredNumber = getLeakerUploadStepNumber(inferredStep);
+      if (stepNumber && inferredNumber && stepNumber === inferredNumber) score += 18;
+      const stepMentions = String(rawText || '').match(/\bstep\s*\d+\b/gi) || [];
+      if (stepMentions.length > 1) return -1;
+      return score;
+    }
+
     function inferLeakerUploadStepFromField(fieldLabel) {
       const field = String(fieldLabel || '').toLowerCase();
       if (/asset|storage|file|download|folder|cloud/.test(field)) return 'Step 2: Asset & Storage';
@@ -8754,26 +8808,35 @@
     }
 
     function getLeakerUploadStepLabel(doc, activeFieldLabel = '') {
-      if (!doc) return inferLeakerUploadStepFromField(activeFieldLabel);
+      const inferredStep = inferLeakerUploadStepFromField(activeFieldLabel);
+      if (!doc) return inferredStep;
       const selectors = [
-        '[aria-current="step"]',
-        '[aria-current="page"]',
+        '[aria-current]',
         '[aria-selected="true"]',
         '[data-state="active"]',
         '[data-active="true"]',
         '.active',
         '.is-active',
+        '.selected',
+        '.current',
         '[class*="active"]',
-        '[role="tab"]'
+        '[class*="selected"]',
+        '[class*="current"]',
+        '[role="tab"][aria-selected="true"]'
       ].join(',');
       try {
+        const candidates = [];
         for (const element of Array.from(doc.querySelectorAll(selectors)).slice(0, 80)) {
-          const text = String(element.innerText || element.textContent || '');
-          const step = parseLeakerUploadStepText(text);
-          if (step) return step;
+          const rawText = String(element.innerText || element.textContent || '');
+          const step = parseLeakerUploadStepText(rawText);
+          if (!step) continue;
+          const score = scoreLeakerUploadStepElement(element, rawText, step, inferredStep);
+          if (score > 0) candidates.push({ step, score });
         }
+        candidates.sort((left, right) => right.score - left.score);
+        if (candidates[0]) return candidates[0].step;
       } catch {}
-      return inferLeakerUploadStepFromField(activeFieldLabel);
+      return inferredStep;
     }
 
     function getLeakerUploadPresenceSnapshot() {
@@ -8791,7 +8854,16 @@
           activeField = leakerUploadLastFieldLabel;
         }
         const creatorControl = findLeakerCreatorNameControl(doc, frameWindow);
-        const creatorName = normalizeLeakerUploadPresenceText(creatorControl?.value || '', 64);
+        let creatorName = normalizeLeakerUploadPresenceText(creatorControl?.value || '', 64);
+        if (creatorName) {
+          leakerUploadLastCreatorName = creatorName;
+          leakerUploadLastCreatorAt = Date.now();
+        } else if (creatorControl) {
+          leakerUploadLastCreatorName = '';
+          leakerUploadLastCreatorAt = 0;
+        } else if (leakerUploadLastCreatorName && Date.now() - leakerUploadLastCreatorAt < 30 * 60 * 1000) {
+          creatorName = leakerUploadLastCreatorName;
+        }
         const step = getLeakerUploadStepLabel(doc, activeField);
         return {
           creatorName,
@@ -8833,7 +8905,7 @@
       }, Math.max(0, delay));
     }
 
-    function cleanupLeakerUploadPresenceTracking() {
+    function cleanupLeakerUploadPresenceTracking(options = {}) {
       if (leakerUploadPresenceTimer) clearTimeout(leakerUploadPresenceTimer);
       leakerUploadPresenceTimer = null;
       if (leakerUploadPresenceObserver) {
@@ -8846,6 +8918,10 @@
       leakerUploadPresenceCleanup = [];
       leakerUploadLastFieldLabel = '';
       leakerUploadLastFieldAt = 0;
+      if (options.resetCreator) {
+        leakerUploadLastCreatorName = '';
+        leakerUploadLastCreatorAt = 0;
+      }
     }
 
     function installLeakerUploadPresenceTracking(frame) {
@@ -9654,7 +9730,7 @@
     }
 
     function clearLeakerFrames() {
-      cleanupLeakerUploadPresenceTracking();
+      cleanupLeakerUploadPresenceTracking({ resetCreator: true });
       for (const frame of [els.leakerLoginFrame, els.leakerCloudFrame, els.leakerUploadFrame]) {
         if (!frame) continue;
         frame.dataset.src = '';
@@ -9692,7 +9768,7 @@
     }
 
     function showLeakerLoginView(forceReload = false) {
-      cleanupLeakerUploadPresenceTracking();
+      cleanupLeakerUploadPresenceTracking({ resetCreator: true });
       leakerModePhase = 'authenticating';
       leakerModeAuthToastShown = true;
       setLeakerModeViewVisible(true);
@@ -9865,7 +9941,7 @@
 
     function reloadLeakerMode() {
       if (leakerModePhase === 'active') {
-        cleanupLeakerUploadPresenceTracking();
+        cleanupLeakerUploadPresenceTracking({ resetCreator: true });
         setLeakerFrame(els.leakerCloudFrame, 'about:blank', true);
         setLeakerFrame(els.leakerUploadFrame, LEAKER_UPLOAD_URL, true);
         return;
