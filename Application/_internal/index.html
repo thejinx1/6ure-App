@@ -5207,6 +5207,8 @@
     let leakerUploadLastFieldAt = 0;
     let leakerUploadLastCreatorName = '';
     let leakerUploadLastCreatorAt = 0;
+    let leakerUploadLastResourceName = '';
+    let leakerUploadLastResourceAt = 0;
     let leakerLinksPlatform = 'tiktok';
     let leakerLinksBusy = false;
     let leakerLinksSelectedUsername = '';
@@ -8710,6 +8712,34 @@
       return bestScore >= 10 ? best : null;
     }
 
+    function scoreLeakerResourceNameControl(doc, control, frameWindow = window) {
+      if (!getVisibleLeakerControl(frameWindow, control)) return -1;
+      const fieldLabel = getLeakerUploadFieldLabel(doc, control).toLowerCase();
+      const context = getLeakerUploadControlContext(doc, control).toLowerCase();
+      let score = 0;
+      if (fieldLabel === 'resource name') score += 36;
+      if (fieldLabel.includes('resource') && fieldLabel.includes('name')) score += 22;
+      if (context.includes('resource name')) score += 14;
+      if (context.includes('e.g.') && context.includes('cc')) score += 3;
+      if (/creator|social|product link|thumbnail|category|description|price|tag|file|asset|storage|url|link/.test(fieldLabel)) score -= 18;
+      if (context.includes('creator name') || context.includes('creator social url')) score -= 10;
+      return score;
+    }
+
+    function findLeakerResourceNameControl(doc, frameWindow = window) {
+      if (!doc) return null;
+      let best = null;
+      let bestScore = 0;
+      for (const control of doc.querySelectorAll('input, textarea')) {
+        const score = scoreLeakerResourceNameControl(doc, control, frameWindow);
+        if (score > bestScore) {
+          best = control;
+          bestScore = score;
+        }
+      }
+      return bestScore >= 12 ? best : null;
+    }
+
     function getLeakerUploadActiveControl(doc, frameWindow = window) {
       const active = doc?.activeElement;
       if (!active) return null;
@@ -8748,6 +8778,132 @@
     function getLeakerUploadStepNumber(stepLabel) {
       const match = String(stepLabel || '').match(/\bstep\s*(\d+)\b/i);
       return match ? match[1] : '';
+    }
+
+    function normalizeLeakerUploadStepLabel(stepLabel) {
+      const step = normalizeLeakerUploadPresenceText(stepLabel, 44);
+      const number = getLeakerUploadStepNumber(step);
+      if (!number || step.includes(':')) return step;
+      const titles = {
+        '1': 'Resource Details',
+        '2': 'Asset & Storage',
+        '3': 'Final Review'
+      };
+      return titles[number] ? `Step ${number}: ${titles[number]}` : step;
+    }
+
+    function parseLeakerUploadRgb(value) {
+      const match = String(value || '').match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+      if (!match) return null;
+      const alpha = match[4] === undefined ? 1 : Number(match[4]);
+      return {
+        r: Number(match[1]),
+        g: Number(match[2]),
+        b: Number(match[3]),
+        a: Number.isFinite(alpha) ? alpha : 1
+      };
+    }
+
+    function scoreLeakerUploadVisualStepElement(element) {
+      try {
+        const view = element.ownerDocument?.defaultView || window;
+        const rect = element.getBoundingClientRect();
+        if (rect.width <= 1 || rect.height <= 1) return -1;
+        const nodes = [element, ...Array.from(element.querySelectorAll('*')).slice(0, 28)];
+        let score = 0;
+        for (const node of nodes) {
+          const style = view.getComputedStyle(node);
+          if (style.display === 'none' || style.visibility === 'hidden') continue;
+          const opacity = Number(style.opacity || '1');
+          if (Number.isFinite(opacity) && opacity < 0.5) score -= 4;
+          const color = parseLeakerUploadRgb(style.color);
+          if (color && color.a > 0.3) {
+            const brightness = (color.r * 0.299) + (color.g * 0.587) + (color.b * 0.114);
+            if (brightness > 215) score += 4;
+          }
+          const background = parseLeakerUploadRgb(style.backgroundColor);
+          if (background && background.a > 0.25) {
+            const bluePurple = background.b > 125 && background.r > 55 && background.g < 170;
+            const greenComplete = background.g > 140 && background.r < 80 && background.b < 160;
+            if (bluePurple) score += 30;
+            if (greenComplete) score -= 8;
+          }
+          const weight = Number.parseInt(style.fontWeight, 10);
+          if (Number.isFinite(weight) && weight >= 600) score += 2;
+        }
+        return score;
+      } catch {
+        return -1;
+      }
+    }
+
+    function getLeakerUploadVisualStepLabel(doc, inferredStep = '') {
+      try {
+        const candidates = [];
+        const selector = 'button, [role="tab"], [aria-current], [aria-selected], li, div, a';
+        for (const element of Array.from(doc.querySelectorAll(selector)).slice(0, 520)) {
+          const rawText = normalizeLeakerUploadPresenceText(element.innerText || element.textContent || '', 120);
+          if (!rawText || !/\bstep\s*[123]\b/i.test(rawText)) continue;
+          const stepMentions = rawText.match(/\bstep\s*[123]\b/gi) || [];
+          if (stepMentions.length !== 1) continue;
+          const step = normalizeLeakerUploadStepLabel(parseLeakerUploadStepText(rawText));
+          const number = getLeakerUploadStepNumber(step);
+          if (!number) continue;
+          const visualScore = scoreLeakerUploadVisualStepElement(element);
+          if (visualScore < 10) continue;
+          const inferredNumber = getLeakerUploadStepNumber(inferredStep);
+          const score = visualScore + (number && inferredNumber && number === inferredNumber ? 8 : 0);
+          candidates.push({ step, score });
+        }
+        candidates.sort((left, right) => (
+          right.score - left.score ||
+          Number(getLeakerUploadStepNumber(right.step) || 0) - Number(getLeakerUploadStepNumber(left.step) || 0)
+        ));
+        return candidates[0]?.step || '';
+      } catch {
+        return '';
+      }
+    }
+
+    function getLeakerUploadDocumentStep(doc) {
+      try {
+        const text = String(doc?.body?.innerText || doc?.body?.textContent || '').toLowerCase().replace(/\s+/g, ' ');
+        if (!text) return '';
+        if (
+          text.includes('review and publish') ||
+          text.includes('review your resource') ||
+          text.includes('review resource details') ||
+          text.includes('resource summary') ||
+          text.includes('publishing checklist') ||
+          text.includes('publish settings') ||
+          text.includes('publish destination') ||
+          text.includes('submit resource') ||
+          text.includes('finish upload') ||
+          text.includes('complete upload') ||
+          text.includes('ready to publish') ||
+          text.includes('final validation')
+        ) {
+          return 'Step 3: Final Review';
+        }
+        if (
+          text.includes('personal cloud transfer') ||
+          text.includes('detected resource from your private cloud') ||
+          text.includes('destination editor') ||
+          text.includes('production storage')
+        ) {
+          return 'Step 2: Asset & Storage';
+        }
+        if (
+          text.includes('publish resource') ||
+          text.includes('publishing warning') ||
+          text.includes('final check')
+        ) {
+          return 'Step 3: Final Review';
+        }
+        return '';
+      } catch {
+        return '';
+      }
     }
 
     function scoreLeakerUploadStepElement(element, rawText, step, inferredStep) {
@@ -8810,6 +8966,8 @@
     function getLeakerUploadStepLabel(doc, activeFieldLabel = '') {
       const inferredStep = inferLeakerUploadStepFromField(activeFieldLabel);
       if (!doc) return inferredStep;
+      const visualStep = getLeakerUploadVisualStepLabel(doc, inferredStep);
+      if (visualStep) return visualStep;
       const selectors = [
         '[aria-current]',
         '[aria-selected="true"]',
@@ -8828,14 +8986,19 @@
         const candidates = [];
         for (const element of Array.from(doc.querySelectorAll(selectors)).slice(0, 80)) {
           const rawText = String(element.innerText || element.textContent || '');
-          const step = parseLeakerUploadStepText(rawText);
+          const step = normalizeLeakerUploadStepLabel(parseLeakerUploadStepText(rawText));
           if (!step) continue;
           const score = scoreLeakerUploadStepElement(element, rawText, step, inferredStep);
           if (score > 0) candidates.push({ step, score });
         }
-        candidates.sort((left, right) => right.score - left.score);
+        candidates.sort((left, right) => (
+          right.score - left.score ||
+          Number(getLeakerUploadStepNumber(right.step) || 0) - Number(getLeakerUploadStepNumber(left.step) || 0)
+        ));
         if (candidates[0]) return candidates[0].step;
       } catch {}
+      const documentStep = getLeakerUploadDocumentStep(doc);
+      if (documentStep) return documentStep;
       return inferredStep;
     }
 
@@ -8846,12 +9009,13 @@
         const frameWindow = frame?.contentWindow || window;
         if (!doc || !doc.body) return null;
         const activeControl = getLeakerUploadActiveControl(doc, frameWindow);
-        let activeField = activeControl ? getLeakerUploadFieldLabel(doc, activeControl) : '';
-        if (activeField) {
-          leakerUploadLastFieldLabel = activeField;
+        const currentActiveField = activeControl ? getLeakerUploadFieldLabel(doc, activeControl) : '';
+        let displayField = currentActiveField;
+        if (currentActiveField) {
+          leakerUploadLastFieldLabel = currentActiveField;
           leakerUploadLastFieldAt = Date.now();
         } else if (leakerUploadLastFieldLabel && Date.now() - leakerUploadLastFieldAt < 15000) {
-          activeField = leakerUploadLastFieldLabel;
+          displayField = leakerUploadLastFieldLabel;
         }
         const creatorControl = findLeakerCreatorNameControl(doc, frameWindow);
         let creatorName = normalizeLeakerUploadPresenceText(creatorControl?.value || '', 64);
@@ -8864,22 +9028,51 @@
         } else if (leakerUploadLastCreatorName && Date.now() - leakerUploadLastCreatorAt < 30 * 60 * 1000) {
           creatorName = leakerUploadLastCreatorName;
         }
-        const step = getLeakerUploadStepLabel(doc, activeField);
+        const resourceControl = findLeakerResourceNameControl(doc, frameWindow);
+        let resourceName = normalizeLeakerUploadPresenceText(resourceControl?.value || '', 64);
+        if (resourceName) {
+          leakerUploadLastResourceName = resourceName;
+          leakerUploadLastResourceAt = Date.now();
+        } else if (resourceControl) {
+          leakerUploadLastResourceName = '';
+          leakerUploadLastResourceAt = 0;
+        } else if (leakerUploadLastResourceName && Date.now() - leakerUploadLastResourceAt < 30 * 60 * 1000) {
+          resourceName = leakerUploadLastResourceName;
+        }
+        const step = getLeakerUploadStepLabel(doc, currentActiveField);
+        if (
+          !currentActiveField &&
+          displayField &&
+          getLeakerUploadStepNumber(step) &&
+          getLeakerUploadStepNumber(step) !== getLeakerUploadStepNumber(inferLeakerUploadStepFromField(displayField))
+        ) {
+          displayField = '';
+        }
         return {
           creatorName,
+          resourceName,
           step,
-          activeField
+          activeField: displayField
         };
       } catch {
         return null;
       }
     }
 
+    function getLeakerUploadDetailsLabel(creatorName = '', resourceName = '') {
+      const creator = normalizeLeakerUploadPresenceText(creatorName, 52);
+      const resource = normalizeLeakerUploadPresenceText(resourceName, 52);
+      if (creator && resource) return normalizeLeakerUploadPresenceText(`Leaking ${creator} - ${resource}`, 120);
+      if (creator) return `Leaking ${creator}`;
+      if (resource) return `Leaking ${resource}`;
+      return 'Preparing leak';
+    }
+
     function applyLeakerUploadPresence(force = false) {
       if (leakerModePhase !== 'active') return;
       const snapshot = getLeakerUploadPresenceSnapshot();
       if (!snapshot) return;
-      const details = snapshot.creatorName ? `Leaking ${snapshot.creatorName}` : 'Preparing leak';
+      const details = getLeakerUploadDetailsLabel(snapshot.creatorName, snapshot.resourceName);
       const stateParts = [
         snapshot.step || 'Upload Dashboard',
         snapshot.activeField ? `Filling ${snapshot.activeField}` : ''
@@ -8921,6 +9114,8 @@
       if (options.resetCreator) {
         leakerUploadLastCreatorName = '';
         leakerUploadLastCreatorAt = 0;
+        leakerUploadLastResourceName = '';
+        leakerUploadLastResourceAt = 0;
       }
     }
 
