@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>6ure Files Release Panel</title>
+  <title>6ure App Release Panel</title>
   <style>
     :root {
       color-scheme: dark;
@@ -308,7 +308,7 @@
   <main class="shell">
     <header class="top">
       <div>
-        <h1>6ure Files Release Panel</h1>
+        <h1>6ure App Release Panel</h1>
         <p class="sub">Setup EXE sec, GitHub Release olustur, latest.json dosyasini Pages reposuna gonder.</p>
       </div>
       <div id="status" class="status">Panel yukleniyor...</div>
@@ -484,7 +484,7 @@
     }
 
     function repo() {
-      return els.repoInput.value.trim() || '6ure-files-updates';
+      return els.repoInput.value.trim() || '6ure-App';
     }
 
     function manifestUrl() {
@@ -533,7 +533,7 @@
       try {
         const config = await api('/api/config');
         els.ownerInput.value = config.owner || 'thejinx1';
-        els.repoInput.value = config.repo || '6ure-files-updates';
+        els.repoInput.value = config.repo || '6ure-App';
         els.installerArgsInput.value = config.installerArgs || '/S';
         setStatus('Hazir.', 'ok');
         log(`Manifest: ${config.manifestUrl}`);

@@ -1,15 +1,27 @@
-﻿{
-    "version":  "1.1.2",
-    "notes":  "Protected warning toast updated. Protected toasts now stay visible for 10 seconds, include the protected creator profile photo, and use clearer wording.",
-    "windows":  {
-                    "url":  "https://github.com/thejinx1/6ure-files-updates/releases/download/v1.1.2/6ure-files-setup-1.1.2.exe",
-                    "sha256":  "f3fbbcd2ef2c40865f4e96df4d592a2b26ebe1c5d611b5a26047b237462bc0dd",
-                    "sizeBytes":  16396404,
-                    "packageType":  "installer",
-                    "installerArgs":  "/S",
-                    "successExitCodes":  [
-                                             0,
-                                             3010
-                                         ]
-                }
+{
+  "version": "1.4.3",
+  "notes": "6ure App 1.4.3",
+  "windows": {
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.3/6ure-app-setup-windows-x64.exe",
+    "sha256": "7bde5558326be02785a23900c59b723d0602ad263590ba6da1ddbfb0ad0eb9e5",
+    "sizeBytes": 15316438,
+    "packageType": "installer",
+    "installerArgs": "/S",
+    "successExitCodes": [
+      0,
+      3010
+    ]
+  },
+  "macos": {
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.3/6ure-app-macos.dmg",
+    "sha256": "875a169cfbe3af94185e1a28039a2e64f82370ba37f6092ab2f9bd74adadc086",
+    "sizeBytes": 21415438,
+    "packageType": "dmg"
+  },
+  "linux": {
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.3/6ure-app-linux-x64.tar.gz",
+    "sha256": "53e61ac9f5ba03f5e42b24652120934811ae1cf165382417dd287b97a9209b24",
+    "sizeBytes": 30628740,
+    "packageType": "tar.gz"
+  }
 }

@@ -5614,6 +5614,8 @@
     let leakerOauthPollTimer = null;
     let leakerOauthActive = false;
     let leakerOauthLastUrl = '';
+    let leakerAutoLoginAttempts = 0;
+    let leakerAutoLoginLastAt = 0;
     let leakerModeTransitioning = false;
     let leakerModeAuthToastShown = false;
     let leakerUploadPresenceTimer = null;
@@ -5640,6 +5642,9 @@
     let appDiscordUser = null;
     let appDiscordLoginActive = false;
     let appDiscordAuthPollTimer = null;
+    let appDiscordAuthCompletedAt = 0;
+    let appAuthSyncTimer = null;
+    let appAuthSyncBusy = false;
     let updateInfo = null;
     let updateBusy = false;
     let updateConfigured = false;
@@ -5670,6 +5675,8 @@
     const OPENING_EXIT_MS = 950;
     const LEAKER_TRANSITION_MIN_MS = 780;
     const LEAKER_LOGIN_POLL_MS = 2600;
+    const LEAKER_AUTO_LOGIN_RETRY_MS = 12000;
+    const LEAKER_AUTO_LOGIN_MAX_ATTEMPTS = 2;
     const LEAKER_LOGIN_URL = '/dashboard/upload';
     const LEAKER_CLOUD_URL = '/dashboard/resources';
     const LEAKER_UPLOAD_URL = '/dashboard/upload';
@@ -7399,6 +7406,11 @@
       appDiscordAuthPollTimer = null;
     }
 
+    function stopAppAuthSyncPolling() {
+      if (appAuthSyncTimer) clearInterval(appAuthSyncTimer);
+      appAuthSyncTimer = null;
+    }
+
     function getAppOauthPhase(status = {}) {
       const oauth = status.oauth || {};
       return String(oauth.phase || '').toLowerCase();
@@ -7411,7 +7423,7 @@
       } else if (phase === 'waiting') {
         setAppAuthMessage('Complete Discord sign-in in the separate window.', true);
       } else if (phase === 'completed' || status.oauth?.completed) {
-        setAppAuthMessage('Discord sign-in complete. Loading your dashboard...', true);
+        setAppAuthMessage('Discord sign-in complete. Syncing 6ureleaks.com session...', true);
       } else {
         setAppAuthMessage('Waiting for Discord sign-in to finish...', true);
       }
@@ -7421,18 +7433,9 @@
       return `<img class="discord-login-icon" src="/assets/discord-logo.svg" alt="" aria-hidden="true"><span>${escapeHtml(label)}</span>`;
     }
 
-    function getFallbackDiscordUser() {
-      return {
-        id: '1421177012814614548',
-        username: 'reyliar',
-        displayName: 'reyli',
-        avatarUrl: '',
-        source: 'oauth-completed-fallback'
-      };
-    }
-
     async function completeAppDiscordAuth(user = null, options = {}) {
       appDiscordLoginActive = false;
+      appDiscordAuthCompletedAt = 0;
       stopAppDiscordAuthPolling();
       appDiscordUser = user || appDiscordUser || {};
       const displayName = formatDiscordDisplayName(appDiscordUser);
@@ -7462,6 +7465,44 @@
       setTimeout(() => els.filesResourcesRefreshBtn?.focus?.(), 80);
     }
 
+    async function syncAppAuthFromSite(options = {}) {
+      if (appDiscordLoginActive || appAuthSyncBusy) return false;
+      appAuthSyncBusy = true;
+      try {
+        const status = await filesApi('/api/app-auth/status?refresh=1', { method: 'GET' });
+        if (status.authenticated && status.user) {
+          const displayName = formatDiscordDisplayName(status.user);
+          appDiscordUser = status.user;
+          setFilesAuthState(true, displayName);
+          if (options.refreshResources) {
+            loadMyResources(true).catch(() => {});
+          }
+          setAppAuthMessage('');
+          return true;
+        }
+
+        if (filesAuthenticated) {
+          appDiscordUser = null;
+          setFilesAuthState(false, '');
+          setAppAuthMessage('6ureleaks.com session ended. Sign in with Discord to continue.');
+          if (!options.silent) showToast('6ureleaks.com session ended. Signed out.', 'ok');
+          if (leakerModePhase === 'active') showLeakerLoginView(true);
+        }
+        return false;
+      } catch {
+        return false;
+      } finally {
+        appAuthSyncBusy = false;
+      }
+    }
+
+    function startAppAuthSyncPolling() {
+      stopAppAuthSyncPolling();
+      appAuthSyncTimer = setInterval(() => {
+        syncAppAuthFromSite({ silent: true, refreshResources: false });
+      }, 15000);
+    }
+
     async function pollAppDiscordAuthStatus() {
       if (!appDiscordLoginActive) {
         stopAppDiscordAuthPolling();
@@ -7478,9 +7519,20 @@
         const phase = getAppOauthPhase(status);
         const oauth = status.oauth || {};
         if (oauth.completed || phase === 'completed') {
-          const user = status.user || getFallbackDiscordUser();
-          await completeAppDiscordAuth(user, { refreshResources: true, runOpening: true });
-          showToast(`Welcome, ${formatDiscordDisplayName(user)}.`, 'ok');
+          appDiscordAuthCompletedAt = appDiscordAuthCompletedAt || Date.now();
+          if (Date.now() - appDiscordAuthCompletedAt > 18000) {
+            appDiscordLoginActive = false;
+            appDiscordAuthCompletedAt = 0;
+            stopAppDiscordAuthPolling();
+            setAppAuthMessage('6ureleaks.com session could not be verified. Sign in again.');
+            if (els.filesLoginBtn) {
+              els.filesLoginBtn.disabled = false;
+              els.filesLoginBtn.innerHTML = discordLoginButtonHtml('Sign in with Discord');
+            }
+            return;
+          }
+          setAppAuthMessage('Discord sign-in complete. Syncing 6ureleaks.com session...', true);
+          appDiscordAuthPollTimer = setTimeout(pollAppDiscordAuthStatus, 900);
           return;
         }
 
@@ -7505,6 +7557,7 @@
     async function startAppDiscordLogin() {
       if (appDiscordLoginActive) return;
       appDiscordLoginActive = true;
+      appDiscordAuthCompletedAt = 0;
       stopAppDiscordAuthPolling();
       if (els.filesLoginBtn) {
         els.filesLoginBtn.disabled = true;
@@ -7523,7 +7576,9 @@
         }
         const phase = getAppOauthPhase(status);
         if (status.oauth?.completed || phase === 'completed') {
-          await completeAppDiscordAuth(status.user || getFallbackDiscordUser(), { refreshResources: true, runOpening: true });
+          setAppAuthMessage('Discord sign-in complete. Syncing 6ureleaks.com session...', true);
+          appDiscordAuthCompletedAt = Date.now();
+          appDiscordAuthPollTimer = setTimeout(pollAppDiscordAuthStatus, 900);
           return;
         }
         renderAppAuthWaitingStatus(status);
@@ -7541,7 +7596,7 @@
 
     async function loadInitialAppAuth() {
       try {
-        const status = await filesApi('/api/app-auth/status', { method: 'GET' });
+        const status = await filesApi('/api/app-auth/status?refresh=1', { method: 'GET' });
         if (status.authenticated && status.user) {
           await completeAppDiscordAuth(status.user, { refreshResources: false, runOpening: false });
           return true;
@@ -8052,6 +8107,8 @@
       }
       els.filesAccountName.textContent = filesUsername;
       const avatarUrl = String(appDiscordUser?.avatarUrl || '').trim();
+      els.filesAccountAvatar.referrerPolicy = 'no-referrer';
+      els.filesAccountAvatar.decoding = 'async';
       els.filesAccountAvatar.onerror = () => {
         els.filesAccountAvatar.onerror = null;
         els.filesAccountAvatar.src = makeFilesAvatarDataUri(filesUsername);
@@ -8884,6 +8941,7 @@
         });
         appDiscordUser = null;
         appDiscordLoginActive = false;
+        appDiscordAuthCompletedAt = 0;
         stopAppDiscordAuthPolling();
         stopFilesPolling();
         filesActiveJobId = '';
@@ -10495,6 +10553,91 @@
       return '';
     }
 
+    function resetLeakerAutoLogin() {
+      leakerAutoLoginAttempts = 0;
+      leakerAutoLoginLastAt = 0;
+    }
+
+    function getLeakerFrameDiscordOAuthUrl(frame) {
+      try {
+        const doc = frame?.contentDocument;
+        if (!doc) return '';
+        for (const element of doc.querySelectorAll('[data-leaker-discord-oauth], a[href], area[href], form[action]')) {
+          const storedUrl = element.dataset?.leakerDiscordOauth || '';
+          const attr = element.matches('form') ? 'action' : 'href';
+          const rawUrl = storedUrl || element.getAttribute(attr) || element[attr] || '';
+          const oauthUrl = getLeakerDiscordOAuthUrl(rawUrl);
+          if (oauthUrl) return oauthUrl;
+        }
+      } catch {}
+      return '';
+    }
+
+    function getLeakerDiscordLoginControl(frame) {
+      try {
+        const doc = frame?.contentDocument;
+        if (!doc) return null;
+        const controls = doc.querySelectorAll('a[href], button, [role="button"], input[type="button"], input[type="submit"]');
+        for (const control of controls) {
+          const text = [
+            control.innerText || control.textContent || '',
+            control.getAttribute('aria-label') || '',
+            control.getAttribute('title') || '',
+            control.getAttribute('value') || '',
+            control.getAttribute('class') || '',
+            control.getAttribute('href') || ''
+          ].join(' ').toLowerCase();
+          if (text.includes('discord')) return control;
+        }
+      } catch {}
+      return null;
+    }
+
+    function leakerFrameLooksLikeDiscordLogin(frame) {
+      try {
+        const text = (frame?.contentDocument?.body?.innerText || '').toLowerCase();
+        return text.includes('discord') && (text.includes('login') || text.includes('log in') || text.includes('sign in'));
+      } catch {
+        return false;
+      }
+    }
+
+    function maybeAutoStartLeakerLogin(frame) {
+      if (!frame || leakerModePhase !== 'authenticating' || leakerOauthActive) return false;
+      if (isLeakerFrameDashboard(frame)) return false;
+      if (leakerAutoLoginAttempts >= LEAKER_AUTO_LOGIN_MAX_ATTEMPTS) return false;
+      const now = Date.now();
+      if (leakerAutoLoginLastAt && now - leakerAutoLoginLastAt < LEAKER_AUTO_LOGIN_RETRY_MS) return false;
+
+      const oauthUrl = getLeakerFrameDiscordOAuthUrl(frame);
+      const discordControl = oauthUrl ? null : getLeakerDiscordLoginControl(frame);
+      const fallbackOAuthUrl = (!oauthUrl && !discordControl && leakerFrameLooksLikeDiscordLogin(frame))
+        ? APP_DISCORD_OAUTH_URL
+        : '';
+      if (!oauthUrl && !discordControl && !fallbackOAuthUrl) return false;
+
+      leakerAutoLoginAttempts += 1;
+      leakerAutoLoginLastAt = now;
+      setLeakerModeStatus('Signing in to 6ureleaks.com with Discord.');
+
+      if (oauthUrl || fallbackOAuthUrl) {
+        const targetUrl = oauthUrl || fallbackOAuthUrl;
+        setTimeout(() => {
+          if (leakerModePhase === 'authenticating' && !leakerOauthActive) {
+            openLeakerDiscordOAuth(targetUrl);
+          }
+        }, 180);
+        return true;
+      }
+
+      try {
+        discordControl.click();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     function installLeakerLoginOAuthBridge(frame) {
       if (!frame || leakerModePhase === 'idle') return false;
       try {
@@ -10809,6 +10952,7 @@
 
     function showLeakerLoginView(forceReload = false) {
       cleanupLeakerUploadPresenceTracking({ resetCreator: true });
+      if (forceReload) resetLeakerAutoLogin();
       leakerModePhase = 'authenticating';
       leakerModeAuthToastShown = true;
       setLeakerModeViewVisible(true);
@@ -10895,15 +11039,26 @@
 
     async function hasStoredLeakerSession() {
       try {
+        const session = await filesApi('/api/leaker-mode/session', { method: 'GET' });
+        if (session.authenticated && session.user) {
+          appDiscordUser = session.user;
+          return true;
+        }
+      } catch {}
+
+      try {
         const status = await filesApi('/api/app-auth/status?refresh=1', { method: 'GET' });
         const phase = getAppOauthPhase(status);
-        if (status.authenticated && status.user) {
+        const userSource = String(status.user?.source || '').toLowerCase();
+        const verifiedSession = status.authenticated && status.user && !userSource.includes('fallback');
+        if (verifiedSession) {
           appDiscordUser = status.user;
           return true;
         }
-        if (status.oauth?.completed || phase === 'completed') {
-          return true;
+        if (status.authenticated && status.user) {
+          appDiscordUser = status.user;
         }
+        if (status.oauth?.completed || phase === 'completed') return false;
       } catch {}
       return false;
     }
@@ -10915,6 +11070,7 @@
       }
       leakerOauthActive = false;
       leakerOauthLastUrl = '';
+      resetLeakerAutoLogin();
       stopLeakerOauthPolling();
       setLeakerModeViewVisible(true);
       els.leakerLoginPanel.classList.add('hidden');
@@ -10939,6 +11095,7 @@
       leakerModeAuthToastShown = false;
       leakerOauthActive = false;
       leakerOauthLastUrl = '';
+      resetLeakerAutoLogin();
       stopLeakerModePolling();
       stopLeakerOauthPolling();
       try {
@@ -10970,7 +11127,12 @@
       if (isLeakerFrameDashboard(els.leakerLoginFrame)) {
         stopLeakerModePolling();
         leakerModeAuthToastShown = false;
+        syncAppAuthFromSite({ silent: true, refreshResources: !filesAuthenticated });
         launchLeakerModeFromReady();
+        return;
+      }
+      if (maybeAutoStartLeakerLogin(els.leakerLoginFrame)) {
+        startLeakerModePolling();
         return;
       }
       if (!quiet) {
@@ -11137,10 +11299,12 @@
         setLeakerFrameLoading(els.leakerCloudFrame, false);
         installLeakerLoginOAuthBridge(els.leakerCloudFrame);
         if (leakerModePhase === 'active' && leakerFrameHasLoginSignals(els.leakerCloudFrame)) {
+          syncAppAuthFromSite({ silent: true, refreshResources: false });
           showLeakerLoginView(true);
           return;
         }
         if (leakerModePhase === 'active' && isLeakerFrameDashboard(els.leakerCloudFrame)) {
+          syncAppAuthFromSite({ silent: true, refreshResources: !filesAuthenticated });
           setLeakerModeStatus('Upload dashboard is open.');
         }
       });
@@ -11151,10 +11315,12 @@
         setTimeout(() => acceptLeakerCookiesInFrame(els.leakerUploadFrame), 160);
         setTimeout(() => acceptLeakerCookiesInFrame(els.leakerUploadFrame), 700);
         if (leakerModePhase === 'active' && leakerFrameHasLoginSignals(els.leakerUploadFrame)) {
+          syncAppAuthFromSite({ silent: true, refreshResources: false });
           showLeakerLoginView(true);
           return;
         }
         if (leakerModePhase === 'active' && isLeakerFrameDashboard(els.leakerUploadFrame)) {
+          syncAppAuthFromSite({ silent: true, refreshResources: !filesAuthenticated });
           setLeakerModeStatus('Upload dashboard is open.');
           if (!installLeakerUploadPresenceTracking(els.leakerUploadFrame)) {
             updateDiscordPresence('Leaker Mode', 'Upload dashboard', { force: true });
@@ -11287,6 +11453,7 @@
         stopLeakerModePolling();
         stopLeakerOauthPolling();
         stopAppDiscordAuthPolling();
+        stopAppAuthSyncPolling();
         abortLeakerLinksRequests();
         if (connectionPollTimer) clearInterval(connectionPollTimer);
       });
@@ -11301,6 +11468,7 @@
       startOpeningScreen('');
       startConnectionMonitoring();
       startDiscordPresencePolling();
+      startAppAuthSyncPolling();
       await loadUpdateStatus();
       loadLeakerModeStatus().catch(() => {});
       startUpdatePolling();

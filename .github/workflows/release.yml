@@ -534,7 +534,7 @@ jobs:
           cat > artifacts/latest.json << MANIFEST
           {
             "version": "${VERSION}",
-            "notes": "6ure™ App ${VERSION}",
+            "notes": "6ure App ${VERSION}",
             "windows": {
               "url": "${BASE_URL}/${{ env.WIN_SETUP }}",
               "sha256": "${WIN_SHA}",
@@ -591,3 +591,29 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
+
+      - name: Update GitHub Pages latest.json
+        run: |
+          set -euo pipefail
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+
+          git fetch origin "${DEFAULT_BRANCH}"
+          git checkout -B "${DEFAULT_BRANCH}" FETCH_HEAD
+
+          cp artifacts/latest.json latest.json
+          touch .nojekyll
+
+          mkdir -p "Developer Files/GitHub Update Server"
+          cp artifacts/latest.json "Developer Files/GitHub Update Server/latest.json"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest.json .nojekyll "Developer Files/GitHub Update Server/latest.json"
+
+          if git diff --cached --quiet; then
+            echo "GitHub Pages latest.json is already up to date."
+            exit 0
+          fi
+
+          git commit -m "Update Pages auto-update manifest for ${{ steps.version.outputs.tag }}"
+          git push origin "HEAD:${DEFAULT_BRANCH}"

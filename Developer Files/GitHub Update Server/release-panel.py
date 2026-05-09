@@ -29,11 +29,11 @@ DEVELOPER_DIR = ROOT.parent
 WORKSPACE_DIR = DEVELOPER_DIR.parent
 SOURCE_CODE_DIR = DEVELOPER_DIR / "Source Code"
 APPLICATION_DIR = WORKSPACE_DIR / "Application"
-DIST_DIR = SOURCE_CODE_DIR / "dist" / "6ure Files"
+DIST_DIR = SOURCE_CODE_DIR / "dist" / "6ure™ App"
 PANEL_DIR = ROOT / ".release-panel"
 SETTINGS_PATH = PANEL_DIR / "settings.json"
 DEFAULT_OWNER = "thejinx1"
-DEFAULT_REPO = "6ure-files-updates"
+DEFAULT_REPO = "6ure-App"
 API_VERSION = "2022-11-28"
 
 
@@ -112,6 +112,7 @@ def save_settings(settings: dict) -> None:
 def write_app_update_config(owner: str, repo: str) -> dict:
     config = {
         "manifestUrl": manifest_url(owner, repo),
+        "githubReleasesUrl": f"https://github.com/{owner}/{repo}/releases",
         "channel": "stable",
         "allowInsecure": False,
     }
@@ -132,7 +133,7 @@ def github_headers(token: str, extra: dict | None = None) -> dict:
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token.strip()}",
         "X-GitHub-Api-Version": API_VERSION,
-        "User-Agent": "6ure-files-release-panel",
+        "User-Agent": "6ure-app-release-panel",
     }
     if extra:
         headers.update(extra)
@@ -405,7 +406,7 @@ def run_build() -> dict:
         "returncode": result.returncode,
         "stdout": result.stdout,
         "stderr": result.stderr,
-        "distExe": str(DIST_DIR / "6ure Files.exe"),
+        "distExe": str(DIST_DIR / "6ure™ App.exe"),
     }
 
 
@@ -563,7 +564,7 @@ class ReleasePanelHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="6ure Files GitHub release panel")
+    parser = argparse.ArgumentParser(description="6ure App GitHub release panel")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-browser", action="store_true")

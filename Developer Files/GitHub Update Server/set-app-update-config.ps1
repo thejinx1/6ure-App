@@ -2,7 +2,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$Owner,
 
-  [string]$Repo = "6ure-files-updates",
+  [string]$Repo = "6ure-App",
 
   [string]$SourceCodeDir = "..\Source Code",
 
@@ -14,6 +14,7 @@ $ErrorActionPreference = "Stop"
 $manifestUrl = "https://$Owner.github.io/$Repo/latest.json"
 $config = [ordered]@{
   manifestUrl = $manifestUrl
+  githubReleasesUrl = "https://github.com/$Owner/$Repo/releases"
   channel = "stable"
   allowInsecure = $false
 }
@@ -21,7 +22,7 @@ $config = [ordered]@{
 $paths = @(
   (Join-Path $SourceCodeDir "update-config.json"),
   (Join-Path $ApplicationDir "update-config.json"),
-  (Join-Path $SourceCodeDir "dist\6ure Files\update-config.json")
+  (Join-Path $SourceCodeDir "dist\6ure$([char]0x2122) App\update-config.json")
 )
 
 foreach ($path in $paths) {

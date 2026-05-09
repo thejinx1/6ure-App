@@ -43,7 +43,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.4.2"
+DEFAULT_APP_VERSION = "1.4.3"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
@@ -223,7 +223,7 @@ MY_RESOURCES_CACHE: dict[str, dict] = {}
 RESOURCE_DETAIL_CACHE_SECONDS = float(os.environ.get("REYLI_RESOURCE_DETAIL_CACHE_SECONDS", "45"))
 RESOURCE_DETAIL_LOCK = threading.RLock()
 RESOURCE_DETAIL_CACHE: dict[int, dict] = {}
-APP_AUTH_PROFILE_CACHE_SECONDS = float(os.environ.get("REYLI_APP_AUTH_PROFILE_CACHE_SECONDS", "30"))
+APP_AUTH_PROFILE_CACHE_SECONDS = float(os.environ.get("REYLI_APP_AUTH_PROFILE_CACHE_SECONDS", "0"))
 APP_AUTH_NEGATIVE_CACHE_SECONDS = float(os.environ.get("REYLI_APP_AUTH_NEGATIVE_CACHE_SECONDS", "4"))
 APP_AUTH_LOCK = threading.RLock()
 APP_AUTH_STATE = {
@@ -1070,6 +1070,36 @@ def clean_discord_id(value) -> str:
     return ""
 
 
+def normalize_discord_avatar_url(value, discord_id: str = "") -> str:
+    text = html.unescape(str(value or "").strip()).replace("\\/", "/")
+    text = re.sub(r"\\u0026", "&", text, flags=re.IGNORECASE)
+    text = re.sub(r"\\u003d", "=", text, flags=re.IGNORECASE)
+    text = re.sub(r"\\u003f", "?", text, flags=re.IGNORECASE)
+    if not text:
+        return ""
+    if text.startswith("//"):
+        text = f"https:{text}"
+    if text.startswith(("cdn.discordapp.com/", "media.discordapp.net/")):
+        text = f"https://{text}"
+    if text.startswith("/_next/image"):
+        try:
+            parsed = urllib.parse.urlsplit(text)
+            nested_url = (urllib.parse.parse_qs(parsed.query or "").get("url") or [""])[0]
+            nested = normalize_discord_avatar_url(nested_url, discord_id)
+            if nested:
+                return nested
+        except Exception:
+            pass
+    if text.startswith("http://") or text.startswith("https://"):
+        return text
+    if text.startswith("/"):
+        return make_6ure_absolute_url(text)
+    if discord_id and re.fullmatch(r"[A-Za-z0-9_]{8,}", text):
+        extension = "gif" if text.startswith("a_") else "png"
+        return f"https://cdn.discordapp.com/avatars/{discord_id}/{text}.{extension}"
+    return ""
+
+
 def normalize_app_auth_user(record, *, source: str = "") -> dict | None:
     if not isinstance(record, dict):
         return None
@@ -1130,16 +1160,7 @@ def normalize_app_auth_user(record, *, source: str = "") -> dict | None:
 
     avatar_url = ""
     for key in avatar_keys:
-        value = str(record.get(key) or "").strip()
-        if not value:
-            continue
-        if value.startswith("http://") or value.startswith("https://"):
-            avatar_url = value
-        elif value.startswith("/"):
-            avatar_url = make_6ure_absolute_url(value)
-        elif discord_id and re.fullmatch(r"[A-Za-z0-9_]{8,}", value):
-            extension = "gif" if value.startswith("a_") else "png"
-            avatar_url = f"https://cdn.discordapp.com/avatars/{discord_id}/{value}.{extension}"
+        avatar_url = normalize_discord_avatar_url(record.get(key), discord_id)
         if avatar_url:
             break
 
@@ -1388,29 +1409,9 @@ def get_app_auth_status(*, refresh: bool = False) -> dict:
     if user:
         snapshot = set_app_auth_user(user)
     else:
-        snapshot = mark_app_auth_checked()
+        snapshot = clear_app_auth_state(clear_cookies=False)
     snapshot["success"] = True
     return snapshot
-
-
-def fallback_app_auth_user(*, source: str = "oauth-completed") -> dict:
-    username = MY_RESOURCES_UPLOADER_ALIASES[0] if MY_RESOURCES_UPLOADER_ALIASES else "reyliar"
-    display_name = MY_RESOURCES_UPLOADER_ALIASES[1] if len(MY_RESOURCES_UPLOADER_ALIASES) > 1 else username
-    user = normalize_app_auth_user(
-        {
-            "id": MY_RESOURCES_UPLOADER_ID,
-            "username": username,
-            "displayName": display_name,
-        },
-        source=source,
-    )
-    return user or {
-        "id": MY_RESOURCES_UPLOADER_ID,
-        "username": username,
-        "displayName": display_name,
-        "avatarUrl": "",
-        "source": source,
-    }
 
 
 def resource_uploader_aliases_from_user(user: dict | None) -> tuple[str, ...]:
@@ -4896,14 +4897,14 @@ def ensure_update_config_repair() -> list[str]:
     if get_update_manifest_url(config):
         return actions
     default_config = {
-        "manifestUrl": "https://github.com/thejinx1/6ure-App/releases/latest/download/latest.json",
+        "manifestUrl": "https://thejinx1.github.io/6ure-App/latest.json",
         "githubReleasesUrl": "https://github.com/thejinx1/6ure-App/releases",
         "channel": "stable",
         "allowInsecure": False,
     }
     target_path = DATA_ROOT / UPDATE_CONFIG_FILE_NAME
     target_path.write_text(json.dumps(default_config, ensure_ascii=False, indent=2), encoding="utf-8")
-    actions.append("Restored the GitHub Releases update channel.")
+    actions.append("Restored the GitHub Pages update channel.")
     return actions
 
 
@@ -6437,6 +6438,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/leaker-mode/status":
             self._leaker_mode_status()
             return
+        if parsed.path == "/api/leaker-mode/session":
+            self._leaker_mode_session()
+            return
         if parsed.path == "/api/leaker-oauth/status":
             self._leaker_oauth_status()
             return
@@ -6715,6 +6719,25 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
 
+    def _leaker_mode_session(self) -> None:
+        try:
+            user = fetch_app_auth_user_from_leaker_session()
+            if user:
+                set_app_auth_user(user)
+            else:
+                clear_app_auth_state(clear_cookies=False)
+            self._send_json(
+                200,
+                {
+                    "success": True,
+                    "authenticated": bool(user),
+                    "user": user,
+                    "checkedAt": int(time.time() * 1000),
+                },
+            )
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
     def _leaker_mode_start(self) -> None:
         try:
             self._send_json(200, self._leaker_bridge().start_leaker_mode())
@@ -6783,10 +6806,6 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                     "cancelled": False,
                     "windowOpen": False,
                 }
-            oauth_phase = str(oauth_status.get("phase") or "").lower()
-            if not payload.get("authenticated") and (oauth_status.get("completed") or oauth_phase == "completed"):
-                payload = set_app_auth_user(fallback_app_auth_user(source="oauth-completed-fallback"))
-                payload["success"] = True
             payload["oauth"] = oauth_status
             self._send_json(200, payload)
         except Exception as error:
@@ -6800,10 +6819,6 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                 raise ValueError("Invalid Discord OAuth URL.")
             oauth_status = self._leaker_bridge().open_leaker_oauth(url)
             auth_status = get_app_auth_status(refresh=False)
-            oauth_phase = str(oauth_status.get("phase") or "").lower()
-            if not auth_status.get("authenticated") and (oauth_status.get("completed") or oauth_phase == "completed"):
-                auth_status = set_app_auth_user(fallback_app_auth_user(source="oauth-completed-fallback"))
-                auth_status["success"] = True
             auth_status["oauth"] = oauth_status
             self._send_json(200, auth_status)
         except Exception as error:

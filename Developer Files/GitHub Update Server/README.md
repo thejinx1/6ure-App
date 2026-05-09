@@ -1,4 +1,4 @@
-# 6ure Files GitHub Update Server
+# 6ure App GitHub Pages Update Server
 
 This folder is the GitHub Pages update server.
 
@@ -18,7 +18,7 @@ http://127.0.0.1:8765/
 
 The panel can:
 
-- connect the app to `https://thejinx1.github.io/6ure-files-updates/latest.json`
+- connect the app to `https://thejinx1.github.io/6ure-App/latest.json`
 - run the PyInstaller build
 - calculate SHA-256 for your setup EXE or ZIP
 - create/update the GitHub Release
@@ -35,9 +35,9 @@ Releases: read/write
 Use this repo pattern:
 
 ```text
-Repo name: 6ure-files-updates
-Pages URL: https://thejinx1.github.io/6ure-files-updates/
-Manifest:  https://thejinx1.github.io/6ure-files-updates/latest.json
+Repo name: 6ure-App
+Pages URL: https://thejinx1.github.io/6ure-App/
+Manifest:  https://thejinx1.github.io/6ure-App/latest.json
 ```
 
 ## Why GitHub Releases for setup EXE files?
@@ -47,7 +47,7 @@ limits, while GitHub's docs recommend Releases for distributing large binaries.
 
 ## First Setup
 
-1. Create a public GitHub repo named `6ure-files-updates`.
+1. Use the public GitHub repo named `6ure-App`.
 2. Upload this folder's files to that repo:
    - `.nojekyll`
    - `index.html`
@@ -62,14 +62,15 @@ limits, while GitHub's docs recommend Releases for distributing large binaries.
 4. Update the app config before building your setup:
 
 ```powershell
-.\set-app-update-config.ps1 -Owner "thejinx1" -Repo "6ure-files-updates"
+.\set-app-update-config.ps1 -Owner "thejinx1" -Repo "6ure-App"
 ```
 
 This writes:
 
 ```json
 {
-  "manifestUrl": "https://thejinx1.github.io/6ure-files-updates/latest.json",
+  "manifestUrl": "https://thejinx1.github.io/6ure-App/latest.json",
+  "githubReleasesUrl": "https://github.com/thejinx1/6ure-App/releases",
   "channel": "stable",
   "allowInsecure": false
 }
@@ -96,7 +97,7 @@ Manual method:
 ```powershell
 .\make-latest.ps1 `
   -Owner "thejinx1" `
-  -Repo "6ure-files-updates" `
+  -Repo "6ure-App" `
   -Version "1.0.1" `
   -PackagePath "C:\path\to\6ure-files-setup-1.0.1.exe" `
   -Notes "Added updater system"
@@ -107,7 +108,7 @@ Manual method:
 Installed apps will read the new version from:
 
 ```text
-https://thejinx1.github.io/6ure-files-updates/latest.json
+https://thejinx1.github.io/6ure-App/latest.json
 ```
 
 ## Installer Args

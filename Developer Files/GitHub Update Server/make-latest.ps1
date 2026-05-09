@@ -2,7 +2,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$Owner,
 
-  [string]$Repo = "6ure-files-updates",
+  [string]$Repo = "6ure-App",
 
   [Parameter(Mandatory = $true)]
   [string]$Version,
