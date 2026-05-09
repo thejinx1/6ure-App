@@ -40,7 +40,48 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-APP_VERSION = os.environ.get("REYLI_APP_VERSION", "1.3.0")
+DEFAULT_APP_VERSION = "1.4.0"
+APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
+
+
+def clean_app_version(value: str) -> str:
+    text = str(value or "").strip().lstrip("v")
+    return text if re.fullmatch(r"\d+(?:\.\d+){0,3}", text) else ""
+
+
+def load_app_version() -> str:
+    env_version = clean_app_version(os.environ.get("REYLI_APP_VERSION", ""))
+    if env_version:
+        return env_version
+
+    seen: set[Path] = set()
+    for root in (ROOT, APP_ROOT):
+        path = (root / APP_VERSION_FILE_NAME).resolve()
+        if path in seen:
+            continue
+        seen.add(path)
+        try:
+            if not path.exists():
+                continue
+            raw = path.read_text(encoding="utf-8-sig").strip()
+            if not raw:
+                continue
+            if raw.startswith("{"):
+                payload = json.loads(raw)
+                if isinstance(payload, dict):
+                    version = clean_app_version(payload.get("version") or payload.get("appVersion") or "")
+                    if version:
+                        return version
+            version = clean_app_version(raw)
+            if version:
+                return version
+        except Exception:
+            continue
+
+    return DEFAULT_APP_VERSION
+
+
+APP_VERSION = load_app_version()
 DATA_ROOT = Path(os.environ.get("REYLI_DATA_DIR", str(ROOT))).expanduser().resolve()
 DATA_ROOT.mkdir(parents=True, exist_ok=True)
 PORT = int(os.environ.get("PORT", "4173"))

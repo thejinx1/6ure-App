@@ -13,12 +13,16 @@ $appName = "6ure$([char]0x2122) App"
 
 if (-not $Version) {
   $serverText = Get-Content -Raw -Path ".\server.py"
-  $match = [regex]::Match($serverText, 'APP_VERSION\s*=\s*os\.environ\.get\("REYLI_APP_VERSION",\s*"([^"]+)"\)')
+  $match = [regex]::Match($serverText, 'DEFAULT_APP_VERSION\s*=\s*"([^"]+)"')
   if (-not $match.Success) {
-    throw "Could not read APP_VERSION from server.py"
+    throw "Could not read DEFAULT_APP_VERSION from server.py"
   }
   $Version = $match.Groups[1].Value
 }
+
+$Version = $Version.TrimStart("v")
+$env:APP_VERSION = $Version
+$env:REYLI_APP_VERSION = $Version
 
 powershell -ExecutionPolicy Bypass -File ".\build.ps1"
 if ($LASTEXITCODE -ne 0) {

@@ -5,7 +5,7 @@ a = Analysis(
     ['files_app.py'],
     pathex=[],
     binaries=[],
-    datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.')],
+    datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('app-version.json', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

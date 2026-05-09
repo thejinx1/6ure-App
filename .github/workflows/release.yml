@@ -48,14 +48,15 @@ jobs:
             $version = "${{ github.ref_name }}".TrimStart("v")
           } else {
             $serverText = Get-Content -Raw -LiteralPath "server.py"
-            $match = [regex]::Match($serverText, 'APP_VERSION\s*=\s*os\.environ\.get\("REYLI_APP_VERSION",\s*"([^"]+)"\)')
+            $match = [regex]::Match($serverText, 'DEFAULT_APP_VERSION\s*=\s*"([^"]+)"')
             if (-not $match.Success) {
-              throw "Could not read APP_VERSION from server.py"
+              throw "Could not read DEFAULT_APP_VERSION from server.py"
             }
             $version = $match.Groups[1].Value.TrimStart("v")
           }
 
           "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REYLI_APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Windows package version: $version"
 
       - name: Install NSIS
@@ -243,6 +244,28 @@ jobs:
           python -m pip install --upgrade pip wheel setuptools
           pip install -r requirements.txt
 
+      - name: Write app version file
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="$(python - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("server.py").read_text(encoding="utf-8")
+          match = re.search(r'DEFAULT_APP_VERSION\s*=\s*"([^"]+)"', text)
+          if not match:
+              raise SystemExit("Could not read DEFAULT_APP_VERSION from server.py")
+          print(match.group(1))
+          PY
+          )"
+          fi
+          VERSION="${VERSION#v}"
+          printf '{\n  "version": "%s"\n}\n' "$VERSION" > app-version.json
+          echo "App version: $VERSION"
+
       - name: Convert PNG to ICNS
         run: |
           rm -rf assets/6ure-logo.iconset
@@ -270,7 +293,7 @@ jobs:
               ["files_app.py"],
               pathex=[],
               binaries=[],
-              datas=[("index.html", "."), ("assets", "assets"), ("discord-presence.json", "."), ("update-config.json", ".")],
+              datas=[("index.html", "."), ("assets", "assets"), ("discord-presence.json", "."), ("update-config.json", "."), ("app-version.json", ".")],
               hiddenimports=[],
               hookspath=[],
               hooksconfig={},
@@ -389,6 +412,28 @@ jobs:
           pip install pycairo PyGObject
           pip install -r requirements.txt
 
+      - name: Write app version file
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="$(python - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("server.py").read_text(encoding="utf-8")
+          match = re.search(r'DEFAULT_APP_VERSION\s*=\s*"([^"]+)"', text)
+          if not match:
+              raise SystemExit("Could not read DEFAULT_APP_VERSION from server.py")
+          print(match.group(1))
+          PY
+          )"
+          fi
+          VERSION="${VERSION#v}"
+          printf '{\n  "version": "%s"\n}\n' "$VERSION" > app-version.json
+          echo "App version: $VERSION"
+
       - name: Create Linux PyInstaller spec
         run: |
           python - <<'PY'
@@ -396,7 +441,7 @@ jobs:
 
           spec = Path("6ure Files.spec").read_text(encoding="utf-8")
           spec = spec.replace("icon='assets\\\\6ure-logo.ico',", "icon=None,")
-          spec = spec.replace("datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.')]", "datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('update-config.json', '.')]")
+          spec = spec.replace("datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('app-version.json', '.')]", "datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('update-config.json', '.'), ('app-version.json', '.')]")
           Path("6ure Files.linux.spec").write_text(spec, encoding="utf-8")
           PY
 
@@ -447,9 +492,9 @@ jobs:
           from pathlib import Path
 
           text = Path("Developer Files/Source Code/server.py").read_text(encoding="utf-8")
-          match = re.search(r'APP_VERSION\s*=\s*os\.environ\.get\("REYLI_APP_VERSION",\s*"([^"]+)"\)', text)
+          match = re.search(r'DEFAULT_APP_VERSION\s*=\s*"([^"]+)"', text)
           if not match:
-              raise SystemExit("Could not read APP_VERSION from server.py")
+              raise SystemExit("Could not read DEFAULT_APP_VERSION from server.py")
           print(match.group(1).lstrip("v"))
           PY
           )"
