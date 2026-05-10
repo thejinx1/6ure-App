@@ -3258,62 +3258,230 @@
 
     .update-monitor {
       position: fixed;
-      right: 18px;
-      bottom: 18px;
-      z-index: 42;
-      width: min(360px, calc(100vw - 36px));
+      inset: 0;
+      z-index: 62;
       display: grid;
-      gap: 9px;
-      padding: 12px;
-      border: 1px solid rgba(82, 247, 255, 0.26);
-      border-radius: 8px;
-      background: rgba(9, 12, 20, 0.95);
-      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.46), 0 0 34px rgba(82, 247, 255, 0.12);
-      color: #e8faff;
-      backdrop-filter: blur(12px);
+      place-items: center;
+      padding: 22px;
+      background:
+        linear-gradient(135deg, rgba(4, 5, 12, 0.78), rgba(7, 11, 20, 0.86)),
+        rgba(3, 4, 10, 0.74);
+      color: #eefcff;
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(16px);
+      transition: opacity 220ms ease;
+    }
+
+    .update-monitor.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .update-monitor-card {
+      position: relative;
+      width: min(500px, calc(100vw - 34px));
+      max-height: calc(100vh - 34px);
+      display: grid;
+      gap: 16px;
+      padding: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(128, 218, 255, 0.22);
+      border-radius: 16px;
+      background:
+        linear-gradient(180deg, rgba(17, 20, 34, 0.98), rgba(7, 9, 17, 0.99));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 34px 96px rgba(0, 0, 0, 0.58),
+        0 0 48px rgba(82, 247, 255, 0.08);
+      opacity: 0;
+      transform: translateY(18px) scale(0.96);
+      transition:
+        opacity 240ms ease,
+        transform 320ms cubic-bezier(0.2, 0.86, 0.2, 1);
+    }
+
+    .update-monitor-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(82, 247, 255, 0.56), rgba(167, 139, 250, 0.48), transparent);
+      opacity: 0.72;
+    }
+
+    .update-monitor.show .update-monitor-card {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .update-monitor-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+      min-height: 36px;
+      padding: 0;
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .update-monitor-visual {
+      position: relative;
+      width: 112px;
+      height: 112px;
+      display: grid;
+      place-items: center;
+      justify-self: center;
+      margin-top: 2px;
+    }
+
+    .update-monitor-ring,
+    .update-monitor-ring::after {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(180, 211, 255, 0.1);
+    }
+
+    .update-monitor-ring {
+      border-top-color: #52f7ff;
+      border-right-color: #a78bfa;
+      animation: update-monitor-spin 1100ms linear infinite;
+    }
+
+    .update-monitor-ring::after {
+      content: "";
+      inset: 12px;
+      border-top-color: rgba(0, 224, 164, 0.72);
+      border-right-color: transparent;
+      animation: update-monitor-spin 1700ms linear infinite reverse;
+    }
+
+    .update-monitor-core {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(82, 247, 255, 0.24);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(82, 247, 255, 0.13), rgba(167, 139, 250, 0.09));
+      box-shadow: 0 0 30px rgba(82, 247, 255, 0.16);
+      animation: update-monitor-breathe 1800ms ease-in-out infinite;
+    }
+
+    .update-monitor-icon {
+      grid-area: 1 / 1;
+      width: 31px;
+      height: 31px;
+      color: #dffbff;
+      opacity: 0;
+      transform: scale(0.72);
+      transition: opacity 180ms ease, transform 220ms ease;
+    }
+
+    .update-monitor-icon path {
+      stroke: currentColor;
+    }
+
+    .update-monitor-visual[data-state="checking"] .update-monitor-icon-sync,
+    .update-monitor-visual[data-state="working"] .update-monitor-icon-sync,
+    .update-monitor-visual[data-state="ready"] .update-monitor-icon-check,
+    .update-monitor-visual[data-state="error"] .update-monitor-icon-alert {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .update-monitor-visual[data-state="checking"] .update-monitor-icon-sync,
+    .update-monitor-visual[data-state="working"] .update-monitor-icon-sync {
+      animation: update-monitor-spin 1100ms linear infinite;
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-ring,
+    .update-monitor[data-state="error"] .update-monitor-ring {
+      animation-duration: 2600ms;
+      opacity: 0.72;
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-core {
+      border-color: rgba(0, 224, 164, 0.42);
+      background: linear-gradient(145deg, rgba(0, 224, 164, 0.16), rgba(82, 247, 255, 0.08));
+      box-shadow: 0 0 34px rgba(0, 224, 164, 0.18);
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-icon {
+      color: #84ffcf;
+    }
+
+    .update-monitor[data-state="error"] .update-monitor-core {
+      border-color: rgba(255, 93, 115, 0.42);
+      background: linear-gradient(145deg, rgba(255, 93, 115, 0.16), rgba(255, 196, 87, 0.08));
+      box-shadow: 0 0 34px rgba(255, 93, 115, 0.16);
+    }
+
+    .update-monitor[data-state="error"] .update-monitor-icon {
+      color: #ff9cac;
     }
 
     .update-monitor-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+      display: grid;
+      gap: 7px;
       min-width: 0;
+      padding: 0 34px;
+      text-align: center;
     }
 
     .update-monitor-title {
       display: grid;
-      gap: 2px;
+      gap: 6px;
       min-width: 0;
     }
 
     .update-monitor-title strong {
       color: #f7f5ff;
-      font-size: 12px;
-      font-weight: 900;
+      font-size: 20px;
+      line-height: 1.18;
+      font-weight: 950;
+      overflow-wrap: anywhere;
     }
 
     .update-monitor-title span,
     .update-monitor-meta,
     .update-monitor-log {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
+      line-height: 1.45;
       overflow-wrap: anywhere;
     }
 
-    .update-monitor-close {
-      min-width: 30px;
-      min-height: 28px;
-      padding: 3px 8px;
-      border-radius: 8px;
-    }
-
     .update-monitor-progress {
-      height: 8px;
+      position: relative;
+      height: 9px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.09);
       overflow: hidden;
+    }
+
+    .update-monitor-progress::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -46%;
+      width: 46%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.46), transparent);
+      opacity: 0;
+      animation: update-monitor-scan 1300ms ease-in-out infinite;
+    }
+
+    .update-monitor[data-state="checking"] .update-monitor-progress::after,
+    .update-monitor[data-state="working"] .update-monitor-progress::after {
+      opacity: 0.74;
     }
 
     .update-monitor-progress span {
@@ -3321,17 +3489,93 @@
       width: 0;
       height: 100%;
       border-radius: inherit;
-      background: linear-gradient(90deg, #52f7ff, #00e0a4);
-      transition: width 180ms ease;
+      background: linear-gradient(90deg, #52f7ff, #a78bfa, #00e0a4);
+      transition: width 360ms cubic-bezier(0.2, 0.86, 0.2, 1);
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-progress span {
+      background: linear-gradient(90deg, #00e0a4, #84ffcf);
+    }
+
+    .update-monitor[data-state="error"] .update-monitor-progress span {
+      background: linear-gradient(90deg, #ff5d73, #ffc457);
+    }
+
+    .update-monitor-meta:not(:empty) {
+      padding: 9px 11px;
+      border: 1px solid rgba(180, 211, 255, 0.11);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      text-align: center;
     }
 
     .update-monitor-log {
-      max-height: 82px;
+      max-height: 98px;
       display: grid;
-      gap: 3px;
+      gap: 4px;
+      padding: 10px 11px;
       overflow: auto;
+      border: 1px solid rgba(180, 211, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(4, 7, 14, 0.56);
       font-family: var(--mono);
       color: #b8faff;
+    }
+
+    @keyframes update-monitor-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes update-monitor-breathe {
+      0%,
+      100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.04);
+      }
+    }
+
+    @keyframes update-monitor-scan {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(320%);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .update-monitor {
+        padding: 14px;
+      }
+
+      .update-monitor-card {
+        width: 100%;
+        padding: 18px;
+        gap: 14px;
+      }
+
+      .update-monitor-visual {
+        width: 96px;
+        height: 96px;
+      }
+
+      .update-monitor-core {
+        width: 58px;
+        height: 58px;
+        border-radius: 16px;
+      }
+
+      .update-monitor-head {
+        padding: 0 28px;
+      }
+
+      .update-monitor-title strong {
+        font-size: 18px;
+      }
     }
 
     .update-prompt {
@@ -4079,8 +4323,7 @@
     .files-resource-detail-dialog,
     .files-dialog,
     .connection-card,
-    .files-result-card,
-    .update-monitor {
+    .files-result-card {
       border-radius: var(--capsule-panel-radius);
       border-color: rgba(255, 255, 255, 0.11);
       background:
@@ -5884,7 +6127,6 @@
     .files-auth-card,
     .files-dialog,
     .connection-card,
-    .update-monitor,
     .files-result-card,
     .files-selection-dialog,
     .files-cloud-dialog,
@@ -6962,17 +7204,38 @@
     </footer>
   </div>
 
-  <div id="updateMonitor" class="update-monitor hidden" aria-live="polite">
-    <div class="update-monitor-head">
-      <div class="update-monitor-title">
-        <strong id="updateMonitorTitle">Update status</strong>
-        <span id="updateMonitorMessage">Waiting...</span>
+  <div id="updateMonitor" class="update-monitor hidden" data-state="checking" aria-live="polite" aria-hidden="true">
+    <div class="update-monitor-card" role="dialog" aria-modal="true" aria-labelledby="updateMonitorTitle">
+      <button id="updateMonitorCloseBtn" class="chip-action update-monitor-close" type="button" aria-label="Close update status" title="Close">x</button>
+      <div id="updateMonitorVisual" class="update-monitor-visual" data-state="checking" aria-hidden="true">
+        <span class="update-monitor-ring"></span>
+        <span class="update-monitor-core">
+          <svg class="update-monitor-icon update-monitor-icon-sync" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 12a8 8 0 0 1-13.7 5.6" stroke-width="1.9" stroke-linecap="round"></path>
+            <path d="M4 12A8 8 0 0 1 17.7 6.4" stroke-width="1.9" stroke-linecap="round"></path>
+            <path d="M17.8 3.8v4h-4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M6.2 20.2v-4h4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <svg class="update-monitor-icon update-monitor-icon-check" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m5 12.5 4.2 4.2L19 7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <svg class="update-monitor-icon update-monitor-icon-alert" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 7v6" stroke-width="2.1" stroke-linecap="round"></path>
+            <path d="M12 17.4h.01" stroke-width="2.6" stroke-linecap="round"></path>
+            <path d="M10.3 4.7 3.2 17a2 2 0 0 0 1.7 3h14.2a2 2 0 0 0 1.7-3L13.7 4.7a2 2 0 0 0-3.4 0Z" stroke-width="1.7" stroke-linejoin="round"></path>
+          </svg>
+        </span>
       </div>
-      <button id="updateMonitorCloseBtn" class="chip-action update-monitor-close" type="button">x</button>
+      <div class="update-monitor-head">
+        <div class="update-monitor-title">
+          <strong id="updateMonitorTitle">Update status</strong>
+          <span id="updateMonitorMessage">Waiting...</span>
+        </div>
+      </div>
+      <div class="update-monitor-progress"><span id="updateMonitorProgress"></span></div>
+      <div id="updateMonitorMeta" class="update-monitor-meta"></div>
+      <div id="updateMonitorLog" class="update-monitor-log"></div>
     </div>
-    <div class="update-monitor-progress"><span id="updateMonitorProgress"></span></div>
-    <div id="updateMonitorMeta" class="update-monitor-meta"></div>
-    <div id="updateMonitorLog" class="update-monitor-log"></div>
   </div>
 
   <div id="updatePrompt" class="update-prompt hidden" aria-hidden="true">
@@ -7128,6 +7391,7 @@
     let updatePollTimer = null;
     let updateStatusTimer = null;
     let updateMonitorDismissed = false;
+    let updateMonitorHideTimer = null;
     let lastUpdateMonitorLine = '';
     let updateMonitorLines = [];
     let discordPresencePollTimer = null;
@@ -7468,6 +7732,7 @@
       updateMonitor: $('#updateMonitor'),
       updateMonitorTitle: $('#updateMonitorTitle'),
       updateMonitorMessage: $('#updateMonitorMessage'),
+      updateMonitorVisual: $('#updateMonitorVisual'),
       updateMonitorProgress: $('#updateMonitorProgress'),
       updateMonitorMeta: $('#updateMonitorMeta'),
       updateMonitorLog: $('#updateMonitorLog'),
@@ -10376,7 +10641,60 @@
     }
 
     function setUpdateMonitorVisible(visible) {
-      els.updateMonitor.classList.toggle('hidden', !visible);
+      if (!els.updateMonitor) return;
+      if (updateMonitorHideTimer) {
+        clearTimeout(updateMonitorHideTimer);
+        updateMonitorHideTimer = null;
+      }
+      if (visible) {
+        els.updateMonitor.classList.remove('hidden');
+        els.updateMonitor.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => els.updateMonitor.classList.add('show'));
+        return;
+      }
+      els.updateMonitor.classList.remove('show');
+      els.updateMonitor.setAttribute('aria-hidden', 'true');
+      updateMonitorHideTimer = setTimeout(() => {
+        els.updateMonitor.classList.add('hidden');
+        updateMonitorHideTimer = null;
+      }, 240);
+    }
+
+    function setUpdateMonitorVisualState(state = 'checking') {
+      const clean = ['checking', 'working', 'ready', 'error'].includes(String(state || '').toLowerCase())
+        ? String(state || '').toLowerCase()
+        : 'checking';
+      els.updateMonitor?.setAttribute('data-state', clean);
+      els.updateMonitorVisual?.setAttribute('data-state', clean);
+    }
+
+    function getUpdateMonitorVisualState(phase = '', message = '') {
+      const value = String(phase || '').toLowerCase();
+      const text = String(message || '').toLowerCase();
+      if (value === 'error' || text.includes('error') || text.includes('failed') || text.includes('could not')) {
+        return 'error';
+      }
+      if (
+        value === 'download' ||
+        value === 'verify' ||
+        value === 'launch' ||
+        value === 'handoff' ||
+        text.includes('install') ||
+        text.includes('download') ||
+        text.includes('starting')
+      ) {
+        return 'working';
+      }
+      if (
+        value === 'ready' ||
+        value === 'manual' ||
+        text.includes('latest version') ||
+        text.includes('available') ||
+        text.includes('opened')
+      ) {
+        return 'ready';
+      }
+      return 'checking';
     }
 
     function getSkippedUpdateVersion() {
@@ -10490,10 +10808,12 @@
       updateMonitorDismissed = false;
       lastUpdateMonitorLine = '';
       updateMonitorLines = [];
+      const visualState = getUpdateMonitorVisualState('', `${title} ${message}`);
+      setUpdateMonitorVisualState(visualState);
       els.updateMonitorTitle.textContent = title;
       els.updateMonitorMessage.textContent = message;
       els.updateMonitorMeta.textContent = '';
-      els.updateMonitorProgress.style.width = '0%';
+      els.updateMonitorProgress.style.width = visualState === 'checking' || visualState === 'working' ? '14%' : '0%';
       els.updateMonitorLog.innerHTML = '';
       setUpdateMonitorVisible(true);
       pushUpdateMonitorLine(message);
@@ -10529,6 +10849,7 @@
       const shouldShow = forceVisible || status.installing || phase || status.lastError;
 
       if (!shouldShow || updateMonitorDismissed) return;
+      setUpdateMonitorVisualState(status.lastError ? 'error' : getUpdateMonitorVisualState(phase, message));
       setUpdateMonitorVisible(true);
       els.updateMonitorTitle.textContent = [label, version].filter(Boolean).join(' - ');
       els.updateMonitorMessage.textContent = message;
@@ -10629,18 +10950,22 @@
         updateConfigured = Boolean(result.configured);
         updateInfo = result.latest || null;
         if (!result.configured) {
-          if (!silent) showToast('Update channel is not configured yet.', 'err');
-          if (!silent) pushUpdateMonitorLine('Update channel is not configured.');
+          if (!silent) {
+            setUpdateMonitorVisualState('error');
+            els.updateMonitorProgress.style.width = '100%';
+            els.updateMonitorMessage.textContent = 'Update channel is not configured yet.';
+            pushUpdateMonitorLine('Update channel is not configured.');
+          }
           return result;
         }
         if (result.updateAvailable) {
           const version = updateInfo?.version ? ` v${updateInfo.version}` : '';
           if (!silent) {
+            setUpdateMonitorVisualState('ready');
             els.updateMonitorProgress.style.width = '100%';
             els.updateMonitorMessage.textContent = `Update${version} is available.`;
             pushUpdateMonitorLine(`Update${version} is available.`);
           }
-          if (!silent) showToast(`Update${version} is available.`, 'ok');
           showUpdatePrompt(result, { force: !silent || Boolean(options.forcePrompt) });
           return result;
         }
@@ -10649,19 +10974,20 @@
           if (skipped && skipped !== String(result.latest.version || '').trim()) setSkippedUpdateVersion('');
         }
         if (!silent) {
+          setUpdateMonitorVisualState('ready');
           els.updateMonitorProgress.style.width = '100%';
           els.updateMonitorMessage.textContent = 'You are on the latest version.';
           pushUpdateMonitorLine('You are on the latest version.');
-          showToast('You are on the latest version.', 'ok');
         }
         return result;
       } catch (error) {
         if (!silent) {
           const message = getFriendlyFilesMessage(error.message, 'Update check could not be completed.');
+          setUpdateMonitorVisualState('error');
+          els.updateMonitorProgress.style.width = '100%';
           els.updateMonitorMessage.textContent = message;
           els.updateMonitorMeta.textContent = message;
           pushUpdateMonitorLine(message);
-          showToast(message, 'err');
         }
         return null;
       } finally {
@@ -10694,6 +11020,7 @@
         if (result.manualDownload) {
           updateBusy = false;
           stopUpdateStatusPolling();
+          setUpdateMonitorVisualState('ready');
           els.updateMonitorMessage.textContent = 'Update download opened in your browser.';
           pushUpdateMonitorLine('Update download opened in your browser.');
           showToast('Update download opened.', 'ok');
@@ -10701,6 +11028,7 @@
           updateResourcesBrowsingPresence({ force: true });
           return;
         }
+        setUpdateMonitorVisualState('ready');
         els.updateMonitorMessage.textContent = 'Updater started. The app will close now.';
         pushUpdateMonitorLine('Updater started. The app will close now.');
         showToast('Installing update. The app will restart.', 'ok');
@@ -10710,6 +11038,8 @@
         setUpdateButtonState();
         updateResourcesBrowsingPresence({ force: true });
         const message = getFriendlyFilesMessage(error.message, 'Update install could not be started.');
+        setUpdateMonitorVisualState('error');
+        els.updateMonitorProgress.style.width = '100%';
         els.updateMonitorMessage.textContent = message;
         els.updateMonitorMeta.textContent = message;
         pushUpdateMonitorLine(message);
@@ -14352,6 +14682,11 @@
         updateMonitorDismissed = true;
         setUpdateMonitorVisible(false);
       });
+      els.updateMonitor.addEventListener('click', event => {
+        if (event.target !== els.updateMonitor) return;
+        updateMonitorDismissed = true;
+        setUpdateMonitorVisible(false);
+      });
       els.updatePromptLaterBtn.addEventListener('click', hideUpdatePrompt);
       els.updatePromptSkipBtn.addEventListener('click', skipCurrentUpdatePrompt);
       els.updatePromptInstallBtn.addEventListener('click', installAppUpdate);
@@ -14370,6 +14705,11 @@
         }
         if (!els.updatePrompt.classList.contains('hidden')) {
           hideUpdatePrompt();
+          return;
+        }
+        if (!els.updateMonitor.classList.contains('hidden')) {
+          updateMonitorDismissed = true;
+          setUpdateMonitorVisible(false);
           return;
         }
         if (!els.filesSettingsOverlay.classList.contains('hidden')) {
