@@ -2,6 +2,8 @@ param(
   [string]$Version = "",
   [string]$SourceAppDir = "",
   [string]$OutputDir = "Setup Output",
+  [string]$CodeSignThumbprint = $env:REYLI_CODE_SIGN_THUMBPRINT,
+  [string]$TimestampUrl = $env:REYLI_CODE_SIGN_TIMESTAMP_URL,
   [switch]$KeepStaging
 )
 
@@ -19,6 +21,41 @@ $legacyAppName = "6ure Files"
 $exeName = "$appName.exe"
 $stageAppDir = Join-Path $stageRoot $appName
 $iconPath = Join-Path $sourceCodeDir "assets\6ure-logo.ico"
+if (-not $TimestampUrl) {
+  $TimestampUrl = "http://timestamp.digicert.com"
+}
+
+function Get-CodeSigningCertificate {
+  param([string]$Thumbprint)
+  $cleanThumbprint = ($Thumbprint -replace '\s', '').ToUpperInvariant()
+  if (-not $cleanThumbprint) {
+    return $null
+  }
+  foreach ($storePath in @("Cert:\CurrentUser\My", "Cert:\LocalMachine\My")) {
+    $cert = Get-ChildItem -Path $storePath -CodeSigningCert -ErrorAction SilentlyContinue |
+      Where-Object { ($_.Thumbprint -replace '\s', '').ToUpperInvariant() -eq $cleanThumbprint } |
+      Select-Object -First 1
+    if ($cert) {
+      return $cert
+    }
+  }
+  return $null
+}
+
+function Sign-InstallerFileIfConfigured {
+  param([string]$Path)
+  if (-not $CodeSignThumbprint) {
+    return
+  }
+  $cert = Get-CodeSigningCertificate -Thumbprint $CodeSignThumbprint
+  if (-not $cert) {
+    throw "Code signing certificate was not found for the configured thumbprint."
+  }
+  $signature = Set-AuthenticodeSignature -LiteralPath $Path -Certificate $cert -TimestampServer $TimestampUrl
+  if ($signature.Status -ne "Valid") {
+    throw "Code signing failed for ${Path}: $($signature.StatusMessage)"
+  }
+}
 
 if (-not $SourceAppDir) {
   if (Test-Path -LiteralPath $distAppDir) {
@@ -80,6 +117,19 @@ New-Item -ItemType Directory -Force -Path $stageAppDir | Out-Null
 
 Get-ChildItem -LiteralPath $resolvedSourceAppDir -Force | Copy-Item -Destination $stageAppDir -Recurse -Force
 Get-ChildItem -LiteralPath $stageAppDir -Recurse -Force -Filter "*.lnk" | Remove-Item -Force
+Get-ChildItem -LiteralPath $stageAppDir -Recurse -Force | Where-Object {
+  $_.Name -in @(
+    "6ure-files-state.json",
+    "6ure-files-state.backup.json",
+    "6ure-files-state.tmp",
+    "app-settings.json",
+    "last-repair.json",
+    "leaker-proxy-cookies.lwp",
+    "6ure-secure-vault.json",
+    "6ure-secure-vault.key",
+    "hlx-api-key.txt"
+  )
+} | Remove-Item -Force
 
 foreach ($required in @($exeName, "_internal", "update-config.json")) {
   if (-not (Test-Path -LiteralPath (Join-Path $stageAppDir $required))) {
@@ -197,6 +247,8 @@ if (-not $makensis) {
 if ($LASTEXITCODE -ne 0) {
   throw "NSIS setup build failed with exit code $LASTEXITCODE"
 }
+
+Sign-InstallerFileIfConfigured -Path $setupPath
 
 $zipHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $zipPath).Hash.ToLowerInvariant()
 $setupHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $setupPath).Hash.ToLowerInvariant()

@@ -3,8 +3,8 @@
   "notes": "6ure App 1.4.5",
   "windows": {
     "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.5/6ure-app-setup-windows-x64.exe",
-    "sha256": "4d5ad060bc49864529d5b94f15a915d0f5e4632d907f9eac527875e19274ae1f",
-    "sizeBytes": 15347044,
+    "sha256": "fcd4c1dc0369494eadcc60a6c4a7eaec56aad52d961ed362de950b31738c130f",
+    "sizeBytes": 15947075,
     "packageType": "installer",
     "installerArgs": "/S",
     "successExitCodes": [0, 3010]

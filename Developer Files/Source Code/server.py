@@ -341,7 +341,7 @@ def leaker_cookie_consent_response_headers() -> list[str]:
     ]
 
 
-ensure_leaker_cookie_consent(save=True)
+ensure_leaker_cookie_consent(save=False)
 FILES_STATE_STRING_KEYS = {
     "username",
     "password",
@@ -380,7 +380,7 @@ def read_state_file(path: Path | None) -> dict | None:
 
 DEFAULT_APP_SETTINGS = {
     "encryptedVault": True,
-    "silentRepairMode": True,
+    "silentRepairMode": False,
 }
 APP_SETTINGS_LOCK = threading.RLock()
 VAULT_LOCK = threading.RLock()
@@ -5845,9 +5845,9 @@ def launch_windows_update_installer(package_path: Path, update_info: dict) -> No
     subprocess.Popen(
         [
             "powershell.exe",
+            "-NoLogo",
             "-NoProfile",
-            "-ExecutionPolicy",
-            "Bypass",
+            "-NonInteractive",
             "-File",
             str(script_path),
         ],
@@ -6059,7 +6059,7 @@ def run_silent_repair(source: str = "manual") -> dict:
     actions.extend(ensure_update_config_repair())
     actions.extend(migrate_credentials_to_vault())
     actions.extend(cleanup_stale_update_files())
-    ensure_leaker_cookie_consent(save=True)
+    ensure_leaker_cookie_consent(save=False)
     log_payload = write_repair_log(source, actions)
     return {
         "success": True,
@@ -6105,7 +6105,7 @@ def security_status(extra_actions: list[str] | None = None) -> dict:
         "success": True,
         "settings": {
             "encryptedVault": bool_setting(settings.get("encryptedVault"), True),
-            "silentRepairMode": bool_setting(settings.get("silentRepairMode"), True),
+            "silentRepairMode": bool_setting(settings.get("silentRepairMode"), False),
         },
         "vault": vault_status(),
         "repair": {

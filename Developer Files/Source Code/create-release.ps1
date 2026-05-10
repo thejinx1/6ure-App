@@ -24,7 +24,7 @@ $Version = $Version.TrimStart("v")
 $env:APP_VERSION = $Version
 $env:REYLI_APP_VERSION = $Version
 
-powershell -ExecutionPolicy Bypass -File ".\build.ps1"
+powershell -NoLogo -NoProfile -NonInteractive -File ".\build.ps1"
 if ($LASTEXITCODE -ne 0) {
   throw "Build failed with exit code $LASTEXITCODE"
 }

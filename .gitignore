@@ -1,0 +1,17 @@
+# Local app state and secrets
+Developer Files/Source Code/6ure-files-state.json
+Developer Files/Source Code/6ure-files-state.backup.json
+Developer Files/Source Code/6ure-files-state.tmp
+Developer Files/Source Code/app-settings.json
+Developer Files/Source Code/last-repair.json
+Developer Files/Source Code/leaker-proxy-cookies.lwp
+Developer Files/Source Code/6ure-secure-vault.json
+Developer Files/Source Code/6ure-secure-vault.key
+Developer Files/Source Code/hlx-api-key.txt
+
+# Generated build outputs
+__pycache__/
+*.pyc
+Developer Files/Source Code/build/
+Developer Files/Source Code/dist/
+Developer Files/Source Code/build-upload-fix/

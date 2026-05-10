@@ -67,9 +67,30 @@ jobs:
           python -m pip install --upgrade pip wheel setuptools
           pip install -r requirements.txt
 
+      - name: Import Windows code signing certificate
+        env:
+          WINDOWS_CODE_SIGN_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CODE_SIGN_CERTIFICATE_BASE64 }}
+          WINDOWS_CODE_SIGN_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CODE_SIGN_CERTIFICATE_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_CODE_SIGN_CERTIFICATE_BASE64) {
+            Write-Host "WINDOWS_CODE_SIGN_CERTIFICATE_BASE64 is not set; skipping Windows code signing."
+            exit 0
+          }
+          $certPath = Join-Path $env:RUNNER_TEMP "windows-code-signing.pfx"
+          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:WINDOWS_CODE_SIGN_CERTIFICATE_BASE64))
+          $certPassword = if ($null -eq $env:WINDOWS_CODE_SIGN_CERTIFICATE_PASSWORD) { "" } else { $env:WINDOWS_CODE_SIGN_CERTIFICATE_PASSWORD }
+          $password = ConvertTo-SecureString -String $certPassword -AsPlainText -Force
+          $cert = @(Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $password | Where-Object { $_.HasPrivateKey } | Select-Object -First 1)[0]
+          if (-not $cert) {
+            throw "Windows code signing certificate could not be imported."
+          }
+          "REYLI_CODE_SIGN_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "REYLI_CODE_SIGN_TIMESTAMP_URL=http://timestamp.digicert.com" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Imported Windows code signing certificate: $($cert.Thumbprint)"
+
       - name: Build with PyInstaller
         run: |
-          powershell -ExecutionPolicy Bypass -File .\build.ps1
+          & .\build.ps1
 
       - name: Create ZIP
         run: |
@@ -78,6 +99,19 @@ jobs:
           if (!(Test-Path -LiteralPath $distDir)) {
             throw "Build output was not found: $distDir"
           }
+          Get-ChildItem -LiteralPath $distDir -Recurse -Force | Where-Object {
+            $_.Name -in @(
+              "6ure-files-state.json",
+              "6ure-files-state.backup.json",
+              "6ure-files-state.tmp",
+              "app-settings.json",
+              "last-repair.json",
+              "leaker-proxy-cookies.lwp",
+              "6ure-secure-vault.json",
+              "6ure-secure-vault.key",
+              "hlx-api-key.txt"
+            )
+          } | Remove-Item -Force
           $zipPath = Join-Path $env:GITHUB_WORKSPACE "${{ env.WIN_PACKAGE }}"
           if (Test-Path -LiteralPath $zipPath) {
             Remove-Item -LiteralPath $zipPath -Force
@@ -85,151 +119,20 @@ jobs:
           Compress-Archive -Path (Join-Path $distDir "*") -DestinationPath $zipPath -Force
 
       - name: Create NSIS setup
+        working-directory: ${{ github.workspace }}
+        shell: pwsh
         run: |
-          $appName = "6ure$([char]0x2122) App"
-          $legacyAppName = "6ure Files"
-          $exeName = "$appName.exe"
-          $distDir = Join-Path "dist" $appName
-          if (!(Test-Path -LiteralPath $distDir)) {
-            throw "Build output was not found: $distDir"
+          $outputDir = Join-Path $env:GITHUB_WORKSPACE "Setup Output"
+          & ".\Developer Files\Installer\package-setup.ps1" -Version $env:APP_VERSION -OutputDir "Setup Output"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Package setup failed with exit code $LASTEXITCODE"
           }
-
-          foreach ($required in @($exeName, "_internal", "update-config.json")) {
-            if (!(Test-Path -LiteralPath (Join-Path $distDir $required))) {
-              throw "Required application file is missing: $required"
-            }
-          }
-
-          $version = $env:APP_VERSION
-          if (-not $version) {
-            throw "APP_VERSION was not set."
-          }
-
-          $versionParts = @($version -split '[^0-9]+' | Where-Object { $_ -ne "" } | Select-Object -First 4)
-          while ($versionParts.Count -lt 4) {
-            $versionParts += "0"
-          }
-          $nsisProductVersion = ($versionParts | ForEach-Object {
-            $part = [int]$_
-            if ($part -gt 65535) { "65535" } else { [string]$part }
-          }) -join "."
-
-          $distFullPath = (Resolve-Path -LiteralPath $distDir).Path
-          $iconPath = (Resolve-Path -LiteralPath "assets\6ure-logo.ico").Path
+          $sourceSetup = Join-Path $outputDir "6ure-app-setup-$env:APP_VERSION.exe"
+          $sourceNsi = Join-Path $outputDir "6ure-app-setup-$env:APP_VERSION.nsi"
           $setupPath = Join-Path $env:GITHUB_WORKSPACE "${{ env.WIN_SETUP }}"
           $nsiPath = Join-Path $env:GITHUB_WORKSPACE "6ure-app-setup-windows-x64.nsi"
-          $stageRoot = Join-Path $env:RUNNER_TEMP "6ure-nsis-stage"
-          $stageAppDir = Join-Path $stageRoot "app"
-
-          foreach ($outputPath in @($setupPath, $nsiPath)) {
-            if (Test-Path -LiteralPath $outputPath) {
-              Remove-Item -LiteralPath $outputPath -Force
-            }
-          }
-          if (Test-Path -LiteralPath $stageRoot) {
-            Remove-Item -LiteralPath $stageRoot -Recurse -Force
-          }
-          New-Item -ItemType Directory -Force -Path $stageAppDir | Out-Null
-          Get-ChildItem -LiteralPath $distFullPath -Force | Copy-Item -Destination $stageAppDir -Recurse -Force
-          Get-ChildItem -LiteralPath $stageAppDir -Recurse -Force -Filter "*.lnk" | Remove-Item -Force
-
-          $nsis = @"
-          Unicode true
-          Name "$appName"
-          OutFile "$setupPath"
-          InstallDir "`$LOCALAPPDATA\Programs\$appName"
-          RequestExecutionLevel user
-          SetCompressor /SOLID lzma
-          VIProductVersion "$nsisProductVersion"
-          VIAddVersionKey "ProductName" "$appName"
-          VIAddVersionKey "CompanyName" "reyli"
-          VIAddVersionKey "FileDescription" "$appName Setup"
-          VIAddVersionKey "FileVersion" "$version"
-          VIAddVersionKey "ProductVersion" "$version"
-          VIAddVersionKey "LegalCopyright" "reyli"
-
-          !include MUI2.nsh
-          !define MUI_ABORTWARNING
-          !define MUI_ICON "$iconPath"
-          !define MUI_UNICON "$iconPath"
-          !define MUI_FINISHPAGE_RUN "`$INSTDIR\$exeName"
-          !define MUI_FINISHPAGE_RUN_TEXT "Launch $appName"
-          !insertmacro MUI_PAGE_DIRECTORY
-          !insertmacro MUI_PAGE_COMPONENTS
-          !insertmacro MUI_PAGE_INSTFILES
-          !insertmacro MUI_PAGE_FINISH
-          !insertmacro MUI_UNPAGE_CONFIRM
-          !insertmacro MUI_UNPAGE_INSTFILES
-          !insertmacro MUI_LANGUAGE "English"
-
-          Function .onInit
-            SetShellVarContext current
-          FunctionEnd
-
-          Function un.onInit
-            SetShellVarContext current
-          FunctionEnd
-
-          Section "$appName" SEC_APP
-            SectionIn RO
-            SetOutPath "`$INSTDIR"
-            File /r "$stageAppDir\*"
-            WriteUninstaller "`$INSTDIR\Uninstall.exe"
-            Delete "`$DESKTOP\$appName.lnk"
-            Delete "`$DESKTOP\$legacyAppName.lnk"
-            Delete "`$SMPROGRAMS\$legacyAppName\$legacyAppName.lnk"
-            RMDir "`$SMPROGRAMS\$legacyAppName"
-            CreateDirectory "`$SMPROGRAMS\$appName"
-            CreateShortcut "`$SMPROGRAMS\$appName\$appName.lnk" "`$INSTDIR\$exeName"
-            DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$legacyAppName"
-            WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "DisplayName" "$appName"
-            WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "DisplayVersion" "$version"
-            WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "Publisher" "reyli"
-            WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "InstallLocation" "`$INSTDIR"
-            WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "UninstallString" '"`$INSTDIR\Uninstall.exe"'
-            WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "NoModify" 1
-            WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "NoRepair" 1
-          SectionEnd
-
-          Section "Create desktop shortcut" SEC_DESKTOP
-            SetOutPath "`$INSTDIR"
-            CreateShortcut "`$DESKTOP\$appName.lnk" "`$INSTDIR\$exeName"
-          SectionEnd
-
-          Section "Uninstall"
-            Delete "`$DESKTOP\$appName.lnk"
-            Delete "`$DESKTOP\$legacyAppName.lnk"
-            Delete "`$SMPROGRAMS\$appName\$appName.lnk"
-            Delete "`$SMPROGRAMS\$legacyAppName\$legacyAppName.lnk"
-            RMDir "`$SMPROGRAMS\$appName"
-            RMDir "`$SMPROGRAMS\$legacyAppName"
-            DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName"
-            DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$legacyAppName"
-            RMDir /r "`$INSTDIR"
-          SectionEnd
-          "@
-
-          Set-Content -LiteralPath $nsiPath -Value $nsis -Encoding utf8BOM
-
-          $makensisCandidates = @(
-            "C:\Program Files (x86)\NSIS\makensis.exe",
-            "C:\Program Files\NSIS\makensis.exe"
-          )
-          $makensis = $makensisCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
-          if (-not $makensis) {
-            $command = Get-Command makensis.exe -ErrorAction SilentlyContinue
-            if ($command) {
-              $makensis = $command.Source
-            }
-          }
-          if (-not $makensis) {
-            throw "NSIS makensis.exe was not found."
-          }
-
-          & $makensis $nsiPath
-          if ($LASTEXITCODE -ne 0) {
-            throw "NSIS setup build failed with exit code $LASTEXITCODE"
-          }
+          Copy-Item -LiteralPath $sourceSetup -Destination $setupPath -Force
+          Copy-Item -LiteralPath $sourceNsi -Destination $nsiPath -Force
           if (!(Test-Path -LiteralPath $setupPath)) {
             throw "NSIS setup output was not found: $setupPath"
           }
@@ -332,7 +235,7 @@ jobs:
               debug=False,
               bootloader_ignore_signals=False,
               strip=False,
-              upx=True,
+              upx=False,
               console=False,
               disable_windowed_traceback=False,
               argv_emulation=False,
@@ -347,7 +250,7 @@ jobs:
               a.binaries,
               a.datas,
               strip=False,
-              upx=True,
+              upx=False,
               upx_exclude=[],
               name=app_name,
           )
@@ -460,6 +363,7 @@ jobs:
 
           spec = Path("6ure Files.spec").read_text(encoding="utf-8")
           spec = spec.replace("icon='assets\\\\6ure-logo.ico',", "icon=None,")
+          spec = spec.replace("    version='version_info.txt',\n", "")
           spec = spec.replace("datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('app-version.json', '.')]", "datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('update-config.json', '.'), ('app-version.json', '.')]")
           Path("6ure Files.linux.spec").write_text(spec, encoding="utf-8")
           PY

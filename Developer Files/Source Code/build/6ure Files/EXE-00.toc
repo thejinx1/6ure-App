@@ -5,7 +5,7 @@
  True,
  ['C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
   'Code\\assets\\6ure-logo.ico'],
- None,
+ versioninfo.VSVersionInfo(ffi=versioninfo.FixedFileInfo(filevers=(1, 4, 5, 0), prodvers=(1, 4, 5, 0), mask=0x3f, flags=0x0, OS=0x40004, fileType=1, subtype=0x0, date=(0, 0)), kids=[versioninfo.StringFileInfo([versioninfo.StringTable('040904B0', [versioninfo.StringStruct('CompanyName', 'reyli'), versioninfo.StringStruct('FileDescription', '6ure App desktop client'), versioninfo.StringStruct('FileVersion', '1.4.5.0'), versioninfo.StringStruct('InternalName', '6ure App'), versioninfo.StringStruct('OriginalFilename', '6ure App.exe'), versioninfo.StringStruct('ProductName', '6ure App'), versioninfo.StringStruct('ProductVersion', '1.4.5.0'), versioninfo.StringStruct('LegalCopyright', 'Copyright reyli')])]), versioninfo.VarFileInfo([versioninfo.VarStruct('Translation', [1033, 1200])])]),
  False,
  False,
  b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<assembly xmlns='
@@ -86,7 +86,7 @@
  [],
  False,
  False,
- 1778415827,
+ 1778417480,
  [('runw.exe',
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],
