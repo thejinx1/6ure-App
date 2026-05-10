@@ -94,6 +94,7 @@ import webview  # noqa: E402
 
 from server import (  # noqa: E402
     create_server,
+    get_app_auth_status,
     is_discord_oauth_url,
     stop_discord_presence,
     sync_leaker_proxy_cookies_from_webview,
@@ -828,16 +829,50 @@ class FilesWindowApi:
                     if returned_at is None:
                         returned_at = time.monotonic()
                     if time.monotonic() - returned_at >= 1.0:
-                        synced = 0
-                        try:
-                            synced = sync_leaker_proxy_cookies_from_webview(oauth_window.get_cookies())
-                        except Exception:
-                            synced = 0
+                        sync_deadline = time.monotonic() + 20.0
+                        synced_cookies = 0
+                        self._set_leaker_oauth_status(
+                            "syncing",
+                            "Discord OAuth finished. Syncing 6ureleaks.com session.",
+                            active=True,
+                            synced_cookies=synced_cookies,
+                        )
+                        while time.monotonic() < sync_deadline and self._is_current_leaker_oauth(oauth_id):
+                            if oauth_window.events.closed.is_set():
+                                break
+                            try:
+                                synced_cookies = max(
+                                    synced_cookies,
+                                    sync_leaker_proxy_cookies_from_webview(oauth_window.get_cookies()),
+                                )
+                            except Exception:
+                                pass
+                            try:
+                                auth_status = get_app_auth_status(refresh=True)
+                            except Exception:
+                                auth_status = {}
+                            if auth_status.get("authenticated"):
+                                self._set_leaker_oauth_status(
+                                    "completed",
+                                    "Discord OAuth completed. Returning to Leaker Mode.",
+                                    completed=True,
+                                    synced_cookies=synced_cookies,
+                                )
+                                time.sleep(0.35)
+                                safe_destroy_window(oauth_window)
+                                return
+                            self._set_leaker_oauth_status(
+                                "syncing",
+                                "Discord OAuth finished. Syncing 6ureleaks.com session.",
+                                active=True,
+                                synced_cookies=synced_cookies,
+                            )
+                            time.sleep(0.75)
                         self._set_leaker_oauth_status(
                             "completed",
-                            "Discord OAuth completed. Returning to Leaker Mode.",
+                            "Discord OAuth finished. Waiting for 6ureleaks.com session verification.",
                             completed=True,
-                            synced_cookies=synced,
+                            synced_cookies=synced_cookies,
                         )
                         time.sleep(0.35)
                         safe_destroy_window(oauth_window)

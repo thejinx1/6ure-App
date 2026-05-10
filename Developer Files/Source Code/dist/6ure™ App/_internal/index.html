@@ -3258,62 +3258,230 @@
 
     .update-monitor {
       position: fixed;
-      right: 18px;
-      bottom: 18px;
-      z-index: 42;
-      width: min(360px, calc(100vw - 36px));
+      inset: 0;
+      z-index: 62;
       display: grid;
-      gap: 9px;
-      padding: 12px;
-      border: 1px solid rgba(82, 247, 255, 0.26);
-      border-radius: 8px;
-      background: rgba(9, 12, 20, 0.95);
-      box-shadow: 0 18px 54px rgba(0, 0, 0, 0.46), 0 0 34px rgba(82, 247, 255, 0.12);
-      color: #e8faff;
-      backdrop-filter: blur(12px);
+      place-items: center;
+      padding: 22px;
+      background:
+        linear-gradient(135deg, rgba(4, 5, 12, 0.78), rgba(7, 11, 20, 0.86)),
+        rgba(3, 4, 10, 0.74);
+      color: #eefcff;
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(16px);
+      transition: opacity 220ms ease;
+    }
+
+    .update-monitor.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .update-monitor-card {
+      position: relative;
+      width: min(500px, calc(100vw - 34px));
+      max-height: calc(100vh - 34px);
+      display: grid;
+      gap: 16px;
+      padding: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(128, 218, 255, 0.22);
+      border-radius: 16px;
+      background:
+        linear-gradient(180deg, rgba(17, 20, 34, 0.98), rgba(7, 9, 17, 0.99));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 34px 96px rgba(0, 0, 0, 0.58),
+        0 0 48px rgba(82, 247, 255, 0.08);
+      opacity: 0;
+      transform: translateY(18px) scale(0.96);
+      transition:
+        opacity 240ms ease,
+        transform 320ms cubic-bezier(0.2, 0.86, 0.2, 1);
+    }
+
+    .update-monitor-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(82, 247, 255, 0.56), rgba(167, 139, 250, 0.48), transparent);
+      opacity: 0.72;
+    }
+
+    .update-monitor.show .update-monitor-card {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .update-monitor-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+      min-height: 36px;
+      padding: 0;
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .update-monitor-visual {
+      position: relative;
+      width: 112px;
+      height: 112px;
+      display: grid;
+      place-items: center;
+      justify-self: center;
+      margin-top: 2px;
+    }
+
+    .update-monitor-ring,
+    .update-monitor-ring::after {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(180, 211, 255, 0.1);
+    }
+
+    .update-monitor-ring {
+      border-top-color: #52f7ff;
+      border-right-color: #a78bfa;
+      animation: update-monitor-spin 1100ms linear infinite;
+    }
+
+    .update-monitor-ring::after {
+      content: "";
+      inset: 12px;
+      border-top-color: rgba(0, 224, 164, 0.72);
+      border-right-color: transparent;
+      animation: update-monitor-spin 1700ms linear infinite reverse;
+    }
+
+    .update-monitor-core {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(82, 247, 255, 0.24);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(82, 247, 255, 0.13), rgba(167, 139, 250, 0.09));
+      box-shadow: 0 0 30px rgba(82, 247, 255, 0.16);
+      animation: update-monitor-breathe 1800ms ease-in-out infinite;
+    }
+
+    .update-monitor-icon {
+      grid-area: 1 / 1;
+      width: 31px;
+      height: 31px;
+      color: #dffbff;
+      opacity: 0;
+      transform: scale(0.72);
+      transition: opacity 180ms ease, transform 220ms ease;
+    }
+
+    .update-monitor-icon path {
+      stroke: currentColor;
+    }
+
+    .update-monitor-visual[data-state="checking"] .update-monitor-icon-sync,
+    .update-monitor-visual[data-state="working"] .update-monitor-icon-sync,
+    .update-monitor-visual[data-state="ready"] .update-monitor-icon-check,
+    .update-monitor-visual[data-state="error"] .update-monitor-icon-alert {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .update-monitor-visual[data-state="checking"] .update-monitor-icon-sync,
+    .update-monitor-visual[data-state="working"] .update-monitor-icon-sync {
+      animation: update-monitor-spin 1100ms linear infinite;
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-ring,
+    .update-monitor[data-state="error"] .update-monitor-ring {
+      animation-duration: 2600ms;
+      opacity: 0.72;
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-core {
+      border-color: rgba(0, 224, 164, 0.42);
+      background: linear-gradient(145deg, rgba(0, 224, 164, 0.16), rgba(82, 247, 255, 0.08));
+      box-shadow: 0 0 34px rgba(0, 224, 164, 0.18);
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-icon {
+      color: #84ffcf;
+    }
+
+    .update-monitor[data-state="error"] .update-monitor-core {
+      border-color: rgba(255, 93, 115, 0.42);
+      background: linear-gradient(145deg, rgba(255, 93, 115, 0.16), rgba(255, 196, 87, 0.08));
+      box-shadow: 0 0 34px rgba(255, 93, 115, 0.16);
+    }
+
+    .update-monitor[data-state="error"] .update-monitor-icon {
+      color: #ff9cac;
     }
 
     .update-monitor-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+      display: grid;
+      gap: 7px;
       min-width: 0;
+      padding: 0 34px;
+      text-align: center;
     }
 
     .update-monitor-title {
       display: grid;
-      gap: 2px;
+      gap: 6px;
       min-width: 0;
     }
 
     .update-monitor-title strong {
       color: #f7f5ff;
-      font-size: 12px;
-      font-weight: 900;
+      font-size: 20px;
+      line-height: 1.18;
+      font-weight: 950;
+      overflow-wrap: anywhere;
     }
 
     .update-monitor-title span,
     .update-monitor-meta,
     .update-monitor-log {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
+      line-height: 1.45;
       overflow-wrap: anywhere;
     }
 
-    .update-monitor-close {
-      min-width: 30px;
-      min-height: 28px;
-      padding: 3px 8px;
-      border-radius: 8px;
-    }
-
     .update-monitor-progress {
-      height: 8px;
+      position: relative;
+      height: 9px;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.09);
       overflow: hidden;
+    }
+
+    .update-monitor-progress::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: -46%;
+      width: 46%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.46), transparent);
+      opacity: 0;
+      animation: update-monitor-scan 1300ms ease-in-out infinite;
+    }
+
+    .update-monitor[data-state="checking"] .update-monitor-progress::after,
+    .update-monitor[data-state="working"] .update-monitor-progress::after {
+      opacity: 0.74;
     }
 
     .update-monitor-progress span {
@@ -3321,17 +3489,93 @@
       width: 0;
       height: 100%;
       border-radius: inherit;
-      background: linear-gradient(90deg, #52f7ff, #00e0a4);
-      transition: width 180ms ease;
+      background: linear-gradient(90deg, #52f7ff, #a78bfa, #00e0a4);
+      transition: width 360ms cubic-bezier(0.2, 0.86, 0.2, 1);
+    }
+
+    .update-monitor[data-state="ready"] .update-monitor-progress span {
+      background: linear-gradient(90deg, #00e0a4, #84ffcf);
+    }
+
+    .update-monitor[data-state="error"] .update-monitor-progress span {
+      background: linear-gradient(90deg, #ff5d73, #ffc457);
+    }
+
+    .update-monitor-meta:not(:empty) {
+      padding: 9px 11px;
+      border: 1px solid rgba(180, 211, 255, 0.11);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.04);
+      text-align: center;
     }
 
     .update-monitor-log {
-      max-height: 82px;
+      max-height: 98px;
       display: grid;
-      gap: 3px;
+      gap: 4px;
+      padding: 10px 11px;
       overflow: auto;
+      border: 1px solid rgba(180, 211, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(4, 7, 14, 0.56);
       font-family: var(--mono);
       color: #b8faff;
+    }
+
+    @keyframes update-monitor-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes update-monitor-breathe {
+      0%,
+      100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.04);
+      }
+    }
+
+    @keyframes update-monitor-scan {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(320%);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .update-monitor {
+        padding: 14px;
+      }
+
+      .update-monitor-card {
+        width: 100%;
+        padding: 18px;
+        gap: 14px;
+      }
+
+      .update-monitor-visual {
+        width: 96px;
+        height: 96px;
+      }
+
+      .update-monitor-core {
+        width: 58px;
+        height: 58px;
+        border-radius: 16px;
+      }
+
+      .update-monitor-head {
+        padding: 0 28px;
+      }
+
+      .update-monitor-title strong {
+        font-size: 18px;
+      }
     }
 
     .update-prompt {
@@ -4079,8 +4323,7 @@
     .files-resource-detail-dialog,
     .files-dialog,
     .connection-card,
-    .files-result-card,
-    .update-monitor {
+    .files-result-card {
       border-radius: var(--capsule-panel-radius);
       border-color: rgba(255, 255, 255, 0.11);
       background:
@@ -4294,6 +4537,10 @@
       grid-template-rows: auto auto auto minmax(0, 1fr) auto;
     }
 
+    .files-requests-card {
+      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    }
+
     .files-general-resources-title {
       min-width: 0;
       display: grid;
@@ -4364,6 +4611,86 @@
       justify-self: center;
       width: min(260px, 100%);
       margin: 8px auto 2px;
+    }
+
+    .files-request-card {
+      cursor: default;
+      animation: files-request-card-in 220ms ease both;
+    }
+
+    .files-request-card.is-completed {
+      border-color: rgba(0, 224, 164, 0.18);
+      background:
+        radial-gradient(circle at 16% 0%, rgba(0, 224, 164, 0.1), transparent 38%),
+        linear-gradient(135deg, rgba(20, 31, 32, 0.92), rgba(11, 13, 21, 0.94));
+    }
+
+    .files-request-card .files-resource-thumb {
+      align-self: start;
+    }
+
+    .files-request-creator {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #cfc9e9;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .files-request-creator img {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 26px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .files-request-creator span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-request-actions {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 3px;
+    }
+
+    .files-request-actions .primary-action,
+    .files-request-actions .chip-action {
+      min-height: 32px;
+      border-radius: 8px;
+      font-size: 11px;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+    }
+
+    .files-request-actions .primary-action:hover,
+    .files-request-actions .chip-action:hover {
+      transform: translateY(-1px);
+    }
+
+    .files-request-complete {
+      box-shadow: 0 0 24px rgba(82, 247, 255, 0.1);
+    }
+
+    @keyframes files-request-card-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .files-resources-profile {
@@ -5715,6 +6042,11 @@
         grid-template-columns: minmax(0, 1fr);
       }
 
+      .files-request-actions .primary-action,
+      .files-request-actions .chip-action {
+        flex: 1 1 136px;
+      }
+
       .files-resource-detail-overlay {
         padding: 10px;
       }
@@ -5884,7 +6216,6 @@
     .files-auth-card,
     .files-dialog,
     .connection-card,
-    .update-monitor,
     .files-result-card,
     .files-selection-dialog,
     .files-cloud-dialog,
@@ -6287,6 +6618,13 @@
         <div class="files-layout">
           <aside class="files-sidebar" aria-label="Quick actions">
             <div class="files-sidebar-rail">
+              <button id="filesMainPageBtn" class="chip-action sidebar-action is-active" type="button" title="Main Page">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 10.6 12 4l8 6.6V19a2 2 0 0 1-2 2h-3.4v-5.5h-5.2V21H6a2 2 0 0 1-2-2v-8.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                  <path d="M9.4 21v-5.5h5.2V21" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                </svg>
+                <span class="sidebar-action-label" data-action-label>Main Page</span>
+              </button>
               <button id="filesUpdateBtn" class="chip-action sidebar-action" type="button" title="Update">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M20 12a8 8 0 0 1-14.6 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
@@ -6303,6 +6641,13 @@
                   <path d="M13 11 20 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
                 </svg>
                 <span class="sidebar-action-label" data-action-label>Resources</span>
+              </button>
+              <button id="filesRequestsBtn" class="chip-action sidebar-action" type="button" title="Requests">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 5.8A2.8 2.8 0 0 1 7.8 3h8.4A2.8 2.8 0 0 1 19 5.8v12.4a2.8 2.8 0 0 1-2.8 2.8H7.8A2.8 2.8 0 0 1 5 18.2V5.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                  <path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                </svg>
+                <span class="sidebar-action-label" data-action-label>Requests</span>
               </button>
               <button id="filesCloudBtn" class="chip-action sidebar-action hidden" type="button" title="Cloud">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -6832,6 +7177,56 @@
             <div id="filesGeneralResourcesStatus" class="files-resources-status">Ready.</div>
           </div>
 
+          <div id="filesRequestsCard" class="files-uploader-card files-resources-card files-requests-card hidden" aria-hidden="true">
+            <div class="files-resources-head">
+              <div class="files-general-resources-title">
+                <img src="/assets/6ure-logo.png" alt="" aria-hidden="true">
+                <div>
+                  <h3>Requests</h3>
+                  <p>Track open 6ure requests and jump straight into completing them.</p>
+                </div>
+              </div>
+              <div class="files-resources-actions">
+                <button id="filesRequestsMineBtn" class="chip-action" type="button">Leaker Zone</button>
+                <button id="filesRequestsOpenBtn" class="chip-action" type="button">Open Site</button>
+                <button id="filesRequestsRefreshBtn" class="primary-action" type="button">Refresh</button>
+              </div>
+            </div>
+
+            <div class="files-resources-stats" aria-label="Request stats">
+              <div class="files-resource-stat">
+                <strong id="filesRequestsTotal">0</strong>
+                <span>Requests</span>
+              </div>
+              <div class="files-resource-stat">
+                <strong id="filesRequestsLoaded">0</strong>
+                <span>Loaded</span>
+              </div>
+              <div class="files-resource-stat">
+                <strong id="filesRequestsPending">0</strong>
+                <span>Pending</span>
+              </div>
+              <div class="files-resource-stat">
+                <strong id="filesRequestsCompleted">0</strong>
+                <span>Completed</span>
+              </div>
+            </div>
+
+            <div class="files-general-toolbar">
+              <input id="filesRequestsSearch" type="search" placeholder="Search requests, creators, products" autocomplete="off" spellcheck="false">
+              <select id="filesRequestsStatusFilter" aria-label="Request status filter">
+                <option value="pending">Pending</option>
+                <option value="">All requests</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div id="filesRequestsList" class="files-resources-list" aria-live="polite">
+              <div class="files-resource-empty">Loading requests...</div>
+            </div>
+            <div id="filesRequestsStatus" class="files-resources-status">Ready.</div>
+          </div>
+
           <div id="filesMyResourcesCard" class="files-uploader-card files-resources-card">
             <div class="files-resources-head">
               <div class="files-resources-profile">
@@ -6962,17 +7357,38 @@
     </footer>
   </div>
 
-  <div id="updateMonitor" class="update-monitor hidden" aria-live="polite">
-    <div class="update-monitor-head">
-      <div class="update-monitor-title">
-        <strong id="updateMonitorTitle">Update status</strong>
-        <span id="updateMonitorMessage">Waiting...</span>
+  <div id="updateMonitor" class="update-monitor hidden" data-state="checking" aria-live="polite" aria-hidden="true">
+    <div class="update-monitor-card" role="dialog" aria-modal="true" aria-labelledby="updateMonitorTitle">
+      <button id="updateMonitorCloseBtn" class="chip-action update-monitor-close" type="button" aria-label="Close update status" title="Close">x</button>
+      <div id="updateMonitorVisual" class="update-monitor-visual" data-state="checking" aria-hidden="true">
+        <span class="update-monitor-ring"></span>
+        <span class="update-monitor-core">
+          <svg class="update-monitor-icon update-monitor-icon-sync" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M20 12a8 8 0 0 1-13.7 5.6" stroke-width="1.9" stroke-linecap="round"></path>
+            <path d="M4 12A8 8 0 0 1 17.7 6.4" stroke-width="1.9" stroke-linecap="round"></path>
+            <path d="M17.8 3.8v4h-4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+            <path d="M6.2 20.2v-4h4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <svg class="update-monitor-icon update-monitor-icon-check" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m5 12.5 4.2 4.2L19 7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <svg class="update-monitor-icon update-monitor-icon-alert" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 7v6" stroke-width="2.1" stroke-linecap="round"></path>
+            <path d="M12 17.4h.01" stroke-width="2.6" stroke-linecap="round"></path>
+            <path d="M10.3 4.7 3.2 17a2 2 0 0 0 1.7 3h14.2a2 2 0 0 0 1.7-3L13.7 4.7a2 2 0 0 0-3.4 0Z" stroke-width="1.7" stroke-linejoin="round"></path>
+          </svg>
+        </span>
       </div>
-      <button id="updateMonitorCloseBtn" class="chip-action update-monitor-close" type="button">x</button>
+      <div class="update-monitor-head">
+        <div class="update-monitor-title">
+          <strong id="updateMonitorTitle">Update status</strong>
+          <span id="updateMonitorMessage">Waiting...</span>
+        </div>
+      </div>
+      <div class="update-monitor-progress"><span id="updateMonitorProgress"></span></div>
+      <div id="updateMonitorMeta" class="update-monitor-meta"></div>
+      <div id="updateMonitorLog" class="update-monitor-log"></div>
     </div>
-    <div class="update-monitor-progress"><span id="updateMonitorProgress"></span></div>
-    <div id="updateMonitorMeta" class="update-monitor-meta"></div>
-    <div id="updateMonitorLog" class="update-monitor-log"></div>
   </div>
 
   <div id="updatePrompt" class="update-prompt hidden" aria-hidden="true">
@@ -7080,6 +7496,13 @@
     let filesGeneralResourcesSearchQuery = '';
     let filesGeneralResourcesCategory = '';
     let filesGeneralResourcesSearchTimer = null;
+    let filesRequestsBusy = false;
+    let filesRequestsItems = [];
+    let filesRequestsPage = 0;
+    let filesRequestsTotalPages = 1;
+    let filesRequestsSearchQuery = '';
+    let filesRequestsStatusFilter = 'pending';
+    let filesRequestsSearchTimer = null;
     let filesEditorGroups = [];
     let filesActiveEditorKey = '';
     let webviewUploadConsentRequest = null;
@@ -7106,6 +7529,8 @@
     let leakerUploadLastCreatorAt = 0;
     let leakerUploadLastResourceName = '';
     let leakerUploadLastResourceAt = 0;
+    let leakerPendingRequestFill = null;
+    let leakerPendingRequestFillTimer = null;
     let leakerLinksPlatform = 'tiktok';
     let leakerLinksBusy = false;
     let leakerLinksSelectedUsername = '';
@@ -7128,6 +7553,7 @@
     let updatePollTimer = null;
     let updateStatusTimer = null;
     let updateMonitorDismissed = false;
+    let updateMonitorHideTimer = null;
     let lastUpdateMonitorLine = '';
     let updateMonitorLines = [];
     let discordPresencePollTimer = null;
@@ -7150,6 +7576,7 @@
     const filesHandledJobs = new Set();
 
     const FILES_URL = 'https://6ureleaks.com/resources';
+    const REQUESTS_URL = 'https://6ureleaks.com/requests';
     const OPENING_DURATION_MS = 3600;
     const OPENING_EXIT_MS = 950;
     const LEAKER_TRANSITION_MIN_MS = 780;
@@ -7248,7 +7675,8 @@
         }
       }
     };
-    const APP_DISCORD_OAUTH_URL = 'https://discord.com/oauth2/authorize?client_id=948565930034749501&redirect_uri=https%3A%2F%2F6ureleaks.com%2Frequests%2Fapi%2Fauth%2Fdiscord%2Fcallback&response_type=code&scope=identify+guilds&state=eyJjYWxsYmFja1VybCI6Imh0dHBzOi8vNnVyZWxlYWtzLmNvbS8iLCJ0IjoxNzc4MjQzNzYzNTE0LCJuIjoiZWMxZGExMGIxNWFlOWQ1YmI0M2VjYzIxYTI5MzFlNTIifQ.c5eb5f8863df611a9d0216549dc3b0163f7a868471e4c7cc0b887ea4f69ad2bd';
+    const APP_DISCORD_OAUTH_URL = '';
+    const APP_DISCORD_AUTH_VERIFY_TIMEOUT_MS = 75000;
     const LEAKER_DISCORD_OAUTH_RE = /^https:\/\/(?:(?:canary|ptb)\.)?(?:discord\.com|discordapp\.com)\/(?:api\/)?oauth2\/authorize\b/i;
     const OPENING_HINTS = [
       'Your workspace is getting ready.',
@@ -7306,8 +7734,10 @@
       leakerUploadFrame: $('#leakerUploadFrame'),
       filesView: $('#filesView'),
       filesBackBtn: $('#filesBackBtn'),
+      filesMainPageBtn: $('#filesMainPageBtn'),
       filesUpdateBtn: $('#filesUpdateBtn'),
       filesOpenSiteBtn: $('#filesOpenSiteBtn'),
+      filesRequestsBtn: $('#filesRequestsBtn'),
       filesCloudBtn: $('#filesCloudBtn'),
       filesProtectedBtn: $('#filesProtectedBtn'),
       filesLeakerModeBtn: $('#filesLeakerModeBtn'),
@@ -7442,6 +7872,18 @@
       filesGeneralResourcesCategory: $('#filesGeneralResourcesCategory'),
       filesGeneralResourcesList: $('#filesGeneralResourcesList'),
       filesGeneralResourcesStatus: $('#filesGeneralResourcesStatus'),
+      filesRequestsCard: $('#filesRequestsCard'),
+      filesRequestsMineBtn: $('#filesRequestsMineBtn'),
+      filesRequestsOpenBtn: $('#filesRequestsOpenBtn'),
+      filesRequestsRefreshBtn: $('#filesRequestsRefreshBtn'),
+      filesRequestsTotal: $('#filesRequestsTotal'),
+      filesRequestsLoaded: $('#filesRequestsLoaded'),
+      filesRequestsPending: $('#filesRequestsPending'),
+      filesRequestsCompleted: $('#filesRequestsCompleted'),
+      filesRequestsSearch: $('#filesRequestsSearch'),
+      filesRequestsStatusFilter: $('#filesRequestsStatusFilter'),
+      filesRequestsList: $('#filesRequestsList'),
+      filesRequestsStatus: $('#filesRequestsStatus'),
       filesAuthGate: $('#filesAuthGate'),
       filesAuthForm: $('#filesAuthForm'),
       filesUsernameInput: $('#filesUsernameInput'),
@@ -7468,6 +7910,7 @@
       updateMonitor: $('#updateMonitor'),
       updateMonitorTitle: $('#updateMonitorTitle'),
       updateMonitorMessage: $('#updateMonitorMessage'),
+      updateMonitorVisual: $('#updateMonitorVisual'),
       updateMonitorProgress: $('#updateMonitorProgress'),
       updateMonitorMeta: $('#updateMonitorMeta'),
       updateMonitorLog: $('#updateMonitorLog'),
@@ -7708,6 +8151,19 @@
           };
         }
         return { details: 'Exploring Resources', state: 'Public library' };
+      }
+      if (filesResourcesView === 'requests') {
+        const search = normalizeLeakerUploadNameText(filesRequestsSearchQuery || '', 44);
+        const status = normalizeLeakerUploadNameText(filesRequestsStatusFilter || '', 24);
+        if (search) return { details: 'Browsing Requests', state: `Searching "${search}"` };
+        if (status) return { details: 'Browsing Requests', state: `${status.charAt(0).toUpperCase()}${status.slice(1)} requests` };
+        if (filesRequestsItems.length) {
+          return {
+            details: 'Browsing Requests',
+            state: `${formatResourceNumber(filesRequestsItems.length)} requests loaded`
+          };
+        }
+        return { details: 'Browsing Requests', state: 'Request board' };
       }
       const owner = getResourcesPresenceOwner();
       const search = normalizeLeakerUploadNameText(filesResourcesSearchQuery || '', 44);
@@ -8233,14 +8689,13 @@
         return;
       }
       els.filesEditorsRail.innerHTML = groups.map(group => {
-        const avatar = group.avatar || makeFilesAvatarDataUri(group.name);
         const meta = [
           `${formatResourceNumber(group.items.length)} leaks`,
           `${formatResourceNumber(group.downloads)} downloads`
         ].join(' - ');
         return `
           <button class="files-editor-chip" type="button" data-editor-key="${escapeHtml(group.key)}">
-            <img src="${escapeHtml(avatar)}" alt="" loading="lazy" decoding="async">
+            ${renderFilesAvatarImage('files-editor-avatar', group.avatar, group.name, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
             <span>
               <strong>${escapeHtml(group.name)}</strong>
               <span>${escapeHtml(meta)}</span>
@@ -8537,11 +8992,9 @@
 
     function renderResourceUploaderDetail(item) {
       const name = String(item?.uploaderName || 'Uploader').trim() || 'Uploader';
-      const fallbackAvatar = makeFilesAvatarDataUri(name);
-      const avatar = String(item?.uploaderAvatarUrl || '').trim() || fallbackAvatar;
       return `
         <div class="files-resource-detail-profile">
-          <img class="files-resource-detail-avatar" src="${escapeHtml(avatar)}" data-fallback-src="${escapeHtml(fallbackAvatar)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=this.dataset.fallbackSrc">
+          ${renderFilesAvatarImage('files-resource-detail-avatar', item?.uploaderAvatarUrl, name, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
           <div class="files-resource-detail-profile-copy">
             <div class="files-resource-detail-profile-name">${escapeHtml(name)}</div>
             <div class="files-resource-detail-profile-meta">Leaked by</div>
@@ -8631,7 +9084,7 @@
             <div class="files-resource-product-kicker">6ure resource</div>
             <h2>${escapeHtml(title)}</h2>
             <button class="files-resource-product-byline" type="button" data-editor-key="${escapeHtml(normalizeResourceEditorKey(editor))}" aria-label="Open ${escapeHtml(editor)} resources">
-              <img class="files-editor-avatar" src="${escapeHtml(item.editorAvatarUrl || makeFilesAvatarDataUri(editor))}" alt="">
+              ${renderFilesAvatarImage('files-editor-avatar', item.editorAvatarUrl, editor, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
               <span>${escapeHtml(editor)}</span>
               <span class="files-resource-product-byline-meta">${escapeHtml(editorMeta)}</span>
             </button>
@@ -8798,10 +9251,10 @@
         if (category) categories.add(category);
       }
       const avatarItem = allItems.find(item => String(item?.editorAvatarUrl || '').trim());
-      const avatar = group.avatar || String(avatarItem?.editorAvatarUrl || '').trim() || makeFilesAvatarDataUri(group.name);
+      const avatar = group.avatar || String(avatarItem?.editorAvatarUrl || '').trim();
       const categoryList = Array.from(categories).slice(0, 4).join(' - ') || 'Leaked editor';
       els.filesEditorProfile.innerHTML = `
-        <img class="files-editor-avatar" src="${escapeHtml(avatar)}" alt="">
+        ${renderFilesAvatarImage('files-editor-avatar', avatar, group.name, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
         <div class="files-editor-copy">
           <h3 id="filesEditorTitle">${escapeHtml(group.name)}</h3>
           <div class="files-editor-stats">
@@ -8956,16 +9409,51 @@
       }
     }
 
+    function setRequestsStats(payload = {}) {
+      const items = Array.isArray(payload.items) ? payload.items : filesRequestsItems;
+      const pagination = payload.pagination || {};
+      const total = Number(pagination.total);
+      const pendingLoaded = items.filter(item => String(item?.status || '').toLowerCase() === 'pending').length;
+      const completedLoaded = items.filter(item => String(item?.status || '').toLowerCase() === 'completed').length;
+      const filteredStatus = String(payload.filters?.status ?? filesRequestsStatusFilter ?? '').toLowerCase();
+      if (els.filesRequestsTotal) els.filesRequestsTotal.textContent = formatResourceNumber(Number.isFinite(total) ? total : items.length);
+      if (els.filesRequestsLoaded) els.filesRequestsLoaded.textContent = formatResourceNumber(items.length);
+      if (els.filesRequestsPending) {
+        els.filesRequestsPending.textContent = formatResourceNumber(filteredStatus === 'pending' && Number.isFinite(total) ? total : pendingLoaded);
+      }
+      if (els.filesRequestsCompleted) {
+        els.filesRequestsCompleted.textContent = formatResourceNumber(filteredStatus === 'completed' && Number.isFinite(total) ? total : completedLoaded);
+      }
+    }
+
+    function setRequestsBusy(active, message = '') {
+      filesRequestsBusy = Boolean(active);
+      if (els.filesRequestsRefreshBtn) {
+        els.filesRequestsRefreshBtn.disabled = filesRequestsBusy;
+        els.filesRequestsRefreshBtn.textContent = filesRequestsBusy ? 'Refreshing...' : 'Refresh';
+      }
+      const moreButton = els.filesRequestsList?.querySelector('[data-requests-more]');
+      if (moreButton) moreButton.disabled = filesRequestsBusy;
+      if (message && els.filesRequestsStatus) {
+        els.filesRequestsStatus.textContent = message;
+      }
+    }
+
     function setResourcesView(view = 'mine') {
-      filesResourcesView = view === 'public' ? 'public' : 'mine';
+      filesResourcesView = view === 'public' || view === 'requests' ? view : 'mine';
       const publicActive = filesResourcesView === 'public';
+      const requestsActive = filesResourcesView === 'requests';
+      const mineActive = filesResourcesView === 'mine';
       els.filesGeneralResourcesCard?.classList.toggle('hidden', !publicActive);
       els.filesGeneralResourcesCard?.setAttribute('aria-hidden', publicActive ? 'false' : 'true');
-      els.filesMyResourcesCard?.classList.toggle('hidden', publicActive);
+      els.filesRequestsCard?.classList.toggle('hidden', !requestsActive);
+      els.filesRequestsCard?.setAttribute('aria-hidden', requestsActive ? 'false' : 'true');
+      els.filesMyResourcesCard?.classList.toggle('hidden', !mineActive);
+      els.filesMyResourcesCard?.setAttribute('aria-hidden', mineActive ? 'false' : 'true');
+      els.filesMainPageBtn?.classList.toggle('is-active', mineActive);
       els.filesOpenSiteBtn?.classList.toggle('is-active', publicActive);
-      if (!publicActive) {
-        updateResourcesBrowsingPresence({ force: true });
-      }
+      els.filesRequestsBtn?.classList.toggle('is-active', requestsActive);
+      updateResourcesBrowsingPresence({ force: true });
     }
 
     function hydrateGeneralResourceCategories(categories = []) {
@@ -9112,6 +9600,260 @@
         filesGeneralResourcesSearchTimer = null;
         loadGeneralResources({ refresh: true }).catch(() => {});
       }, 320);
+    }
+
+    function makeRequestAbsoluteUrl(value, fallback = REQUESTS_URL) {
+      const cleanValue = String(value || '').trim();
+      if (!cleanValue) return fallback;
+      try {
+        return new URL(cleanValue, 'https://6ureleaks.com').href;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function getRequestItemId(item) {
+      const id = Number(item?.id ?? item);
+      return Number.isFinite(id) && id > 0 ? String(Math.trunc(id)) : '';
+    }
+
+    function getRequestUrl(item) {
+      const id = getRequestItemId(item);
+      return id ? `${REQUESTS_URL}/${id}` : REQUESTS_URL;
+    }
+
+    function getRequestCreatorName(item = {}) {
+      return String(item.creator_name || item.creatorName || item.creator || item.username || 'Unknown creator').trim() || 'Unknown creator';
+    }
+
+    function getRequestStatusLabel(value) {
+      const status = String(value || 'pending').trim().toLowerCase();
+      if (status === 'completed') return 'Completed';
+      if (status === 'rejected') return 'Rejected';
+      if (status === 'approved') return 'Approved';
+      return 'Pending';
+    }
+
+    function getRequestById(requestId) {
+      const cleanId = getRequestItemId(requestId);
+      return filesRequestsItems.find(item => getRequestItemId(item) === cleanId) || null;
+    }
+
+    function getLeakerRequestFillPayload(item = {}) {
+      const productUrl = makeRequestAbsoluteUrl(item.product_url || item.productUrl || '', '');
+      return {
+        requestId: getRequestItemId(item),
+        title: String(item.title || 'Requested resource').trim() || 'Requested resource',
+        productUrl,
+        creatorName: getRequestCreatorName(item),
+        creatorUrl: makeRequestAbsoluteUrl(item.creator_url || item.creatorUrl || '', ''),
+        sourceUrl: getRequestUrl(item)
+      };
+    }
+
+    function renderRequestCard(item = {}) {
+      const requestId = getRequestItemId(item);
+      const title = String(item.title || 'Untitled request').trim() || 'Untitled request';
+      const creatorName = getRequestCreatorName(item);
+      const status = String(item.status || 'pending').trim().toLowerCase() || 'pending';
+      const statusLabel = getRequestStatusLabel(status);
+      const productUrl = makeRequestAbsoluteUrl(item.product_url || item.productUrl || '', '');
+      const creatorUrl = makeRequestAbsoluteUrl(item.creator_url || item.creatorUrl || '', '');
+      const requestUrl = getRequestUrl(item);
+      const leakUrl = makeRequestAbsoluteUrl(item.leak_message_url || item.leakMessageUrl || '', '');
+      const imageUrl = makeRequestAbsoluteUrl(item.image_url || item.imageUrl || '', '');
+      const creatorAvatar = makeRequestAbsoluteUrl(item.creator_avatar || item.creatorAvatar || item.avatar || '', '');
+      const description = String(item.description || '').replace(/\s+/g, ' ').trim();
+      const price = String(item.price || '').trim();
+      const meta = [
+        price,
+        `${formatResourceNumber(item.upvotes)} upvotes`,
+        `${formatResourceNumber(item.views)} views`,
+        `${formatResourceNumber(item.comments_count || item.commentsCount)} comments`,
+        formatResourceDate(item.created_at || item.createdAt)
+      ].filter(Boolean);
+      const thumbnailHtml = imageUrl
+        ? `<img data-resource-thumb-src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" onerror="this.remove()">`
+        : '';
+      const completeDisabled = status === 'completed' || !productUrl;
+      const completeTitle = !productUrl
+        ? 'This request has no product link'
+        : status === 'completed'
+          ? 'This request is already completed'
+          : 'Open Leaker Mode and fill Product Link';
+      return `
+        <article class="files-resource-card files-request-card ${status === 'completed' ? 'is-completed' : ''}" data-request-id="${escapeHtml(requestId)}">
+          <div class="files-resource-thumb" aria-hidden="true">
+            <div class="files-resource-thumb-fallback">${escapeHtml(getResourceInitials(title))}</div>
+            ${thumbnailHtml}
+          </div>
+          <div class="files-resource-body">
+            <div class="files-resource-topline">
+              <span class="files-resource-pill ${status === 'completed' ? 'free' : 'premium'}">${escapeHtml(statusLabel)}</span>
+              ${price ? `<span class="files-resource-pill">${escapeHtml(price)}</span>` : ''}
+              <span class="files-resource-pill">#${escapeHtml(requestId || 'request')}</span>
+            </div>
+            <h4 class="files-resource-title">${escapeHtml(title)}</h4>
+            <div class="files-request-creator">
+              ${renderFilesAvatarImage('files-request-creator-avatar', creatorAvatar, creatorName, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
+              <span>${escapeHtml(creatorName)}</span>
+            </div>
+            ${description ? `<p class="files-resource-description">${escapeHtml(description)}</p>` : ''}
+            <div class="files-resource-tags">
+              ${meta.map(value => `<span class="files-resource-pill">${escapeHtml(value)}</span>`).join('')}
+            </div>
+            <div class="files-request-actions">
+              <button class="primary-action files-request-complete" type="button" data-request-complete-id="${escapeHtml(requestId)}" title="${escapeHtml(completeTitle)}" ${completeDisabled ? 'disabled' : ''}>Complete</button>
+              ${productUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(productUrl)}">Product</button>` : ''}
+              ${creatorUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(creatorUrl)}">Creator</button>` : ''}
+              ${leakUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(leakUrl)}">Leak</button>` : `<button class="chip-action" type="button" data-external-url="${escapeHtml(requestUrl)}">Request</button>`}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderRequestsList(options = {}) {
+      if (!els.filesRequestsList) return;
+      const items = filesRequestsItems;
+      const preserveScrollTop = Number(options.preserveScrollTop);
+      const shouldRestoreScroll = Number.isFinite(preserveScrollTop);
+      const canLoadMore = filesRequestsPage < filesRequestsTotalPages;
+      const loadMoreHtml = canLoadMore
+        ? '<button class="chip-action files-general-load" type="button" data-requests-more>Load more</button>'
+        : '';
+      if (!items.length) {
+        els.filesRequestsList.classList.remove('files-resource-storefront');
+        els.filesRequestsList.innerHTML = `<div class="files-resource-empty"><strong>No requests found.</strong>Try another search or status filter.</div>${loadMoreHtml}`;
+      } else {
+        els.filesRequestsList.classList.remove('files-resource-storefront');
+        els.filesRequestsList.innerHTML = `${items.map(item => renderRequestCard(item)).join('')}${loadMoreHtml}`;
+        scheduleResourceImageHydration(els.filesRequestsList);
+      }
+      if (shouldRestoreScroll) {
+        const targetScrollTop = Math.max(0, preserveScrollTop);
+        els.filesRequestsList.scrollTop = targetScrollTop;
+        requestAnimationFrame(() => {
+          els.filesRequestsList.scrollTop = targetScrollTop;
+        });
+      }
+      if (els.filesRequestsStatus) {
+        els.filesRequestsStatus.textContent = [
+          `${formatResourceNumber(items.length)} requests loaded.`,
+          filesRequestsSearchQuery ? `Search: ${filesRequestsSearchQuery.trim()}.` : '',
+          filesRequestsStatusFilter ? `Status: ${filesRequestsStatusFilter}.` : '',
+          filesRequestsTotalPages > 1 ? `Page ${formatResourceNumber(filesRequestsPage)} of ${formatResourceNumber(filesRequestsTotalPages)}.` : ''
+        ].filter(Boolean).join(' ');
+      }
+    }
+
+    function renderRequestsSkeleton() {
+      if (!els.filesRequestsList) return;
+      els.filesRequestsList.classList.remove('files-resource-storefront');
+      els.filesRequestsList.innerHTML = Array.from({ length: 6 })
+        .map(() => '<div class="files-resource-skeleton" aria-hidden="true"></div>')
+        .join('');
+    }
+
+    async function loadRequests(options = {}) {
+      const refresh = Boolean(options.refresh);
+      const append = Boolean(options.append);
+      if (filesRequestsBusy) return;
+      const nextPage = append ? filesRequestsPage + 1 : 1;
+      const previousScrollTop = append ? (els.filesRequestsList?.scrollTop || 0) : null;
+      setRequestsBusy(true, append ? 'Loading more requests...' : 'Loading requests...');
+      if (!append) renderRequestsSkeleton();
+      try {
+        const activeSearch = filesRequestsSearchQuery.trim();
+        const activeStatus = filesRequestsStatusFilter.trim();
+        const query = new URLSearchParams({
+          page: String(nextPage),
+          limit: '24'
+        });
+        if (activeSearch) query.set('search', activeSearch);
+        if (activeStatus) query.set('status', activeStatus);
+        if (refresh) query.set('_', String(Date.now()));
+        const payload = await filesApi(`/api/requests?${query.toString()}`, { method: 'GET' });
+        const items = Array.isArray(payload.requests) ? payload.requests : [];
+        filesRequestsItems = append ? [...filesRequestsItems, ...items] : items;
+        const pagination = payload.pagination || {};
+        filesRequestsPage = Number(pagination.page) || nextPage;
+        filesRequestsTotalPages = Math.max(1, Number(pagination.totalPages) || filesRequestsPage);
+        setRequestsStats({
+          items: filesRequestsItems,
+          pagination,
+          filters: { search: activeSearch, status: activeStatus }
+        });
+        renderRequestsList({ preserveScrollTop: previousScrollTop });
+        const updatedText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (els.filesRequestsStatus) {
+          els.filesRequestsStatus.textContent = [
+            `${formatResourceNumber(filesRequestsItems.length)} requests loaded.`,
+            `Updated ${updatedText}.`,
+            activeSearch ? `Search: ${activeSearch}.` : '',
+            activeStatus ? `Status: ${activeStatus}.` : '',
+            filesRequestsTotalPages > 1 ? `Page ${formatResourceNumber(filesRequestsPage)} of ${formatResourceNumber(filesRequestsTotalPages)}.` : ''
+          ].filter(Boolean).join(' ');
+        }
+        updateDiscordPresence(
+          'Browsing Requests',
+          activeSearch
+            ? `Searching "${normalizeLeakerUploadNameText(activeSearch, 44)}"`
+            : `${formatResourceNumber(pagination.total)} ${activeStatus || 'all'} requests`,
+          { force: true }
+        );
+      } catch (error) {
+        if (!append) {
+          filesRequestsItems = [];
+          setRequestsStats({ items: [], pagination: {} });
+          if (els.filesRequestsList) {
+            els.filesRequestsList.classList.remove('files-resource-storefront');
+            els.filesRequestsList.innerHTML = '<div class="files-resource-empty"><strong>Requests could not be loaded.</strong>Please try Refresh in a moment.</div>';
+          }
+        }
+        if (els.filesRequestsStatus) {
+          els.filesRequestsStatus.textContent = getFriendlyFilesMessage(error.message, 'Requests could not be loaded.');
+        }
+        showToast('Requests could not be loaded.', 'err');
+      } finally {
+        setRequestsBusy(false);
+      }
+    }
+
+    function showRequestsPage(options = {}) {
+      setResourcesView('requests');
+      if (options.refresh || !filesRequestsItems.length) {
+        loadRequests({ refresh: Boolean(options.refresh) }).catch(() => {});
+      } else {
+        renderRequestsList();
+        updateResourcesBrowsingPresence({ force: true });
+      }
+    }
+
+    function scheduleRequestsSearch() {
+      if (filesRequestsSearchTimer) clearTimeout(filesRequestsSearchTimer);
+      if (els.filesRequestsStatus) {
+        els.filesRequestsStatus.textContent = 'Searching requests...';
+      }
+      filesRequestsSearchTimer = setTimeout(() => {
+        filesRequestsSearchTimer = null;
+        loadRequests({ refresh: true }).catch(() => {});
+      }, 320);
+    }
+
+    async function completeRequestFromRequestsPage(requestId) {
+      const request = getRequestById(requestId);
+      if (!request) {
+        showToast('Request could not be found. Refresh Requests and try again.', 'err');
+        return;
+      }
+      const payload = getLeakerRequestFillPayload(request);
+      if (!payload.productUrl) {
+        showToast('This request does not have a product link.', 'err');
+        return;
+      }
+      showToast(`Opening Leaker Mode for ${normalizeLeakerUploadNameText(payload.title, 42)}.`, 'ok');
+      await startLeakerMode({ request: payload });
     }
 
     function showMyResourcesPage() {
@@ -9456,6 +10198,20 @@
         </svg>
       `.trim();
       return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    function renderFilesAvatarImage(className, avatarUrl, fallbackName, attrs = '') {
+      const fallbackAvatar = makeFilesAvatarDataUri(fallbackName);
+      const src = String(avatarUrl || '').trim() || fallbackAvatar;
+      const extraAttrs = String(attrs || '').trim();
+      return [
+        `<img class="${escapeHtml(className)}"`,
+        `src="${escapeHtml(src)}"`,
+        `data-fallback-src="${escapeHtml(fallbackAvatar)}"`,
+        'alt=""',
+        extraAttrs,
+        'onerror="this.onerror=null;this.src=this.dataset.fallbackSrc"'
+      ].filter(Boolean).join(' ') + '>';
     }
 
     function getFilesResultIcon(kind) {
@@ -10079,12 +10835,78 @@
       return String(oauth.phase || '').toLowerCase();
     }
 
+    let appDiscordOAuthUrlCache = '';
+    let appDiscordOAuthUrlCacheAt = 0;
+
+    function normalizeAppDiscordOAuthSearchText(text) {
+      return String(text || '')
+        .replace(/&amp;/gi, '&')
+        .replace(/\\\//g, '/')
+        .replace(/\\u0026/gi, '&')
+        .replace(/\\u003d/gi, '=')
+        .replace(/\\u003f/gi, '?')
+        .replace(/\\u002f/gi, '/')
+        .replace(/\\u003a/gi, ':');
+    }
+
+    function normalizeAppDiscordOAuthUrl(value) {
+      let cleanUrl = normalizeAppDiscordOAuthSearchText(value).trim().replace(/[.,;\]}]+$/g, '');
+      if (/^https%3a%2f%2f/i.test(cleanUrl)) {
+        try {
+          cleanUrl = decodeURIComponent(cleanUrl);
+        } catch {}
+      }
+      return LEAKER_DISCORD_OAUTH_RE.test(cleanUrl) ? cleanUrl : '';
+    }
+
+    function extractAppDiscordOAuthUrl(text) {
+      const source = normalizeAppDiscordOAuthSearchText(text);
+      const bridgePattern = /(?:https?:\/\/[^/]+)?\/leaker-oauth\/bridge\?[^"'<>\s)]*/gi;
+      for (const match of source.matchAll(bridgePattern)) {
+        try {
+          const bridgeUrl = new URL(match[0], window.location.origin);
+          const oauthUrl = normalizeAppDiscordOAuthUrl(bridgeUrl.searchParams.get('url') || '');
+          if (oauthUrl) return oauthUrl;
+        } catch {}
+      }
+
+      const directPattern = /https:\/\/(?:(?:canary|ptb)\.)?(?:discord\.com|discordapp\.com)\/(?:api\/)?oauth2\/authorize[^"'<>\s)]*/gi;
+      for (const match of source.matchAll(directPattern)) {
+        const oauthUrl = normalizeAppDiscordOAuthUrl(match[0]);
+        if (oauthUrl) return oauthUrl;
+      }
+      return '';
+    }
+
+    async function resolveAppDiscordOAuthUrl() {
+      const now = Date.now();
+      if (appDiscordOAuthUrlCache && now - appDiscordOAuthUrlCacheAt < 20000) {
+        return appDiscordOAuthUrlCache;
+      }
+
+      for (const path of ['/leaker-proxy/', '/leaker-proxy/requests/account']) {
+        try {
+          const response = await fetch(path, { cache: 'no-store' });
+          if (!response.ok) continue;
+          const oauthUrl = extractAppDiscordOAuthUrl(await response.text());
+          if (oauthUrl) {
+            appDiscordOAuthUrlCache = oauthUrl;
+            appDiscordOAuthUrlCacheAt = Date.now();
+            return oauthUrl;
+          }
+        } catch {}
+      }
+      return normalizeAppDiscordOAuthUrl(APP_DISCORD_OAUTH_URL);
+    }
+
     function renderAppAuthWaitingStatus(status = {}) {
       const phase = getAppOauthPhase(status);
       if (phase === 'opening') {
         setAppAuthMessage('Opening Discord sign-in window...', true);
       } else if (phase === 'waiting') {
         setAppAuthMessage('Complete Discord sign-in in the separate window.', true);
+      } else if (phase === 'syncing') {
+        setAppAuthMessage('Discord sign-in finished. Syncing 6ureleaks.com session...', true);
       } else if (phase === 'completed' || status.oauth?.completed) {
         setAppAuthMessage('Discord sign-in complete. Syncing 6ureleaks.com session...', true);
       } else {
@@ -10183,11 +11005,11 @@
         const oauth = status.oauth || {};
         if (oauth.completed || phase === 'completed') {
           appDiscordAuthCompletedAt = appDiscordAuthCompletedAt || Date.now();
-          if (Date.now() - appDiscordAuthCompletedAt > 18000) {
+          if (Date.now() - appDiscordAuthCompletedAt > APP_DISCORD_AUTH_VERIFY_TIMEOUT_MS) {
             appDiscordLoginActive = false;
             appDiscordAuthCompletedAt = 0;
             stopAppDiscordAuthPolling();
-            setAppAuthMessage('6ureleaks.com session could not be verified. Sign in again.');
+            setAppAuthMessage('Discord sign-in finished, but 6ureleaks.com did not expose the session. Close Discord windows and try again.');
             if (els.filesLoginBtn) {
               els.filesLoginBtn.disabled = false;
               els.filesLoginBtn.innerHTML = discordLoginButtonHtml('Sign in with Discord');
@@ -10229,9 +11051,10 @@
       setAppAuthMessage('Opening Discord sign-in window...', true);
 
       try {
+        const oauthUrl = await resolveAppDiscordOAuthUrl();
         const status = await filesApi('/api/app-auth/discord/start', {
           method: 'POST',
-          body: JSON.stringify({ url: APP_DISCORD_OAUTH_URL })
+          body: JSON.stringify(oauthUrl ? { url: oauthUrl } : {})
         });
         if (status.authenticated && status.user) {
           await completeAppDiscordAuth(status.user, { refreshResources: true, runOpening: true });
@@ -10376,7 +11199,60 @@
     }
 
     function setUpdateMonitorVisible(visible) {
-      els.updateMonitor.classList.toggle('hidden', !visible);
+      if (!els.updateMonitor) return;
+      if (updateMonitorHideTimer) {
+        clearTimeout(updateMonitorHideTimer);
+        updateMonitorHideTimer = null;
+      }
+      if (visible) {
+        els.updateMonitor.classList.remove('hidden');
+        els.updateMonitor.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => els.updateMonitor.classList.add('show'));
+        return;
+      }
+      els.updateMonitor.classList.remove('show');
+      els.updateMonitor.setAttribute('aria-hidden', 'true');
+      updateMonitorHideTimer = setTimeout(() => {
+        els.updateMonitor.classList.add('hidden');
+        updateMonitorHideTimer = null;
+      }, 240);
+    }
+
+    function setUpdateMonitorVisualState(state = 'checking') {
+      const clean = ['checking', 'working', 'ready', 'error'].includes(String(state || '').toLowerCase())
+        ? String(state || '').toLowerCase()
+        : 'checking';
+      els.updateMonitor?.setAttribute('data-state', clean);
+      els.updateMonitorVisual?.setAttribute('data-state', clean);
+    }
+
+    function getUpdateMonitorVisualState(phase = '', message = '') {
+      const value = String(phase || '').toLowerCase();
+      const text = String(message || '').toLowerCase();
+      if (value === 'error' || text.includes('error') || text.includes('failed') || text.includes('could not')) {
+        return 'error';
+      }
+      if (
+        value === 'download' ||
+        value === 'verify' ||
+        value === 'launch' ||
+        value === 'handoff' ||
+        text.includes('install') ||
+        text.includes('download') ||
+        text.includes('starting')
+      ) {
+        return 'working';
+      }
+      if (
+        value === 'ready' ||
+        value === 'manual' ||
+        text.includes('latest version') ||
+        text.includes('available') ||
+        text.includes('opened')
+      ) {
+        return 'ready';
+      }
+      return 'checking';
     }
 
     function getSkippedUpdateVersion() {
@@ -10490,10 +11366,12 @@
       updateMonitorDismissed = false;
       lastUpdateMonitorLine = '';
       updateMonitorLines = [];
+      const visualState = getUpdateMonitorVisualState('', `${title} ${message}`);
+      setUpdateMonitorVisualState(visualState);
       els.updateMonitorTitle.textContent = title;
       els.updateMonitorMessage.textContent = message;
       els.updateMonitorMeta.textContent = '';
-      els.updateMonitorProgress.style.width = '0%';
+      els.updateMonitorProgress.style.width = visualState === 'checking' || visualState === 'working' ? '14%' : '0%';
       els.updateMonitorLog.innerHTML = '';
       setUpdateMonitorVisible(true);
       pushUpdateMonitorLine(message);
@@ -10529,6 +11407,7 @@
       const shouldShow = forceVisible || status.installing || phase || status.lastError;
 
       if (!shouldShow || updateMonitorDismissed) return;
+      setUpdateMonitorVisualState(status.lastError ? 'error' : getUpdateMonitorVisualState(phase, message));
       setUpdateMonitorVisible(true);
       els.updateMonitorTitle.textContent = [label, version].filter(Boolean).join(' - ');
       els.updateMonitorMessage.textContent = message;
@@ -10629,18 +11508,22 @@
         updateConfigured = Boolean(result.configured);
         updateInfo = result.latest || null;
         if (!result.configured) {
-          if (!silent) showToast('Update channel is not configured yet.', 'err');
-          if (!silent) pushUpdateMonitorLine('Update channel is not configured.');
+          if (!silent) {
+            setUpdateMonitorVisualState('error');
+            els.updateMonitorProgress.style.width = '100%';
+            els.updateMonitorMessage.textContent = 'Update channel is not configured yet.';
+            pushUpdateMonitorLine('Update channel is not configured.');
+          }
           return result;
         }
         if (result.updateAvailable) {
           const version = updateInfo?.version ? ` v${updateInfo.version}` : '';
           if (!silent) {
+            setUpdateMonitorVisualState('ready');
             els.updateMonitorProgress.style.width = '100%';
             els.updateMonitorMessage.textContent = `Update${version} is available.`;
             pushUpdateMonitorLine(`Update${version} is available.`);
           }
-          if (!silent) showToast(`Update${version} is available.`, 'ok');
           showUpdatePrompt(result, { force: !silent || Boolean(options.forcePrompt) });
           return result;
         }
@@ -10649,19 +11532,20 @@
           if (skipped && skipped !== String(result.latest.version || '').trim()) setSkippedUpdateVersion('');
         }
         if (!silent) {
+          setUpdateMonitorVisualState('ready');
           els.updateMonitorProgress.style.width = '100%';
           els.updateMonitorMessage.textContent = 'You are on the latest version.';
           pushUpdateMonitorLine('You are on the latest version.');
-          showToast('You are on the latest version.', 'ok');
         }
         return result;
       } catch (error) {
         if (!silent) {
           const message = getFriendlyFilesMessage(error.message, 'Update check could not be completed.');
+          setUpdateMonitorVisualState('error');
+          els.updateMonitorProgress.style.width = '100%';
           els.updateMonitorMessage.textContent = message;
           els.updateMonitorMeta.textContent = message;
           pushUpdateMonitorLine(message);
-          showToast(message, 'err');
         }
         return null;
       } finally {
@@ -10694,6 +11578,7 @@
         if (result.manualDownload) {
           updateBusy = false;
           stopUpdateStatusPolling();
+          setUpdateMonitorVisualState('ready');
           els.updateMonitorMessage.textContent = 'Update download opened in your browser.';
           pushUpdateMonitorLine('Update download opened in your browser.');
           showToast('Update download opened.', 'ok');
@@ -10701,6 +11586,7 @@
           updateResourcesBrowsingPresence({ force: true });
           return;
         }
+        setUpdateMonitorVisualState('ready');
         els.updateMonitorMessage.textContent = 'Updater started. The app will close now.';
         pushUpdateMonitorLine('Updater started. The app will close now.');
         showToast('Installing update. The app will restart.', 'ok');
@@ -10710,6 +11596,8 @@
         setUpdateButtonState();
         updateResourcesBrowsingPresence({ force: true });
         const message = getFriendlyFilesMessage(error.message, 'Update install could not be started.');
+        setUpdateMonitorVisualState('error');
+        els.updateMonitorProgress.style.width = '100%';
         els.updateMonitorMessage.textContent = message;
         els.updateMonitorMeta.textContent = message;
         pushUpdateMonitorLine(message);
@@ -12073,6 +12961,236 @@
         return;
       }
       showToast('Profile link copied. Open the upload form, then try Paste URL again.', 'err');
+    }
+
+    function setPendingLeakerRequestFill(request = {}) {
+      const productUrl = String(request.productUrl || request.product_url || '').trim();
+      if (!productUrl) return false;
+      if (leakerPendingRequestFillTimer) clearTimeout(leakerPendingRequestFillTimer);
+      leakerPendingRequestFillTimer = null;
+      leakerPendingRequestFill = {
+        requestId: String(request.requestId || request.id || '').trim(),
+        title: String(request.title || 'Requested resource').trim() || 'Requested resource',
+        productUrl,
+        creatorName: String(request.creatorName || request.creator_name || '').trim(),
+        sourceUrl: String(request.sourceUrl || '').trim(),
+        attempts: 0,
+        waitAttempts: 0,
+        readySince: 0,
+        createdAt: Date.now()
+      };
+      return true;
+    }
+
+    function clearPendingLeakerRequestFill() {
+      if (leakerPendingRequestFillTimer) clearTimeout(leakerPendingRequestFillTimer);
+      leakerPendingRequestFillTimer = null;
+      leakerPendingRequestFill = null;
+    }
+
+    function scoreLeakerProductLinkControl(doc, control, frameWindow = window) {
+      if (!getVisibleLeakerControl(frameWindow, control)) return -1;
+      const tag = String(control.tagName || '').toLowerCase();
+      const type = String(control.getAttribute('type') || '').toLowerCase();
+      if (tag !== 'input' && tag !== 'textarea') return -1;
+      const fieldLabel = getLeakerUploadFieldLabel(doc, control).toLowerCase();
+      const context = getLeakerUploadControlContext(doc, control).toLowerCase();
+      const attrs = [
+        control.id,
+        control.name,
+        control.placeholder,
+        control.getAttribute('aria-label'),
+        control.getAttribute('title'),
+        control.getAttribute('data-field'),
+        control.getAttribute('data-name')
+      ].join(' ').toLowerCase();
+      const text = `${fieldLabel} ${attrs} ${context}`;
+      let score = 0;
+      if (fieldLabel === 'product link') score += 42;
+      if (fieldLabel.includes('product') && (fieldLabel.includes('link') || fieldLabel.includes('url'))) score += 30;
+      if (text.includes('product link')) score += 24;
+      if (text.includes('payhip') || text.includes('gumroad')) score += 12;
+      if (text.includes('product') && (text.includes('url') || text.includes('link'))) score += 10;
+      if (type === 'url') score += 6;
+      if (attrs.includes('product')) score += 6;
+      if (fieldLabel.includes('creator social') || text.includes('creator social url')) score -= 32;
+      if (fieldLabel.includes('thumbnail') || text.includes('thumbnail url')) score -= 28;
+      if (fieldLabel.includes('resource name') || text.includes('resource name')) score -= 18;
+      if (fieldLabel.includes('creator name') || text.includes('creator name')) score -= 18;
+      return score;
+    }
+
+    function findLeakerProductLinkControl(doc, frameWindow = window) {
+      if (!doc) return null;
+      let best = null;
+      let bestScore = 0;
+      for (const control of doc.querySelectorAll('input, textarea')) {
+        const score = scoreLeakerProductLinkControl(doc, control, frameWindow);
+        if (score > bestScore) {
+          best = control;
+          bestScore = score;
+        }
+      }
+      return bestScore >= 16 ? best : null;
+    }
+
+    function getVisibleLeakerElement(frameWindow, element) {
+      if (!element) return false;
+      try {
+        const style = frameWindow.getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const opacity = Number(style.opacity || '1');
+        if (Number.isFinite(opacity) && opacity < 0.08) return false;
+        const rect = element.getBoundingClientRect();
+        return rect.width > 2 && rect.height > 2;
+      } catch {
+        return true;
+      }
+    }
+
+    function leakerDashboardHasLoadingScreen(doc, frameWindow = window) {
+      if (!doc || !doc.body) return true;
+      const readyState = String(doc.readyState || '').toLowerCase();
+      if (readyState && readyState !== 'complete') return true;
+      const bodyText = normalizeLeakerUploadPresenceText(doc.body.innerText || doc.body.textContent || '', 120).toLowerCase();
+      if (/^(loading|loading\.{1,3}|preparing|please wait|yükleniyor|hazırlanıyor)$/i.test(bodyText)) return true;
+
+      const viewportWidth = Number(frameWindow.innerWidth || doc.documentElement?.clientWidth || 1);
+      const viewportHeight = Number(frameWindow.innerHeight || doc.documentElement?.clientHeight || 1);
+      const viewportArea = Math.max(1, viewportWidth * viewportHeight);
+      const loadingSelector = [
+        '[aria-busy="true"]',
+        '[role="progressbar"]',
+        '[role="status"]',
+        '[class*="loading" i]',
+        '[class*="loader" i]',
+        '[class*="spinner" i]',
+        '[class*="skeleton" i]',
+        '[data-loading="true"]',
+        '[data-state="loading"]'
+      ].join(',');
+      try {
+        for (const element of Array.from(doc.querySelectorAll(loadingSelector)).slice(0, 100)) {
+          if (!getVisibleLeakerElement(frameWindow, element)) continue;
+          const rect = element.getBoundingClientRect();
+          const areaRatio = (rect.width * rect.height) / viewportArea;
+          const largePanel = areaRatio > 0.08 || (rect.width > viewportWidth * 0.58 && rect.height > 72);
+          const marker = [
+            element.id,
+            element.className,
+            element.getAttribute?.('role'),
+            element.getAttribute?.('aria-label'),
+            element.getAttribute?.('data-state')
+          ].join(' ').toLowerCase();
+          const text = normalizeLeakerUploadPresenceText(element.innerText || element.textContent || '', 140).toLowerCase();
+          const loadingSignal = /loading|loader|spinner|skeleton|progress|please wait|preparing|yüklen|hazırlan/.test(`${marker} ${text}`);
+          const role = String(element.getAttribute?.('role') || '').toLowerCase();
+          if (loadingSignal && largePanel) return true;
+          if ((role === 'progressbar' || role === 'status') && loadingSignal && areaRatio > 0.015) return true;
+        }
+      } catch {}
+      return false;
+    }
+
+    function getLeakerRequestFillReadiness() {
+      const pending = leakerPendingRequestFill;
+      if (!pending) return { ready: false, reason: 'empty' };
+      const frame = els.leakerUploadFrame;
+      const shell = getLeakerFrameShell(frame);
+      if (!frame || shell?.classList.contains('is-loading')) {
+        pending.readySince = 0;
+        return { ready: false, reason: 'frame-loading' };
+      }
+      try {
+        const doc = frame.contentDocument;
+        const frameWindow = frame.contentWindow || window;
+        if (!doc || !doc.body) {
+          pending.readySince = 0;
+          return { ready: false, reason: 'document-loading' };
+        }
+        if (leakerDashboardHasLoadingScreen(doc, frameWindow)) {
+          pending.readySince = 0;
+          return { ready: false, reason: 'dashboard-loading' };
+        }
+        const control = findLeakerProductLinkControl(doc, frameWindow);
+        if (!control) {
+          pending.readySince = 0;
+          return { ready: false, reason: 'field-missing' };
+        }
+        if (!pending.readySince) {
+          pending.readySince = Date.now();
+          return { ready: false, reason: 'settling' };
+        }
+        if (Date.now() - pending.readySince < 650) {
+          return { ready: false, reason: 'settling' };
+        }
+        return { ready: true, control };
+      } catch {
+        pending.readySince = 0;
+        return { ready: false, reason: 'unavailable' };
+      }
+    }
+
+    function fillProductLinkInLeakerUpload(url) {
+      const cleanUrl = String(url || '').trim();
+      if (!cleanUrl) return false;
+      for (const frame of [els.leakerUploadFrame, els.leakerLoginFrame, els.leakerCloudFrame]) {
+        try {
+          const doc = frame?.contentDocument;
+          const frameWindow = frame?.contentWindow || window;
+          const control = findLeakerProductLinkControl(doc, frameWindow);
+          if (!control) continue;
+          setLeakerFormControlValue(control, cleanUrl, frameWindow);
+          try { control.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch {}
+          return true;
+        } catch {}
+      }
+      return false;
+    }
+
+    function schedulePendingLeakerRequestFill(delay = 520) {
+      if (!leakerPendingRequestFill) return;
+      if (leakerPendingRequestFillTimer) clearTimeout(leakerPendingRequestFillTimer);
+      leakerPendingRequestFillTimer = setTimeout(() => {
+        leakerPendingRequestFillTimer = null;
+        tryPendingLeakerRequestFill({ reschedule: true });
+      }, Math.max(0, delay));
+    }
+
+    function tryPendingLeakerRequestFill(options = {}) {
+      const pending = leakerPendingRequestFill;
+      if (!pending || leakerModePhase !== 'active') return false;
+      const readiness = getLeakerRequestFillReadiness();
+      if (!readiness.ready) {
+        pending.waitAttempts = Number(pending.waitAttempts || 0) + 1;
+        if (pending.waitAttempts === 1 || readiness.reason === 'dashboard-loading') {
+          setLeakerModeStatus('Waiting for Leaker Dashboard to finish loading.');
+        }
+        if (pending.waitAttempts < 90) {
+          schedulePendingLeakerRequestFill(readiness.reason === 'settling' ? 260 : 650);
+        } else if (!options.silent) {
+          showToast('Leaker Dashboard was not ready for autofill. Try Complete again after it finishes loading.', 'err');
+          clearPendingLeakerRequestFill();
+        }
+        return false;
+      }
+      pending.attempts = Number(pending.attempts || 0) + 1;
+      if (fillProductLinkInLeakerUpload(pending.productUrl)) {
+        const title = normalizeLeakerUploadNameText(pending.title, 44) || 'request';
+        setLeakerModeStatus(`Product Link filled from ${title}.`);
+        showToast('Request product link added to Leaker Mode.', 'ok');
+        updateDiscordPresence('Completing Request', title, { force: true });
+        clearPendingLeakerRequestFill();
+        return true;
+      }
+      if (pending.attempts < 16) {
+        const delay = Math.min(1700, 420 + pending.attempts * 170);
+        schedulePendingLeakerRequestFill(delay);
+      } else if (!options.silent) {
+        showToast('Product Link field was not ready yet. Reload Leaker Mode or press Complete again.', 'err');
+        clearPendingLeakerRequestFill();
+      }
+      return false;
     }
 
     function normalizeLeakerUploadPresenceText(value, maxLength = 72) {
@@ -13840,6 +14958,7 @@
       releaseLeakerFrame(els.leakerLoginFrame);
       releaseLeakerFrame(els.leakerCloudFrame);
       setLeakerFrame(els.leakerUploadFrame, LEAKER_UPLOAD_URL);
+      schedulePendingLeakerRequestFill(760);
     }
 
     async function launchLeakerModeFromReady(options = {}) {
@@ -13865,6 +14984,7 @@
         if (!installLeakerUploadPresenceTracking(els.leakerUploadFrame)) {
           updateDiscordPresence('Leaker Dashboard', 'Upload area open', { force: true });
         }
+        schedulePendingLeakerRequestFill(520);
       } catch (error) {
         showToast(getFriendlyFilesMessage(error.message, 'Leaker Mode could not be opened.'), 'err');
       } finally {
@@ -13931,8 +15051,14 @@
       return false;
     }
 
-    async function startLeakerMode() {
+    async function startLeakerMode(options = {}) {
+      const request = options?.request || null;
+      if (request) setPendingLeakerRequestFill(request);
       if (leakerModePhase === 'active') {
+        if (request) {
+          tryPendingLeakerRequestFill();
+          return;
+        }
         await exitLeakerMode();
         return;
       }
@@ -13972,6 +15098,7 @@
           body: JSON.stringify({})
         });
       } catch {}
+      clearPendingLeakerRequestFill();
       await hideLeakerModeTransition();
       setLeakerModeViewVisible(false);
       clearLeakerFrames();
@@ -14087,6 +15214,17 @@
           startLeakerMode();
           return;
         }
+        const requestCompleteButton = event.target.closest('[data-request-complete-id]');
+        if (requestCompleteButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!requestCompleteButton.disabled) {
+            completeRequestFromRequestsPage(requestCompleteButton.dataset.requestCompleteId || '').catch(error => {
+              showToast(getFriendlyFilesMessage(error.message, 'Request could not be completed.'), 'err');
+            });
+          }
+          return;
+        }
         const editorButton = event.target.closest('[data-editor-key]');
         if (editorButton) {
           event.preventDefault();
@@ -14124,12 +15262,14 @@
         }
       });
       els.filesBackBtn?.addEventListener('click', () => {
-        if (filesResourcesView === 'public') {
+        if (filesResourcesView === 'public' || filesResourcesView === 'requests') {
           showMyResourcesPage();
         }
       });
+      els.filesMainPageBtn?.addEventListener('click', showMyResourcesPage);
       els.filesUpdateBtn.addEventListener('click', handleUpdateButtonClick);
       els.filesOpenSiteBtn.addEventListener('click', () => showGeneralResourcesPage());
+      els.filesRequestsBtn?.addEventListener('click', () => showRequestsPage());
       els.filesGeneralResourcesMineBtn?.addEventListener('click', showMyResourcesPage);
       els.filesGeneralResourcesOpenBtn?.addEventListener('click', openFilesSiteExternal);
       els.filesGeneralResourcesRefreshBtn?.addEventListener('click', () => loadGeneralResources({ refresh: true }));
@@ -14146,6 +15286,23 @@
       els.filesGeneralResourcesCategory?.addEventListener('change', () => {
         filesGeneralResourcesCategory = els.filesGeneralResourcesCategory.value;
         loadGeneralResources({ refresh: true }).catch(() => {});
+      });
+      els.filesRequestsMineBtn?.addEventListener('click', showMyResourcesPage);
+      els.filesRequestsOpenBtn?.addEventListener('click', () => openExternalUrl(REQUESTS_URL));
+      els.filesRequestsRefreshBtn?.addEventListener('click', () => loadRequests({ refresh: true }));
+      els.filesRequestsList?.addEventListener('click', event => {
+        const moreButton = event.target.closest('[data-requests-more]');
+        if (!moreButton) return;
+        event.preventDefault();
+        loadRequests({ append: true });
+      });
+      els.filesRequestsSearch?.addEventListener('input', () => {
+        filesRequestsSearchQuery = els.filesRequestsSearch.value;
+        scheduleRequestsSearch();
+      });
+      els.filesRequestsStatusFilter?.addEventListener('change', () => {
+        filesRequestsStatusFilter = els.filesRequestsStatusFilter.value;
+        loadRequests({ refresh: true }).catch(() => {});
       });
       els.filesResourcesSearch?.addEventListener('input', () => {
         filesResourcesSearchQuery = els.filesResourcesSearch.value;
@@ -14249,6 +15406,8 @@
           if (!installLeakerUploadPresenceTracking(els.leakerUploadFrame)) {
             updateDiscordPresence('Leaker Dashboard', 'Upload area open', { force: true });
           }
+          schedulePendingLeakerRequestFill(360);
+          setTimeout(() => tryPendingLeakerRequestFill({ silent: true }), 1100);
         }
       });
       els.filesLogoutBtn.addEventListener('click', logoutFiles);
@@ -14352,6 +15511,11 @@
         updateMonitorDismissed = true;
         setUpdateMonitorVisible(false);
       });
+      els.updateMonitor.addEventListener('click', event => {
+        if (event.target !== els.updateMonitor) return;
+        updateMonitorDismissed = true;
+        setUpdateMonitorVisible(false);
+      });
       els.updatePromptLaterBtn.addEventListener('click', hideUpdatePrompt);
       els.updatePromptSkipBtn.addEventListener('click', skipCurrentUpdatePrompt);
       els.updatePromptInstallBtn.addEventListener('click', installAppUpdate);
@@ -14370,6 +15534,11 @@
         }
         if (!els.updatePrompt.classList.contains('hidden')) {
           hideUpdatePrompt();
+          return;
+        }
+        if (!els.updateMonitor.classList.contains('hidden')) {
+          updateMonitorDismissed = true;
+          setUpdateMonitorVisible(false);
           return;
         }
         if (!els.filesSettingsOverlay.classList.contains('hidden')) {

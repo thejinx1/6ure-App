@@ -157,10 +157,14 @@ PROTECTED_LIST_API_URL = "https://6ureleaks.com/api/protection/users"
 LEAKER_SITE_BASE_URL = "https://6ureleaks.com"
 LEAKER_PROXY_PREFIX = "/leaker-proxy"
 LEAKER_OAUTH_BRIDGE_PATH = "/leaker-oauth/bridge"
-APP_DISCORD_OAUTH_URL = os.environ.get(
-    "REYLI_APP_DISCORD_OAUTH_URL",
-    "https://discord.com/oauth2/authorize?client_id=948565930034749501&redirect_uri=https%3A%2F%2F6ureleaks.com%2Frequests%2Fapi%2Fauth%2Fdiscord%2Fcallback&response_type=code&scope=identify+guilds&state=eyJjYWxsYmFja1VybCI6Imh0dHBzOi8vNnVyZWxlYWtzLmNvbS8iLCJ0IjoxNzc4MjQzNzYzNTE0LCJuIjoiZWMxZGExMGIxNWFlOWQ1YmI0M2VjYzIxYTI5MzFlNTIifQ.c5eb5f8863df611a9d0216549dc3b0163f7a868471e4c7cc0b887ea4f69ad2bd",
-).strip()
+APP_DISCORD_OAUTH_DEFAULT_URL = (
+    "https://discord.com/oauth2/authorize?client_id=948565930034749501&redirect_uri=https%3A%2F%2F6ureleaks.com%2Frequests%2Fapi%2Fauth%2Fdiscord%2Fcallback&response_type=code&scope=identify+guilds&state=eyJjYWxsYmFja1VybCI6Imh0dHBzOi8vNnVyZWxlYWtzLmNvbS8iLCJ0IjoxNzc4MjQzNzYzNTE0LCJuIjoiZWMxZGExMGIxNWFlOWQ1YmI0M2VjYzIxYTI5MzFlNTIifQ.c5eb5f8863df611a9d0216549dc3b0163f7a868471e4c7cc0b887ea4f69ad2bd"
+)
+APP_DISCORD_OAUTH_URL_ENV = os.environ.get("REYLI_APP_DISCORD_OAUTH_URL", "").strip()
+APP_DISCORD_OAUTH_URL = (APP_DISCORD_OAUTH_URL_ENV or APP_DISCORD_OAUTH_DEFAULT_URL).strip()
+APP_DISCORD_OAUTH_CACHE_SECONDS = float(os.environ.get("REYLI_APP_DISCORD_OAUTH_CACHE_SECONDS", "20"))
+APP_DISCORD_OAUTH_CACHE_LOCK = threading.RLock()
+APP_DISCORD_OAUTH_CACHE = {"url": "", "checkedAt": 0.0}
 LEAKER_PROXY_TIMEOUT_SECONDS = 45
 LEAKER_PROXY_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -3986,7 +3990,111 @@ def normalize_discord_oauth_url(url: str) -> str:
     clean_url = re.sub(r"\\u003d", "=", clean_url, flags=re.IGNORECASE)
     clean_url = re.sub(r"\\u003f", "?", clean_url, flags=re.IGNORECASE)
     clean_url = re.sub(r"\\u002f", "/", clean_url, flags=re.IGNORECASE)
+    clean_url = re.sub(r"\\u003a", ":", clean_url, flags=re.IGNORECASE)
     return clean_url.rstrip("\\")
+
+
+def normalize_discord_oauth_search_text(text: str) -> str:
+    clean_text = html.unescape(str(text or ""))
+    clean_text = clean_text.replace("\\/", "/")
+    clean_text = re.sub(r"\\u0026", "&", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"\\u003d", "=", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"\\u003f", "?", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"\\u002f", "/", clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r"\\u003a", ":", clean_text, flags=re.IGNORECASE)
+    return clean_text
+
+
+def extract_discord_oauth_urls(text: str) -> list[str]:
+    if not text or "discord" not in str(text).lower():
+        return []
+
+    search_text = normalize_discord_oauth_search_text(text)
+    pattern = re.compile(
+        r"""https://(?:(?:canary|ptb)\.)?(?:discord\.com|discordapp\.com)/(?:api/)?oauth2/authorize[^\s"'<>)]*""",
+        flags=re.IGNORECASE,
+    )
+    urls: list[str] = []
+    seen: set[str] = set()
+    for raw_url in pattern.findall(search_text):
+        clean_url = normalize_discord_oauth_url(raw_url).rstrip(".,;}]")
+        if not is_discord_oauth_url(clean_url) or clean_url in seen:
+            continue
+        urls.append(clean_url)
+        seen.add(clean_url)
+    return urls
+
+
+def fetch_live_app_discord_oauth_url() -> str:
+    ensure_leaker_cookie_consent(save=False)
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Referer": LEAKER_SITE_BASE_URL,
+        "User-Agent": LEAKER_PROXY_USER_AGENT,
+    }
+    for path in ("/", "/requests/account"):
+        url = f"{LEAKER_SITE_BASE_URL}{path}"
+        try:
+            with LEAKER_PROXY_LOCK:
+                response = LEAKER_PROXY_SESSION.get(
+                    url,
+                    headers=headers,
+                    allow_redirects=True,
+                    timeout=16,
+                )
+                try:
+                    LEAKER_PROXY_SESSION.cookies.save(ignore_discard=True, ignore_expires=True)
+                except Exception:
+                    pass
+            if response.status_code >= 400:
+                continue
+            for oauth_url in extract_discord_oauth_urls(response.text):
+                return oauth_url
+        except Exception:
+            continue
+    return ""
+
+
+def get_live_app_discord_oauth_url(*, force: bool = False) -> str:
+    now = time.time()
+    with APP_DISCORD_OAUTH_CACHE_LOCK:
+        cached_url = str(APP_DISCORD_OAUTH_CACHE.get("url") or "")
+        cached_at = float(APP_DISCORD_OAUTH_CACHE.get("checkedAt") or 0)
+        if (
+            not force
+            and cached_url
+            and APP_DISCORD_OAUTH_CACHE_SECONDS > 0
+            and now - cached_at < APP_DISCORD_OAUTH_CACHE_SECONDS
+        ):
+            return cached_url
+
+    live_url = fetch_live_app_discord_oauth_url()
+    if live_url:
+        with APP_DISCORD_OAUTH_CACHE_LOCK:
+            APP_DISCORD_OAUTH_CACHE["url"] = live_url
+            APP_DISCORD_OAUTH_CACHE["checkedAt"] = time.time()
+    return live_url
+
+
+def resolve_app_discord_oauth_url(provided_url: str = "") -> str:
+    env_url = normalize_discord_oauth_url(APP_DISCORD_OAUTH_URL_ENV)
+    if env_url and is_discord_oauth_url(env_url):
+        return env_url
+
+    live_url = get_live_app_discord_oauth_url(force=False)
+    if live_url:
+        return live_url
+
+    clean_provided_url = normalize_discord_oauth_url(provided_url)
+    if clean_provided_url and is_discord_oauth_url(clean_provided_url):
+        return clean_provided_url
+
+    fallback_url = normalize_discord_oauth_url(APP_DISCORD_OAUTH_URL)
+    if fallback_url and is_discord_oauth_url(fallback_url):
+        return fallback_url
+    return ""
 
 
 def leaker_discord_oauth_bridge_url(url: str) -> str:
@@ -8068,7 +8176,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
     def _leaker_oauth_open(self) -> None:
         try:
             payload = self._read_json()
-            url = str(payload.get("url", "") or "").strip()
+            url = resolve_app_discord_oauth_url(payload.get("url", ""))
+            if not url:
+                raise ValueError("Discord OAuth URL could not be resolved.")
             self._send_json(200, self._leaker_bridge().open_leaker_oauth(url))
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
@@ -8096,9 +8206,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
     def _app_auth_discord_start(self) -> None:
         try:
             payload = self._read_json()
-            url = str(payload.get("url", "") or "").strip() or APP_DISCORD_OAUTH_URL
-            if not is_discord_oauth_url(url):
-                raise ValueError("Invalid Discord OAuth URL.")
+            url = resolve_app_discord_oauth_url(payload.get("url", ""))
+            if not url or not is_discord_oauth_url(url):
+                raise ValueError("Discord OAuth URL could not be resolved.")
             oauth_status = self._leaker_bridge().open_leaker_oauth(url)
             auth_status = get_app_auth_status(refresh=False)
             auth_status["oauth"] = oauth_status
