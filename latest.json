@@ -1,24 +1,24 @@
 {
-  "version": "1.4.4",
-  "notes": "6ure App 1.4.4",
+  "version": "1.4.5",
+  "notes": "6ure App 1.4.5",
   "windows": {
-    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.4/6ure-app-setup-windows-x64.exe",
-    "sha256": "b6d30a0a80344d935086987b69892b391dabba8a603e5065966067af27663b07",
-    "sizeBytes": 15321592,
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.5/6ure-app-setup-windows-x64.exe",
+    "sha256": "4d5ad060bc49864529d5b94f15a915d0f5e4632d907f9eac527875e19274ae1f",
+    "sizeBytes": 15347044,
     "packageType": "installer",
     "installerArgs": "/S",
     "successExitCodes": [0, 3010]
   },
   "macos": {
-    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.4/6ure-app-macos.dmg",
-    "sha256": "62c1aa55e34fd38dd1312256199ff4a941d38cdf45a153beddd60bbe8325b440",
-    "sizeBytes": 21427446,
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.5/6ure-app-macos.dmg",
+    "sha256": "54285629baf6bee4e0709316b3d1b6cdb6cb7a229e5a31ec413ccd33467620b3",
+    "sizeBytes": 21435663,
     "packageType": "dmg"
   },
   "linux": {
-    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.4/6ure-app-linux-x64.tar.gz",
-    "sha256": "36a40352c98fb191b995866ff7c206c088e364893ead8f3d2c8796a5792d4c49",
-    "sizeBytes": 30640514,
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.4.5/6ure-app-linux-x64.tar.gz",
+    "sha256": "b7ab60b175ccd7c4e0e1dc1fa253a9362e88c7d125d000a2e36223914bf8990e",
+    "sizeBytes": 30648630,
     "packageType": "tar.gz"
   }
 }
