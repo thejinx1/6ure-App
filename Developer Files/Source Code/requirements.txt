@@ -3,3 +3,5 @@ pyinstaller
 requests
 cryptography
 pyobjc; sys_platform == "darwin"
+pycairo; sys_platform == "linux"
+PyGObject; sys_platform == "linux"

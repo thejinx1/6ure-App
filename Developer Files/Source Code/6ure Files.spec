@@ -23,6 +23,7 @@ exe = EXE(
     exclude_binaries=True,
     name='6ure™ App',
     debug=False,
+    append_pkg=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,

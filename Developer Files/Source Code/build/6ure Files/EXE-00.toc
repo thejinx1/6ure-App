@@ -26,7 +26,7 @@
  b'emblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version='
  b'"6.0.0.0" processorArchitecture="*" publicKeyToken="6595b64144ccf1df" langua'
  b'ge="*"/>\n    </dependentAssembly>\n  </dependency>\n</assembly>',
- True,
+ False,
  False,
  None,
  None,
@@ -86,7 +86,7 @@
  [],
  False,
  False,
- 1778439317,
+ 1778442263,
  [('runw.exe',
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],

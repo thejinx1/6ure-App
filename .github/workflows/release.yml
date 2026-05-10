@@ -92,6 +92,37 @@ jobs:
         run: |
           & .\build.ps1
 
+      - name: Verify Windows app bundle
+        run: |
+          $appName = "6ure$([char]0x2122) App"
+          $distDir = Join-Path "dist" $appName
+          if (!(Test-Path -LiteralPath $distDir)) {
+            throw "Build output was not found: $distDir"
+          }
+
+          $requiredItems = @(
+            "$appName.exe",
+            "$appName.pkg",
+            "_internal"
+          )
+          foreach ($item in $requiredItems) {
+            $path = Join-Path $distDir $item
+            if (!(Test-Path -LiteralPath $path)) {
+              throw "Required Windows app bundle item is missing: $path"
+            }
+          }
+
+          $exePath = Join-Path $distDir "$appName.exe"
+          $pkgPath = Join-Path $distDir "$appName.pkg"
+          $exeSize = (Get-Item -LiteralPath $exePath).Length
+          $pkgSize = (Get-Item -LiteralPath $pkgPath).Length
+          if ($pkgSize -le 0) {
+            throw "PyInstaller external package is empty: $pkgPath"
+          }
+          Write-Host "Verified Windows app bundle."
+          Write-Host "EXE size: $exeSize bytes"
+          Write-Host "PKG size: $pkgSize bytes"
+
       - name: Create ZIP
         run: |
           $appName = "6ure$([char]0x2122) App"
@@ -117,13 +148,19 @@ jobs:
             Remove-Item -LiteralPath $zipPath -Force
           }
           Compress-Archive -Path (Join-Path $distDir "*") -DestinationPath $zipPath -Force
+          Write-Host "Created portable ZIP with EXE, PKG, and _internal: $zipPath"
 
       - name: Create NSIS setup
         working-directory: ${{ github.workspace }}
         shell: pwsh
         run: |
           $outputDir = Join-Path $env:GITHUB_WORKSPACE "Setup Output"
-          & ".\Developer Files\Installer\package-setup.ps1" -Version $env:APP_VERSION -OutputDir "Setup Output"
+          $appName = "6ure$([char]0x2122) App"
+          $sourceAppDir = Join-Path $env:GITHUB_WORKSPACE "Developer Files\Source Code\dist\$appName"
+          if (!(Test-Path -LiteralPath (Join-Path $sourceAppDir "$appName.pkg"))) {
+            throw "PyInstaller external package was not found before setup packaging: $sourceAppDir"
+          }
+          & ".\Developer Files\Installer\package-setup.ps1" -Version $env:APP_VERSION -SourceAppDir $sourceAppDir -OutputDir "Setup Output"
           if ($LASTEXITCODE -ne 0) {
             throw "Package setup failed with exit code $LASTEXITCODE"
           }
@@ -209,7 +246,11 @@ jobs:
           cat > "6ure App.macos.spec" <<'PYISPEC'
           # -*- mode: python ; coding: utf-8 -*-
 
+          import json
+          from pathlib import Path
+
           app_name = "6ure™ App"
+          app_version = json.loads(Path("app-version.json").read_text(encoding="utf-8")).get("version", "0.0.0")
 
           a = Analysis(
               ["files_app.py"],
@@ -260,26 +301,45 @@ jobs:
               name=f"{app_name}.app",
               icon="assets/6ure-logo.icns",
               bundle_identifier="com.reyli.6ureapp",
+              info_plist={
+                  "CFBundleShortVersionString": app_version,
+                  "CFBundleVersion": app_version,
+                  "NSHighResolutionCapable": True,
+                  "NSRequiresAquaSystemAppearance": False,
+              },
           )
           PYISPEC
 
       - name: Build with PyInstaller
         run: python -m PyInstaller --noconfirm --clean "6ure App.macos.spec"
 
-      - name: Optional codesign
-        env:
-          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+      - name: Verify macOS app bundle
         run: |
-          if [ -z "$CODESIGN_IDENTITY" ]; then
-            echo "CODESIGN_IDENTITY is not set; skipping codesign."
-            exit 0
-          fi
           APP_PATH="$(find dist -maxdepth 1 -name '*.app' -print -quit)"
           if [ -z "$APP_PATH" ]; then
             echo "No .app bundle found in dist"
             exit 1
           fi
-          codesign --deep --force --sign "$CODESIGN_IDENTITY" "$APP_PATH"
+          test -f "$APP_PATH/Contents/Info.plist"
+          test -d "$APP_PATH/Contents/MacOS"
+          plutil -lint "$APP_PATH/Contents/Info.plist"
+
+      - name: Codesign macOS app
+        env:
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+        run: |
+          APP_PATH="$(find dist -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found in dist"
+            exit 1
+          fi
+          if [ -n "$CODESIGN_IDENTITY" ]; then
+            codesign --deep --force --options runtime --timestamp --sign "$CODESIGN_IDENTITY" "$APP_PATH"
+          else
+            echo "CODESIGN_IDENTITY is not set; using ad-hoc codesign for local compatibility."
+            codesign --deep --force --sign - "$APP_PATH"
+          fi
+          codesign --verify --deep --strict "$APP_PATH"
 
       - name: Create DMG
         run: |
@@ -297,6 +357,7 @@ jobs:
 
           for attempt in 1 2 3; do
             if hdiutil create -volname "${{ env.APP_NAME }}" -srcfolder "$STAGE_DIR" -ov -format UDZO "$DMG_PATH"; then
+              hdiutil verify "$DMG_PATH"
               exit 0
             fi
             status=$?
@@ -373,15 +434,123 @@ jobs:
           python - <<'PY'
           from pathlib import Path
 
-          spec = Path("6ure Files.spec").read_text(encoding="utf-8")
-          spec = spec.replace("icon='assets\\\\6ure-logo.ico',", "icon=None,")
-          spec = spec.replace("    version='version_info.txt',\n", "")
-          spec = spec.replace("datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('app-version.json', '.')]", "datas=[('index.html', '.'), ('assets', 'assets'), ('discord-presence.json', '.'), ('update-config.json', '.'), ('app-version.json', '.')]")
-          Path("6ure Files.linux.spec").write_text(spec, encoding="utf-8")
+          Path("6ure Files.linux.spec").write_text(
+              """# -*- mode: python ; coding: utf-8 -*-
+
+          app_name = "6ure™ App"
+
+          a = Analysis(
+              ["files_app.py"],
+              pathex=[],
+              binaries=[],
+              datas=[
+                  ("index.html", "."),
+                  ("assets", "assets"),
+                  ("discord-presence.json", "."),
+                  ("update-config.json", "."),
+                  ("app-version.json", "."),
+              ],
+              hiddenimports=[],
+              hookspath=[],
+              hooksconfig={},
+              runtime_hooks=[],
+              excludes=[],
+              noarchive=False,
+              optimize=0,
+          )
+          pyz = PYZ(a.pure)
+
+          exe = EXE(
+              pyz,
+              a.scripts,
+              [],
+              exclude_binaries=True,
+              name=app_name,
+              debug=False,
+              bootloader_ignore_signals=False,
+              strip=False,
+              upx=False,
+              console=False,
+              disable_windowed_traceback=False,
+              argv_emulation=False,
+              target_arch=None,
+              codesign_identity=None,
+              entitlements_file=None,
+              icon=None,
+          )
+
+          coll = COLLECT(
+              exe,
+              a.binaries,
+              a.datas,
+              strip=False,
+              upx=False,
+              upx_exclude=[],
+              name=app_name,
+          )
+          """,
+              encoding="utf-8",
+          )
           PY
 
       - name: Build with PyInstaller
         run: python -m PyInstaller --noconfirm --clean "6ure Files.linux.spec"
+
+      - name: Prepare Linux portable bundle
+        run: |
+          python - <<'PY'
+          import os
+          import stat
+          import textwrap
+          from pathlib import Path
+
+          app_dir = next((path for path in Path("dist").iterdir() if path.is_dir() and path.name.startswith("6ure")), None)
+          if app_dir is None:
+              raise SystemExit("Build output was not found in dist")
+
+          executable = next(
+              (
+                  path
+                  for path in app_dir.iterdir()
+                  if path.is_file() and os.access(path, os.X_OK) and path.name.startswith("6ure")
+              ),
+              None,
+          )
+          if executable is None:
+              raise SystemExit("Linux executable was not found in the app bundle")
+
+          launcher = app_dir / "launch-6ure-app.sh"
+          launcher.write_text(
+              f"""#!/usr/bin/env bash
+          set -Eeuo pipefail
+          APP_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+          export GDK_BACKEND="${{GDK_BACKEND:-x11,wayland}}"
+          export WEBKIT_DISABLE_COMPOSITING_MODE="${{WEBKIT_DISABLE_COMPOSITING_MODE:-1}}"
+          export NO_AT_BRIDGE="${{NO_AT_BRIDGE:-1}}"
+          exec "$APP_DIR/{executable.name}" "$@"
+          """,
+              encoding="utf-8",
+          )
+          launcher.chmod(launcher.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+          (app_dir / "README-linux.txt").write_text(
+              textwrap.dedent(
+                  """\
+                  6ure App Linux package
+
+                  Run ./launch-6ure-app.sh from this folder.
+
+                  Required desktop libraries:
+                  - Debian/Ubuntu: sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0
+                  - Fedora: sudo dnf install gtk3 webkit2gtk4.1
+                  - Arch: sudo pacman -S gtk3 webkit2gtk-4.1
+
+                  If your distro only ships WebKitGTK 4.0, install its equivalent package for your release.
+                  """
+              ),
+              encoding="utf-8",
+          )
+          PY
 
       - name: Create tar.gz
         run: |
@@ -510,7 +679,7 @@ jobs:
             | Platform | File |
             |----------|------|
             | Windows Setup (x64) | `${{ env.WIN_SETUP }}` |
-            | Windows Portable ZIP (x64) | `${{ env.WIN_PACKAGE }}` |
+            | Windows Portable ZIP (x64) | `${{ env.WIN_PACKAGE }}` (EXE + PKG + _internal) |
             | macOS | `${{ env.MAC_PACKAGE }}` |
             | Linux (x64) | `${{ env.LINUX_PACKAGE }}` |
 

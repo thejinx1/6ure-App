@@ -5464,6 +5464,12 @@ def ps_array(values: list[str | int]) -> str:
     return "@(" + ", ".join(ps_single_quote(str(value)) for value in values) + ")"
 
 
+def write_windows_powershell_script(path: Path, script: str) -> None:
+    # Windows PowerShell 5.1 reads BOM-less UTF-8 scripts with the system ANSI codepage.
+    # The app path contains "™", so the updater must be written with a UTF-8 BOM.
+    path.write_text(script.rstrip() + "\n", encoding="utf-8-sig")
+
+
 def sh_single_quote(value: str | Path) -> str:
     return "'" + str(value).replace("'", "'\"'\"'") + "'"
 
@@ -5521,6 +5527,30 @@ function Invoke-Retry {{
   throw "$Label failed: $lastError"
 }}
 
+function Start-UpdatedApp {{
+  param([string[]]$CandidatePaths)
+  foreach ($candidate in $CandidatePaths) {{
+    if ([string]::IsNullOrWhiteSpace($candidate)) {{
+      continue
+    }}
+    for ($i = 1; $i -le 12; $i++) {{
+      if (Test-Path -LiteralPath $candidate -PathType Leaf) {{
+        try {{
+          $workingDir = Split-Path -Parent $candidate
+          Write-UpdateLog "Starting updated app: $candidate"
+          Start-Process -FilePath $candidate -WorkingDirectory $workingDir
+          return $true
+        }} catch {{
+          Write-UpdateLog ("Start failed for " + $candidate + ": " + $_)
+        }}
+      }}
+      Start-Sleep -Milliseconds 500
+    }}
+  }}
+  Write-UpdateLog "Updated app executable was not found."
+  return $false
+}}
+
 try {{
   New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
   Write-UpdateLog "Waiting for process $pidToWait"
@@ -5571,8 +5601,9 @@ try {{
     Copy-Item -LiteralPath $payloadConfig -Destination $targetConfig -Force
   }}
 
-  Write-UpdateLog "Starting updated app"
-  Start-Process -FilePath (Join-Path $appDir $exeName) -WorkingDirectory $appDir
+  if (-not (Start-UpdatedApp -CandidatePaths @((Join-Path $appDir $exeName), $exePath))) {{
+    throw "Updated app executable could not be started."
+  }}
   Start-Sleep -Seconds 2
   Remove-Item -LiteralPath $extractDir -Recurse -Force -ErrorAction SilentlyContinue
   Write-UpdateLog "Update completed"
@@ -5583,13 +5614,11 @@ try {{
       Get-ChildItem -LiteralPath $backupDir -Force | Copy-Item -Destination $appDir -Recurse -Force -ErrorAction SilentlyContinue
     }}
   }} catch {{}}
-  if (Test-Path -LiteralPath $exePath) {{
-    Start-Process -FilePath $exePath -WorkingDirectory $appDir
-  }}
+  Start-UpdatedApp -CandidatePaths @($exePath, (Join-Path $appDir $exeName)) | Out-Null
   exit 1
 }}
 """.strip()
-    script_path.write_text(script, encoding="utf-8")
+    write_windows_powershell_script(script_path, script)
     return script_path
 
 
@@ -5604,6 +5633,7 @@ def write_windows_installer_update_script(package_path: Path, update_info: dict)
     script_path = UPDATE_DOWNLOAD_DIR / "run-6ure-app-installer-update.ps1"
     app_dir = APP_ROOT.resolve()
     exe_path = Path(sys.executable).resolve()
+    exe_name = exe_path.name
     backup_root = UPDATE_BACKUP_DIR.resolve()
     installer_args = update_info.get("installerArgs", "")
     if isinstance(installer_args, list):
@@ -5629,6 +5659,7 @@ $ErrorActionPreference = "Stop"
 $appDir = {ps_single_quote(str(app_dir))}
 $installerPath = {ps_single_quote(str(package_path.resolve()))}
 $exePath = {ps_single_quote(str(exe_path))}
+$exeName = {ps_single_quote(exe_name)}
 $backupRoot = {ps_single_quote(str(backup_root))}
 $installerArgs = {ps_array(installer_arg_items)}
 $successExitCodes = @({", ".join(str(code) for code in clean_success_codes)})
@@ -5639,6 +5670,51 @@ function Write-UpdateLog {{
   param([string]$Message)
   $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   Add-Content -LiteralPath $logPath -Value "$stamp $Message"
+}}
+
+function Start-UpdatedApp {{
+  param([string[]]$CandidatePaths)
+  foreach ($candidate in $CandidatePaths) {{
+    if ([string]::IsNullOrWhiteSpace($candidate)) {{
+      continue
+    }}
+    for ($i = 1; $i -le 12; $i++) {{
+      if (Test-Path -LiteralPath $candidate -PathType Leaf) {{
+        try {{
+          $workingDir = Split-Path -Parent $candidate
+          Write-UpdateLog "Starting updated app: $candidate"
+          Start-Process -FilePath $candidate -WorkingDirectory $workingDir
+          return $true
+        }} catch {{
+          Write-UpdateLog ("Start failed for " + $candidate + ": " + $_)
+        }}
+      }}
+      Start-Sleep -Milliseconds 500
+    }}
+  }}
+  Write-UpdateLog "Updated app executable was not found."
+  return $false
+}}
+
+function Get-AppLaunchCandidates {{
+  $candidates = New-Object System.Collections.Generic.List[string]
+  foreach ($key in @(
+    "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\6ure™ App",
+    "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\6ure Files"
+  )) {{
+    try {{
+      $installLocation = [string]((Get-ItemProperty -LiteralPath $key -ErrorAction Stop).InstallLocation)
+      if (-not [string]::IsNullOrWhiteSpace($installLocation)) {{
+        $candidates.Add((Join-Path $installLocation $exeName))
+      }}
+    }} catch {{}}
+  }}
+  if (-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {{
+    $candidates.Add((Join-Path (Join-Path $env:LOCALAPPDATA "Programs\\6ure™ App") $exeName))
+  }}
+  $candidates.Add($exePath)
+  $candidates.Add((Join-Path $appDir $exeName))
+  return @($candidates | Where-Object {{ -not [string]::IsNullOrWhiteSpace($_) }} | Select-Object -Unique)
 }}
 
 try {{
@@ -5661,20 +5737,17 @@ try {{
     throw "Installer exited with code $($proc.ExitCode)."
   }}
 
-  if (Test-Path -LiteralPath $exePath) {{
-    Write-UpdateLog "Starting updated app"
-    Start-Process -FilePath $exePath -WorkingDirectory (Split-Path -Parent $exePath)
+  if (-not (Start-UpdatedApp -CandidatePaths (Get-AppLaunchCandidates))) {{
+    throw "Updated app executable could not be started."
   }}
   Write-UpdateLog "Installer update completed"
 }} catch {{
   Write-UpdateLog ("Installer update failed: " + $_)
-  if (Test-Path -LiteralPath $exePath) {{
-    Start-Process -FilePath $exePath -WorkingDirectory (Split-Path -Parent $exePath)
-  }}
+  Start-UpdatedApp -CandidatePaths @($exePath, (Join-Path $appDir $exeName)) | Out-Null
   exit 1
 }}
 """.strip()
-    script_path.write_text(script, encoding="utf-8")
+    write_windows_powershell_script(script_path, script)
     return script_path
 
 
@@ -5726,8 +5799,18 @@ restore_backup() {{
 
 restart_app() {{
   if [ -d "$APP_BUNDLE" ]; then
-    open "$APP_BUNDLE" >/dev/null 2>&1 || true
+    open -n "$APP_BUNDLE" >/dev/null 2>&1 && return 0
   fi
+  local macos_dir="$APP_BUNDLE/Contents/MacOS"
+  if [ -d "$macos_dir" ]; then
+    local executable
+    executable=$(find "$macos_dir" -maxdepth 2 -type f -perm -111 -print -quit)
+    if [ -n "$executable" ]; then
+      nohup "$executable" >/dev/null 2>&1 &
+      return 0
+    fi
+  fi
+  return 1
 }}
 
 on_error() {{
@@ -5747,6 +5830,9 @@ wait_for_app_exit() {{
     sleep 1
     i=$((i + 1))
   done
+  if kill -0 "$PID_TO_WAIT" >/dev/null 2>&1; then
+    log_update "App process did not exit within timeout; continuing update."
+  fi
   sleep 1
 }}
 
@@ -5800,7 +5886,7 @@ fi
 
 xattr -dr com.apple.quarantine "$APP_BUNDLE" >/dev/null 2>&1 || true
 log_update "Starting updated app"
-open "$APP_BUNDLE" >/dev/null 2>&1 || log_update "Updated app could not be started automatically."
+restart_app || log_update "Updated app could not be started automatically."
 log_update "Update completed"
 """.strip()
     script_path.write_text(script + "\n", encoding="utf-8")
@@ -5861,9 +5947,23 @@ restore_backup() {{
 }}
 
 restart_app() {{
-  if [ -x "$APP_DIR/$EXE_NAME" ]; then
-    nohup "$APP_DIR/$EXE_NAME" >/dev/null 2>&1 &
+  local candidate="$APP_DIR/$EXE_NAME"
+  if [ -f "$candidate" ]; then
+    chmod +x "$candidate" >/dev/null 2>&1 || true
   fi
+  if [ ! -x "$candidate" ]; then
+    candidate=$(find "$APP_DIR" -maxdepth 2 -type f -perm -111 -name "6ure*App*" -print -quit)
+  fi
+  if [ -n "${{candidate:-}}" ] && [ -x "$candidate" ]; then
+    if command -v setsid >/dev/null 2>&1; then
+      setsid "$candidate" >/dev/null 2>&1 &
+    else
+      nohup "$candidate" >/dev/null 2>&1 &
+    fi
+    return 0
+  fi
+  log_update "Updated app executable was not found."
+  return 1
 }}
 
 on_error() {{
@@ -5883,6 +5983,9 @@ wait_for_app_exit() {{
     sleep 1
     i=$((i + 1))
   done
+  if kill -0 "$PID_TO_WAIT" >/dev/null 2>&1; then
+    log_update "App process did not exit within timeout; continuing update."
+  fi
   sleep 1
 }}
 
@@ -5934,7 +6037,7 @@ fi
 
 chmod +x "$APP_DIR/$EXE_NAME" >/dev/null 2>&1 || true
 log_update "Starting updated app"
-nohup "$APP_DIR/$EXE_NAME" >/dev/null 2>&1 &
+restart_app || true
 log_update "Update completed"
 """.strip()
     script_path.write_text(script + "\n", encoding="utf-8")

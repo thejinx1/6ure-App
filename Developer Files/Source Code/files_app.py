@@ -81,6 +81,9 @@ def configure_webview_runtime_environment() -> None:
         os.environ.setdefault("WEBVIEW2_USER_DATA_FOLDER", str(webview_profile_dir()))
         append_env_browser_args("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", WEBVIEW_LOW_MEMORY_BROWSER_ARGS)
     elif sys.platform.startswith("linux"):
+        os.environ.setdefault("GDK_BACKEND", "x11,wayland")
+        os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
+        os.environ.setdefault("NO_AT_BRIDGE", "1")
         append_env_browser_args("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_LOW_MEMORY_BROWSER_ARGS)
 
 
@@ -125,6 +128,22 @@ def webview_gui() -> str | None:
         return "edgechromium"
     if sys.platform == "darwin":
         return "cocoa"
+    if sys.platform.startswith("linux"):
+        try:
+            import gi
+
+            gi.require_version("Gtk", "3.0")
+            webkit_ready = False
+            for webkit_version in ("4.1", "4.0"):
+                try:
+                    gi.require_version("WebKit2", webkit_version)
+                    webkit_ready = True
+                    break
+                except ValueError:
+                    continue
+            return "gtk" if webkit_ready else None
+        except Exception:
+            return None
     return None
 
 
