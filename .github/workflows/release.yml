@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 env:
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.12"
   SOURCE_DIR: "Developer Files/Source Code"
   APP_NAME: "6ure™ App"
   WIN_PACKAGE: "6ure-app-windows-x64.zip"
@@ -519,14 +519,18 @@ jobs:
           if executable is None:
               raise SystemExit("Linux executable was not found in the app bundle")
 
+          bash_source = "$" + "{" + "BASH_" + "SOURCE[0]" + "}"
+          gdk_backend = "$" + "{" + "GDK_" + "BACKEND:-x11,wayland" + "}"
+          webkit_compositing = "$" + "{" + "WEBKIT_DISABLE_" + "COMPOSITING_MODE:-1" + "}"
+          no_at_bridge = "$" + "{" + "NO_AT_" + "BRIDGE:-1" + "}"
           launcher = app_dir / "launch-6ure-app.sh"
           launcher.write_text(
               f"""#!/usr/bin/env bash
           set -Eeuo pipefail
-          APP_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
-          export GDK_BACKEND="${{GDK_BACKEND:-x11,wayland}}"
-          export WEBKIT_DISABLE_COMPOSITING_MODE="${{WEBKIT_DISABLE_COMPOSITING_MODE:-1}}"
-          export NO_AT_BRIDGE="${{NO_AT_BRIDGE:-1}}"
+          APP_DIR="$(cd "$(dirname "{bash_source}")" && pwd)"
+          export GDK_BACKEND="{gdk_backend}"
+          export WEBKIT_DISABLE_COMPOSITING_MODE="{webkit_compositing}"
+          export NO_AT_BRIDGE="{no_at_bridge}"
           exec "$APP_DIR/{executable.name}" "$@"
           """,
               encoding="utf-8",
