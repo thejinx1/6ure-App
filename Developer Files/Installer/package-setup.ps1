@@ -19,7 +19,8 @@ $stageRoot = Join-Path ([System.IO.Path]::GetTempPath()) "6ure-setup-staging-$PI
 $appName = "6ure$([char]0x2122) App"
 $legacyAppName = "6ure Files"
 $exeName = "$appName.exe"
-$stageAppDir = Join-Path $stageRoot $appName
+$stageAppDir = Join-Path $stageRoot "app-files"
+$zipAppDir = Join-Path $stageRoot $appName
 $iconPath = Join-Path $sourceCodeDir "assets\6ure-logo.ico"
 if (-not $TimestampUrl) {
   $TimestampUrl = "http://timestamp.digicert.com"
@@ -55,6 +56,15 @@ function Sign-InstallerFileIfConfigured {
   if ($signature.Status -ne "Valid") {
     throw "Code signing failed for ${Path}: $($signature.StatusMessage)"
   }
+}
+
+function Write-Utf8BomFile {
+  param(
+    [string]$Path,
+    [string]$Value
+  )
+  $utf8Bom = New-Object System.Text.UTF8Encoding $true
+  [System.IO.File]::WriteAllText($Path, $Value, $utf8Bom)
 }
 
 if (-not $SourceAppDir) {
@@ -147,8 +157,10 @@ if ($blocked) {
 if (Test-Path -LiteralPath $zipPath) {
   Remove-Item -LiteralPath $zipPath -Force
 }
+New-Item -ItemType Directory -Force -Path $zipAppDir | Out-Null
+Get-ChildItem -LiteralPath $stageAppDir -Force | Copy-Item -Destination $zipAppDir -Recurse -Force
 Start-Sleep -Seconds 1
-Compress-Archive -LiteralPath $stageAppDir -DestinationPath $zipPath -Force
+Compress-Archive -LiteralPath $zipAppDir -DestinationPath $zipPath -Force
 
 $nsis = @"
 Unicode true
@@ -226,7 +238,7 @@ Section "Uninstall"
 SectionEnd
 "@
 
-Set-Content -LiteralPath $nsiPath -Value $nsis -Encoding UTF8
+Write-Utf8BomFile -Path $nsiPath -Value $nsis
 
 $makensisCandidates = @(
   "C:\Program Files (x86)\NSIS\makensis.exe",

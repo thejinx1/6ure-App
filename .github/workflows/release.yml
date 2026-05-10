@@ -288,11 +288,23 @@ jobs:
             echo "No .app bundle found in dist"
             exit 1
           fi
-          rm -rf dmg-stage
-          mkdir -p dmg-stage
-          cp -a "$APP_PATH" dmg-stage/
-          ln -s /Applications dmg-stage/Applications
-          hdiutil create -volname "${{ env.APP_NAME }}" -srcfolder dmg-stage -ov -format UDZO "$GITHUB_WORKSPACE/${{ env.MAC_PACKAGE }}"
+          DMG_PATH="$GITHUB_WORKSPACE/${{ env.MAC_PACKAGE }}"
+          STAGE_DIR="$(mktemp -d "${RUNNER_TEMP:-/tmp}/6ure-dmg-stage.XXXXXX")"
+          trap 'rm -rf "$STAGE_DIR"' EXIT
+          ditto "$APP_PATH" "$STAGE_DIR/$(basename "$APP_PATH")"
+          ln -s /Applications "$STAGE_DIR/Applications"
+          rm -f "$DMG_PATH"
+
+          for attempt in 1 2 3; do
+            if hdiutil create -volname "${{ env.APP_NAME }}" -srcfolder "$STAGE_DIR" -ov -format UDZO "$DMG_PATH"; then
+              exit 0
+            fi
+            status=$?
+            echo "hdiutil create failed on attempt $attempt with exit code $status"
+            rm -f "$DMG_PATH"
+            sleep $((attempt * 5))
+          done
+          exit "$status"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
