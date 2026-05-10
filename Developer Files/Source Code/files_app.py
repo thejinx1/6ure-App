@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import html
+import gc
+import json
 import os
 import sys
 import threading
@@ -49,12 +51,44 @@ def webview_profile_dir() -> Path:
     return persistent_app_data_dir() / "webview-profile"
 
 
+WEBVIEW_LOW_MEMORY_BROWSER_ARGS = (
+    "--disable-background-networking",
+    "--disable-component-extensions-with-background-pages",
+    "--disable-extensions",
+    "--disable-notifications",
+    "--disable-speech-api",
+    "--disable-sync",
+    "--disk-cache-size=67108864",
+    "--media-cache-size=16777216",
+    "--renderer-process-limit=3",
+)
+
+
+def append_env_browser_args(name: str, args: tuple[str, ...]) -> None:
+    existing = str(os.environ.get(name) or "").strip()
+    parts = [part for part in existing.split() if part]
+    seen = set(parts)
+    for arg in args:
+        if arg not in seen:
+            parts.append(arg)
+            seen.add(arg)
+    if parts:
+        os.environ[name] = " ".join(parts)
+
+
+def configure_webview_runtime_environment() -> None:
+    if sys.platform.startswith("win"):
+        os.environ.setdefault("WEBVIEW2_USER_DATA_FOLDER", str(webview_profile_dir()))
+        append_env_browser_args("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", WEBVIEW_LOW_MEMORY_BROWSER_ARGS)
+    elif sys.platform.startswith("linux"):
+        append_env_browser_args("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_LOW_MEMORY_BROWSER_ARGS)
+
+
 os.environ.setdefault("REYLI_CONFIG_FILE", "6ure-files-state.json")
 os.environ.setdefault("REYLI_CONFIG_BACKUP_FILE", "6ure-files-state.backup.json")
 os.environ.setdefault("REYLI_DATA_DIR", str(files_data_dir()))
 os.environ.setdefault("REYLI_LEGACY_DATA_DIR", str(app_dir()))
-if sys.platform.startswith("win"):
-    os.environ.setdefault("WEBVIEW2_USER_DATA_FOLDER", str(webview_profile_dir()))
+configure_webview_runtime_environment()
 
 import webview  # noqa: E402
 
@@ -177,7 +211,7 @@ def leaker_control_html() -> str:
   <main>
     <div class="copy">
       <strong>Leaker Mode</strong>
-      <span>Upload dashboard is open.</span>
+      <span>Leaker Dashboard is open.</span>
     </div>
     <button type="button" onclick="window.pywebview.api.exit_leaker_mode()">Exit</button>
   </main>
@@ -193,6 +227,157 @@ def safe_destroy_window(window) -> None:
             window.destroy()
     except Exception:
         pass
+
+
+MEMORY_TRIM_MIN_INTERVAL_SECONDS = 6.0
+_MEMORY_TRIM_LOCK = threading.Lock()
+_MEMORY_TRIM_LAST_AT = 0.0
+
+
+def windows_descendant_process_ids(root_pid: int | None = None) -> list[int]:
+    if not sys.platform.startswith("win"):
+        return []
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except Exception:
+        return []
+
+    class ProcessEntry32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.c_size_t),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", ctypes.c_long),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * 260),
+        ]
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel32.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel32.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry32)]
+    kernel32.Process32FirstW.restype = wintypes.BOOL
+    kernel32.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry32)]
+    kernel32.Process32NextW.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    snapshot = kernel32.CreateToolhelp32Snapshot(0x00000002, 0)
+    if int(snapshot) == -1:
+        return []
+
+    children: dict[int, list[int]] = {}
+    try:
+        entry = ProcessEntry32()
+        entry.dwSize = ctypes.sizeof(ProcessEntry32)
+        if not kernel32.Process32FirstW(snapshot, ctypes.byref(entry)):
+            return []
+        while True:
+            pid = int(entry.th32ProcessID)
+            parent_pid = int(entry.th32ParentProcessID)
+            children.setdefault(parent_pid, []).append(pid)
+            if not kernel32.Process32NextW(snapshot, ctypes.byref(entry)):
+                break
+    finally:
+        kernel32.CloseHandle(snapshot)
+
+    descendants: list[int] = []
+    queue = [int(root_pid or os.getpid())]
+    seen = set(queue)
+    while queue:
+        parent_pid = queue.pop(0)
+        for child_pid in children.get(parent_pid, []):
+            if child_pid in seen:
+                continue
+            seen.add(child_pid)
+            descendants.append(child_pid)
+            queue.append(child_pid)
+    return descendants
+
+
+def windows_trim_working_set(pid: int) -> bool:
+    if not sys.platform.startswith("win"):
+        return False
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+    except Exception:
+        return False
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    psapi = ctypes.WinDLL("psapi", use_last_error=True)
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    psapi.EmptyWorkingSet.argtypes = [wintypes.HANDLE]
+    psapi.EmptyWorkingSet.restype = wintypes.BOOL
+
+    handle = kernel32.OpenProcess(0x0400 | 0x0100, False, int(pid))
+    if not handle:
+        return False
+    try:
+        return bool(psapi.EmptyWorkingSet(handle))
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def trim_app_memory(*, force: bool = False, reason: str = "") -> dict:
+    global _MEMORY_TRIM_LAST_AT
+
+    now = time.monotonic()
+    with _MEMORY_TRIM_LOCK:
+        if not force and now - _MEMORY_TRIM_LAST_AT < MEMORY_TRIM_MIN_INTERVAL_SECONDS:
+            return {"success": True, "skipped": True, "reason": reason}
+        _MEMORY_TRIM_LAST_AT = now
+
+    collected = gc.collect()
+    trimmed_children = 0
+    trimmed_current = False
+
+    if sys.platform.startswith("win"):
+        trimmed_current = windows_trim_working_set(os.getpid())
+        for pid in windows_descendant_process_ids():
+            if windows_trim_working_set(pid):
+                trimmed_children += 1
+    elif sys.platform.startswith("linux"):
+        try:
+            import ctypes
+
+            libc = ctypes.CDLL("libc.so.6")
+            if hasattr(libc, "malloc_trim"):
+                libc.malloc_trim(0)
+                trimmed_current = True
+        except Exception:
+            trimmed_current = False
+
+    return {
+        "success": True,
+        "skipped": False,
+        "reason": reason,
+        "collected": collected,
+        "trimmedCurrent": trimmed_current,
+        "trimmedChildren": trimmed_children,
+    }
+
+
+def schedule_memory_trim(delay: float = 0.75, *, reason: str = "", force: bool = False) -> None:
+    def run_trim() -> None:
+        try:
+            trim_app_memory(force=force, reason=reason)
+        except Exception:
+            pass
+
+    timer = threading.Timer(max(0.0, float(delay or 0)), run_trim)
+    timer.daemon = True
+    timer.start()
 
 
 def is_leaker_dashboard_url(url: str) -> bool:
@@ -292,6 +477,7 @@ class FilesWindowApi:
 
         if action == "minimize":
             self.window.minimize()
+            schedule_memory_trim(0.8, reason="window-minimized")
             return
 
         if action == "maximize":
@@ -303,7 +489,12 @@ class FilesWindowApi:
             return
 
         if action == "close":
-            self.window.destroy()
+            try:
+                self.exit_leaker_mode(restore_main=False)
+            except Exception:
+                pass
+            safe_destroy_window(self.window)
+            schedule_memory_trim(0.1, reason="window-closing", force=True)
 
     def select_folders(self) -> list[str]:
         if not self.window:
@@ -317,6 +508,170 @@ class FilesWindowApi:
     def select_folder(self) -> str:
         folders = self.select_folders()
         return folders[0] if folders else ""
+
+    def _main_webview2_control(self):
+        native = getattr(self.window, "native", None)
+        for candidate in (
+            getattr(native, "webview", None),
+            getattr(getattr(native, "browser", None), "webview", None),
+        ):
+            if candidate is not None and getattr(candidate, "CoreWebView2", None) is not None:
+                return candidate
+        raise RuntimeError("Main WebView2 control is unavailable.")
+
+    def _call_devtools_protocol(self, method_name: str, payload: dict, timeout: float = 12.0) -> dict:
+        webview_control = self._main_webview2_control()
+        result: dict = {"value": None, "error": None}
+        done = threading.Semaphore(0)
+
+        def run_on_ui_thread():
+            try:
+                from System import Action, Func, Object, String
+                from System.Threading.Tasks import Task, TaskScheduler
+
+                task = webview_control.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                    method_name,
+                    json.dumps(payload or {}),
+                )
+
+                def on_complete(completed_task):
+                    try:
+                        result["value"] = completed_task.Result
+                    except Exception as error:
+                        result["error"] = error
+                    finally:
+                        done.release()
+
+                task.ContinueWith(Action[Task[String]](on_complete), TaskScheduler.FromCurrentSynchronizationContext())
+            except Exception as error:
+                result["error"] = error
+                done.release()
+            return None
+
+        try:
+            from System import Func, Object
+
+            webview_control.Invoke(Func[Object](run_on_ui_thread))
+        except Exception as error:
+            raise RuntimeError(f"WebView2 command could not be scheduled: {error}") from error
+
+        if not done.acquire(timeout=timeout):
+            raise TimeoutError(f"WebView2 DevTools command timed out: {method_name}")
+        if result["error"] is not None:
+            raise RuntimeError(f"WebView2 DevTools command failed: {result['error']}") from result["error"]
+
+        try:
+            return json.loads(result["value"] or "{}")
+        except Exception:
+            return {}
+
+    def _select_webview_upload_paths(self, payload: dict) -> tuple[list[str], str, int]:
+        if not self.window:
+            return [], "", 0
+
+        directory = bool(payload.get("directory"))
+        multiple = bool(payload.get("multiple")) or directory
+        if directory:
+            selected = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
+            if not selected:
+                return [], "", 0
+            root = Path(str(selected[0])).expanduser().resolve()
+            file_count = 0
+            for current_root, _, file_names in os.walk(root):
+                for file_name in file_names:
+                    file_path = Path(current_root) / file_name
+                    try:
+                        if file_path.is_file():
+                            file_count += 1
+                    except OSError:
+                        continue
+            return [str(root)], root.name, file_count
+
+        selected = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=multiple)
+        files = [str(Path(item).expanduser().resolve()) for item in selected] if selected else []
+        return files, Path(files[0]).parent.name if files else "", len(files)
+
+    def apply_webview_upload_selection(self, payload: dict) -> dict:
+        if not isinstance(payload, dict):
+            payload = {}
+        input_id = str(payload.get("inputId") or "").strip()
+        if not input_id.startswith("sixure-upload-"):
+            raise ValueError("Upload input was not identified.")
+
+        files, folder_name, file_count = self._select_webview_upload_paths(payload)
+        if not files:
+            return {"success": False, "cancelled": True}
+
+        expression = f"""
+        (() => {{
+          const inputId = {json.dumps(input_id)};
+          const selector = '[data-sixure-upload-input-id="' + String(inputId).replace(/["\\\\]/g, '\\\\$&') + '"]';
+          for (const frameId of ['leakerUploadFrame', 'leakerLoginFrame', 'leakerCloudFrame']) {{
+            const frame = document.getElementById(frameId);
+            const doc = frame && frame.contentDocument;
+            const input = doc && doc.querySelector(selector);
+            if (input) {{
+              input.__sixureNativeSelectionStartedAt = Date.now();
+              return input;
+            }}
+          }}
+          return null;
+        }})()
+        """
+        evaluation = self._call_devtools_protocol(
+            "Runtime.evaluate",
+            {
+                "expression": expression,
+                "objectGroup": "sixureUpload",
+                "includeCommandLineAPI": False,
+                "returnByValue": False,
+                "awaitPromise": False,
+            },
+        )
+        remote_object = evaluation.get("result") if isinstance(evaluation, dict) else {}
+        object_id = str((remote_object or {}).get("objectId") or "")
+        if not object_id:
+            raise RuntimeError("Upload input could not be found in Leaker Dashboard.")
+
+        try:
+            self._call_devtools_protocol("DOM.setFileInputFiles", {"objectId": object_id, "files": files}, timeout=30.0)
+            self._call_devtools_protocol(
+                "Runtime.evaluate",
+                {
+                    "expression": f"""
+                    (() => {{
+                      const inputId = {json.dumps(input_id)};
+                      const selector = '[data-sixure-upload-input-id="' + String(inputId).replace(/["\\\\]/g, '\\\\$&') + '"]';
+                      for (const frameId of ['leakerUploadFrame', 'leakerLoginFrame', 'leakerCloudFrame']) {{
+                        const frame = document.getElementById(frameId);
+                        const doc = frame && frame.contentDocument;
+                        const input = doc && doc.querySelector(selector);
+                        if (!input) continue;
+                        if (Date.now() - Number(input.__sixureLastNativeChangeAt || 0) > 700) {{
+                          input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                          input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        }}
+                        return true;
+                      }}
+                      return false;
+                    }})()
+                    """,
+                    "returnByValue": True,
+                    "awaitPromise": False,
+                },
+            )
+        finally:
+            try:
+                self._call_devtools_protocol("Runtime.releaseObjectGroup", {"objectGroup": "sixureUpload"})
+            except Exception:
+                pass
+
+        return {
+            "success": True,
+            "applied": True,
+            "count": file_count or len(files),
+            "folderName": folder_name,
+        }
 
     def _set_leaker_status(self, phase: str, message: str, *, active: bool = False, needs_login: bool = False) -> dict:
         with self._leaker_lock:
@@ -530,7 +885,7 @@ class FilesWindowApi:
             self._leaker_exiting = False
             self._leaker_status = {
                 "phase": "authenticating",
-            "message": "Checking your 6ureleaks.com upload dashboard session.",
+            "message": "Checking your 6ureleaks.com Leaker Dashboard session.",
                 "active": False,
                 "needsLogin": True,
                 "updatedAt": int(time.time() * 1000),
@@ -556,7 +911,7 @@ class FilesWindowApi:
                 return self.leaker_status()
             self._leaker_status = {
                 "phase": "launching",
-                "message": "Opening the Upload dashboard.",
+                "message": "Opening the Leaker Dashboard.",
                 "active": False,
                 "needsLogin": False,
                 "updatedAt": int(time.time() * 1000),
@@ -565,7 +920,10 @@ class FilesWindowApi:
         threading.Thread(target=self._open_leaker_windows, daemon=True).start()
         return self.leaker_status()
 
-    def exit_leaker_mode(self) -> dict:
+    def trim_webview_memory(self, reason: str = "manual") -> dict:
+        return trim_app_memory(force=True, reason=reason)
+
+    def exit_leaker_mode(self, *, restore_main: bool = True) -> dict:
         with self._leaker_lock:
             self._leaker_exiting = True
             self._leaker_oauth_id += 1
@@ -600,11 +958,13 @@ class FilesWindowApi:
 
         for window in windows:
             safe_destroy_window(window)
-        try:
-            if self.window and not self.window.events.closed.is_set():
-                self.window.restore()
-        except Exception:
-            pass
+        if restore_main:
+            try:
+                if self.window and not self.window.events.closed.is_set():
+                    self.window.restore()
+            except Exception:
+                pass
+        schedule_memory_trim(0.6, reason="leaker-mode-exit", force=True)
         return self.leaker_status()
 
     def _is_current_leaker_session(self, session_id: int) -> bool:
@@ -781,6 +1141,7 @@ class FilesWindowApi:
             self._leaker_control_window = None
         for window in windows:
             safe_destroy_window(window)
+        schedule_memory_trim(0.6, reason="leaker-dashboard-closed", force=True)
 
 
 def start_http_server():
@@ -957,8 +1318,15 @@ def main() -> None:
         gui = webview_gui()
         if gui:
             start_options["gui"] = gui
+        schedule_memory_trim(2.5, reason="startup")
+        schedule_memory_trim(12.0, reason="startup-settled")
         webview.start(**start_options)
     finally:
+        try:
+            api.exit_leaker_mode(restore_main=False)
+        except Exception:
+            pass
+        trim_app_memory(force=True, reason="shutdown")
         if server is not None:
             server.shutdown()
         stop_discord_presence()

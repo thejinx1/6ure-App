@@ -149,6 +149,7 @@ DISCORD_PRESENCE: DiscordPresenceManager | None = None
 FILES_BASE_URL = "https://files.6ureleaks.com"
 FILES_SITE_URL = f"{FILES_BASE_URL}/web/client/files"
 DASHBOARD_URL = "https://6ureleaks.com/dashboard"
+DASHBOARD_RESOURCES_URL = "https://6ureleaks.com/dashboard/resources"
 RESOURCES_URL = "https://6ureleaks.com/resources"
 RESOURCES_API_URL = "https://6ureleaks.com/api/resources"
 PROTECTED_LIST_PAGE_URL = "https://6ureleaks.com/requests/protected"
@@ -216,10 +217,22 @@ MY_RESOURCES_UPLOADER_ALIASES = tuple(
     if alias.strip()
 )
 MY_RESOURCES_PAGE_LIMIT = 100
-MY_RESOURCES_MAX_PAGES = int(os.environ.get("REYLI_RESOURCES_MAX_PAGES", "40"))
+MY_RESOURCES_MAX_PAGES = int(os.environ.get("REYLI_RESOURCES_MAX_PAGES", "100"))
+RESOURCES_SCAN_CACHE_SECONDS = float(os.environ.get("REYLI_RESOURCES_SCAN_CACHE_SECONDS", "45"))
+RESOURCES_SCAN_LOCK = threading.RLock()
+RESOURCES_SCAN_CACHE: dict[str, dict] = {}
+PUBLIC_RESOURCES_CACHE_SECONDS = float(os.environ.get("REYLI_PUBLIC_RESOURCES_CACHE_SECONDS", "35"))
+PUBLIC_RESOURCES_LOCK = threading.RLock()
+PUBLIC_RESOURCES_CACHE: dict[str, dict] = {}
 MY_RESOURCES_CACHE_SECONDS = float(os.environ.get("REYLI_RESOURCES_CACHE_SECONDS", "90"))
 MY_RESOURCES_LOCK = threading.RLock()
 MY_RESOURCES_CACHE: dict[str, dict] = {}
+DASHBOARD_RESOURCES_CACHE_SECONDS = float(os.environ.get("REYLI_DASHBOARD_RESOURCES_CACHE_SECONDS", "45"))
+DASHBOARD_RESOURCES_LOCK = threading.RLock()
+DASHBOARD_RESOURCES_CACHE: dict[str, dict] = {}
+EDITOR_RESOURCES_CACHE_SECONDS = float(os.environ.get("REYLI_EDITOR_RESOURCES_CACHE_SECONDS", "120"))
+EDITOR_RESOURCES_LOCK = threading.RLock()
+EDITOR_RESOURCES_CACHE: dict[str, dict] = {}
 RESOURCE_DETAIL_CACHE_SECONDS = float(os.environ.get("REYLI_RESOURCE_DETAIL_CACHE_SECONDS", "45"))
 RESOURCE_DETAIL_LOCK = threading.RLock()
 RESOURCE_DETAIL_CACHE: dict[int, dict] = {}
@@ -1436,11 +1449,13 @@ def current_resources_uploader() -> dict:
             "id": clean_discord_id(user.get("id")) or MY_RESOURCES_UPLOADER_ID,
             "aliases": aliases,
             "displayName": clean_display_name,
+            "avatarUrl": str(user.get("avatarUrl") or "").strip(),
         }
     return {
         "id": MY_RESOURCES_UPLOADER_ID,
         "aliases": MY_RESOURCES_UPLOADER_ALIASES,
         "displayName": "reyli",
+        "avatarUrl": "",
     }
 
 
@@ -1475,16 +1490,46 @@ def safe_float(value, default: float = 0.0) -> float:
         return default
 
 
+def safe_bool(value, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value in (None, ""):
+        return default
+    if isinstance(value, (int, float)):
+        return bool(value)
+    clean_value = str(value or "").strip().casefold()
+    if clean_value in {"1", "true", "yes", "y", "on"}:
+        return True
+    if clean_value in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def resource_field(item: dict, *keys: str, default=None):
+    if not isinstance(item, dict):
+        return default
+    for key in keys:
+        if key in item and item.get(key) is not None:
+            return item.get(key)
+    return default
+
+
 def normalize_resource_uploader_name(value: str) -> str:
     return str(value or "").strip().casefold().lstrip("@")
 
 
+def normalize_resource_editor_name(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip()).casefold()
+
+
 def resource_matches_uploader(item: dict, uploader_id: str, uploader_aliases: tuple[str, ...]) -> bool:
-    member_id = str(item.get("discord_member_id") or "").strip()
+    member_id = str(resource_field(item, "discord_member_id", "discordMemberId", "uploaderId", default="") or "").strip()
     if uploader_id and member_id == uploader_id:
         return True
 
-    member_name = normalize_resource_uploader_name(item.get("discord_member_name") or "")
+    member_name = normalize_resource_uploader_name(
+        resource_field(item, "discord_member_name", "discordMemberName", "uploaderName", default="") or ""
+    )
     return bool(member_name and member_name in uploader_aliases)
 
 
@@ -1535,55 +1580,91 @@ def sanitize_resource_tags(value) -> list[str]:
     return tags[:16]
 
 
+def sanitize_resource_tags_text(value) -> str:
+    return ", ".join(sanitize_resource_tags(value))
+
+
 def sanitize_my_resource_item(item: dict) -> dict:
-    resource_id = safe_int(item.get("id"))
-    leaked_at = str(item.get("leaked_at") or "").strip()
+    resource_id = safe_int(resource_field(item, "id", "resource_id", "resourceId"))
+    leaked_at = str(resource_field(item, "leaked_at", "leakedAt", default="") or "").strip()
+    tags_value = resource_field(item, "tags", "tag_list", "tagList", default="")
+    hide_description = safe_bool(resource_field(item, "hide_description", "hideDescription", default=False))
+    is_premium = safe_bool(resource_field(item, "is_premium", "isPremium", "premium", default=False))
+    is_protected = safe_bool(resource_field(item, "is_protected", "isProtected", "protected", default=False))
     return {
         "id": resource_id,
-        "name": str(item.get("name") or "Untitled resource").strip(),
-        "editorName": str(item.get("editor_name") or "Unknown").strip(),
-        "filePath": str(item.get("file_path") or "").strip(),
-        "thumbnailUrl": make_6ure_absolute_url(item.get("thumbnail_url") or ""),
-        "placeUrl": make_6ure_absolute_url(item.get("place_url") or ""),
+        "name": str(resource_field(item, "name", "title", default="Untitled resource") or "Untitled resource").strip(),
+        "editorName": str(resource_field(item, "editor_name", "editorName", default="Unknown") or "Unknown").strip(),
+        "filePath": str(resource_field(item, "file_path", "filePath", default="") or "").strip(),
+        "thumbnailUrl": make_6ure_absolute_url(resource_field(item, "thumbnail_url", "thumbnailUrl", default="") or ""),
+        "placeUrl": make_6ure_absolute_url(
+            resource_field(item, "place_url", "placeUrl", "product_url", "productUrl", default="") or ""
+        ),
         "url": f"{RESOURCES_URL}/{resource_id}" if resource_id else RESOURCES_URL,
-        "category": str(item.get("category") or "Uncategorized").strip(),
-        "downloadCount": safe_int(item.get("download_count")),
-        "viewCount": safe_int(item.get("view_count")),
-        "commentsCount": safe_int(item.get("comments_count")),
-        "isPremium": bool(safe_int(item.get("is_premium"))),
-        "isProtected": bool(safe_int(item.get("is_protected"))),
-        "status": str(item.get("status") or "").strip(),
-        "price": str(item.get("price") or "").strip(),
-        "priceNumeric": safe_float(item.get("price_numeric")),
-        "fileSizeBytes": safe_int(item.get("file_size_bytes")),
-        "description": "" if safe_int(item.get("hide_description")) else sanitize_resource_description(item.get("description") or ""),
-        "editorSocialUrl": make_6ure_absolute_url(item.get("editor_social_url") or ""),
-        "editorAvatarUrl": make_6ure_absolute_url(item.get("editor_avatar_url") or ""),
-        "uploaderName": str(item.get("discord_member_name") or "").strip(),
-        "uploaderId": "",
-        "uploaderAvatarUrl": make_6ure_absolute_url(item.get("discord_member_avatar") or ""),
+        "category": str(resource_field(item, "category", default="Uncategorized") or "Uncategorized").strip(),
+        "downloadCount": safe_int(resource_field(item, "download_count", "downloadCount", "downloads")),
+        "viewCount": safe_int(resource_field(item, "view_count", "viewCount", "views")),
+        "commentsCount": safe_int(resource_field(item, "comments_count", "commentsCount", "comments")),
+        "isPremium": is_premium,
+        "isProtected": is_protected,
+        "status": str(resource_field(item, "status", default="") or "").strip(),
+        "price": str(resource_field(item, "price", default="") or "").strip(),
+        "priceNumeric": safe_float(resource_field(item, "price_numeric", "priceNumeric")),
+        "fileSizeBytes": safe_int(resource_field(item, "file_size_bytes", "fileSizeBytes", "size_bytes", "sizeBytes")),
+        "description": "" if hide_description else sanitize_resource_description(
+            resource_field(item, "description", "desc", default="") or ""
+        ),
+        "editorSocialUrl": make_6ure_absolute_url(
+            resource_field(item, "editor_social_url", "editorSocialUrl", default="") or ""
+        ),
+        "editorAvatarUrl": make_6ure_absolute_url(
+            resource_field(item, "editor_avatar_url", "editorAvatarUrl", default="") or ""
+        ),
+        "uploaderName": str(
+            resource_field(item, "discord_member_name", "discordMemberName", "uploaderName", default="") or ""
+        ).strip(),
+        "uploaderId": str(
+            resource_field(item, "discord_member_id", "discordMemberId", "uploaderId", default="") or ""
+        ).strip(),
+        "uploaderAvatarUrl": make_6ure_absolute_url(
+            resource_field(item, "discord_member_avatar", "discordMemberAvatar", "uploaderAvatarUrl", default="") or ""
+        ),
         "leakedAt": leaked_at,
+        "tags": sanitize_resource_tags(tags_value),
+        "tagsText": sanitize_resource_tags_text(tags_value),
+        "hideDescription": hide_description,
+        "countsForPayout": safe_bool(
+            resource_field(item, "counts_for_payout", "countsForPayout", default=True),
+            default=True,
+        ),
+        "hidden": safe_bool(resource_field(item, "hidden", "is_hidden", "isHidden", default=False)),
+        "isFeatured": safe_bool(resource_field(item, "is_featured", "isFeatured", default=False)),
+        "editable": safe_bool(resource_field(item, "editable", "canEdit", default=False)),
     }
 
 
 def sanitize_resource_detail_item(item: dict) -> dict:
     clean_item = sanitize_my_resource_item(item)
     resource_id = safe_int(clean_item.get("id"))
-    hide_description = safe_int(item.get("hide_description"))
+    hide_description = safe_bool(resource_field(item, "hide_description", "hideDescription", default=False))
     clean_item.update(
         {
-            "apiUrl": f"{RESOURCES_API_URL}/{resource_id}" if resource_id else RESOURCES_API_URL,
-            "editorId": safe_int(item.get("editor_id")),
-            "tags": sanitize_resource_tags(item.get("tags")),
-            "description": "" if hide_description else sanitize_resource_detail_text(item.get("description") or ""),
-            "hideDescription": bool(hide_description),
-            "isFeatured": bool(safe_int(item.get("is_featured"))),
-            "hidden": bool(safe_int(item.get("hidden"))),
-            "countsForPayout": bool(safe_int(item.get("counts_for_payout"))),
-            "editorTotalDownloads": safe_int(item.get("editor_total_downloads")),
-            "editorResourceCount": safe_int(item.get("editor_resource_count")),
-            "createdAt": str(item.get("created_at") or "").strip(),
-            "updatedAt": str(item.get("updated_at") or "").strip(),
+            "editorId": safe_int(resource_field(item, "editor_id", "editorId")),
+            "tags": sanitize_resource_tags(resource_field(item, "tags", "tag_list", "tagList", default="")),
+            "description": "" if hide_description else sanitize_resource_detail_text(
+                resource_field(item, "description", "desc", default="") or ""
+            ),
+            "hideDescription": hide_description,
+            "isFeatured": safe_bool(resource_field(item, "is_featured", "isFeatured", default=False)),
+            "hidden": safe_bool(resource_field(item, "hidden", "is_hidden", "isHidden", default=False)),
+            "countsForPayout": safe_bool(
+                resource_field(item, "counts_for_payout", "countsForPayout", default=True),
+                default=True,
+            ),
+            "editorTotalDownloads": safe_int(resource_field(item, "editor_total_downloads", "editorTotalDownloads")),
+            "editorResourceCount": safe_int(resource_field(item, "editor_resource_count", "editorResourceCount")),
+            "createdAt": str(resource_field(item, "created_at", "createdAt", default="") or "").strip(),
+            "updatedAt": str(resource_field(item, "updated_at", "updatedAt", default="") or "").strip(),
         }
     )
     return clean_item
@@ -1591,19 +1672,274 @@ def sanitize_resource_detail_item(item: dict) -> dict:
 
 def sanitize_related_resource_item(item: dict) -> dict:
     clean_item = sanitize_my_resource_item(item)
-    resource_id = safe_int(clean_item.get("id"))
-    clean_item["apiUrl"] = f"{RESOURCES_API_URL}/{resource_id}" if resource_id else RESOURCES_API_URL
-    clean_item["tags"] = sanitize_resource_tags(item.get("tags"))
+    clean_item["tags"] = sanitize_resource_tags(resource_field(item, "tags", "tag_list", "tagList", default=""))
     return clean_item
 
 
-def fetch_resources_page(page: int, *, skip_metadata: bool = True) -> dict:
+def collect_json_strings(value) -> list[str]:
+    strings: list[str] = []
+    if isinstance(value, str):
+        strings.append(value)
+    elif isinstance(value, dict):
+        for item in value.values():
+            strings.extend(collect_json_strings(item))
+    elif isinstance(value, list):
+        for item in value:
+            strings.extend(collect_json_strings(item))
+    return strings
+
+
+def decoded_next_flight_text(html_text: str) -> str:
+    segments: list[str] = []
+    for match in re.finditer(
+        r"self\.__next_f\.push\((?P<data>\[[\s\S]*?\])\)</script>",
+        html_text or "",
+        flags=re.IGNORECASE,
+    ):
+        data = html.unescape(match.group("data"))
+        try:
+            parsed = json.loads(data)
+        except Exception:
+            continue
+        segments.extend(collect_json_strings(parsed))
+    return "\n".join(segments)
+
+
+def balanced_json_slice(text: str, start_index: int) -> str:
+    if start_index < 0 or start_index >= len(text):
+        return ""
+    opening = text[start_index]
+    closing = "}" if opening == "{" else "]" if opening == "[" else ""
+    if not closing:
+        return ""
+    depth = 0
+    in_string = False
+    escape_next = False
+    for index in range(start_index, len(text)):
+        char = text[index]
+        if in_string:
+            if escape_next:
+                escape_next = False
+            elif char == "\\":
+                escape_next = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == opening:
+            depth += 1
+        elif char == closing:
+            depth -= 1
+            if depth == 0:
+                return text[start_index : index + 1]
+    return ""
+
+
+def parse_json_fragment(fragment: str):
+    clean_fragment = str(fragment or "").strip()
+    if not clean_fragment:
+        return None
+    candidates = [
+        clean_fragment,
+        clean_fragment.replace("$undefined", "null"),
+        html.unescape(clean_fragment).replace("$undefined", "null"),
+    ]
+    for candidate in candidates:
+        try:
+            return json.loads(candidate)
+        except Exception:
+            continue
+    return None
+
+
+def looks_like_dashboard_resource(value) -> bool:
+    if not isinstance(value, dict):
+        return False
+    if safe_int(resource_field(value, "id", "resource_id", "resourceId")) <= 0:
+        return False
+    useful_keys = {
+        "download_count",
+        "downloadCount",
+        "view_count",
+        "viewCount",
+        "editor_name",
+        "editorName",
+        "file_path",
+        "filePath",
+        "thumbnail_url",
+        "thumbnailUrl",
+        "place_url",
+        "placeUrl",
+    }
+    return any(key in value for key in useful_keys)
+
+
+def collect_dashboard_resource_records(value, records: list[dict]) -> None:
+    if isinstance(value, dict):
+        if looks_like_dashboard_resource(value):
+            records.append(value)
+        for item in value.values():
+            if isinstance(item, (dict, list)):
+                collect_dashboard_resource_records(item, records)
+    elif isinstance(value, list):
+        for item in value:
+            if isinstance(item, (dict, list)):
+                collect_dashboard_resource_records(item, records)
+
+
+def extract_dashboard_resource_records(html_text: str) -> list[dict]:
+    records: list[dict] = []
+    candidate_texts = [
+        html_text or "",
+        html.unescape(html_text or ""),
+        decoded_next_flight_text(html_text or ""),
+    ]
+    candidate_texts.append(html.unescape(candidate_texts[-1]))
+
+    next_data_match = re.search(
+        r'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(?P<data>.*?)</script>',
+        html_text or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if next_data_match:
+        parsed = parse_json_fragment(html.unescape(next_data_match.group("data")))
+        collect_dashboard_resource_records(parsed, records)
+
+    for text in candidate_texts:
+        if not text:
+            continue
+        for key in ("initialUploads", "uploads", "resources"):
+            search_from = 0
+            while True:
+                key_index = text.find(key, search_from)
+                if key_index < 0:
+                    break
+                colon_index = text.find(":", key_index)
+                if colon_index < 0:
+                    search_from = key_index + len(key)
+                    continue
+                json_start = -1
+                for index in range(colon_index + 1, min(len(text), colon_index + 120)):
+                    if text[index] in "[{":
+                        json_start = index
+                        break
+                if json_start >= 0:
+                    parsed = parse_json_fragment(balanced_json_slice(text, json_start))
+                    collect_dashboard_resource_records(parsed, records)
+                search_from = key_index + len(key)
+
+        for marker in ('"download_count"', '"downloadCount"', '"editor_name"', '"editorName"'):
+            search_from = 0
+            while True:
+                marker_index = text.find(marker, search_from)
+                if marker_index < 0:
+                    break
+                object_start = text.rfind("{", 0, marker_index)
+                if object_start >= 0:
+                    parsed = parse_json_fragment(balanced_json_slice(text, object_start))
+                    collect_dashboard_resource_records(parsed, records)
+                search_from = marker_index + len(marker)
+
+    unique: dict[int, dict] = {}
+    for record in records:
+        resource_id = safe_int(resource_field(record, "id", "resource_id", "resourceId"))
+        if resource_id > 0:
+            unique[resource_id] = {**record, "editable": not safe_bool(resource_field(record, "is_protected", "isProtected", default=False))}
+    return list(unique.values())
+
+
+def fetch_dashboard_resources_records(*, refresh: bool = False) -> tuple[list[dict], dict]:
+    now = time.time()
+    snapshot = get_app_auth_snapshot()
+    user = snapshot.get("user") if snapshot.get("authenticated") else None
+    cache_key = str((user or {}).get("id") or (user or {}).get("username") or "current")
+    with DASHBOARD_RESOURCES_LOCK:
+        cached_entry = DASHBOARD_RESOURCES_CACHE.get(cache_key) or {}
+        cached_records = cached_entry.get("records")
+        cached_meta = cached_entry.get("meta")
+        if not refresh and cached_records is not None and float(cached_entry.get("expiresAt") or 0) > now:
+            return list(cached_records), dict(cached_meta or {})
+
+    ensure_leaker_cookie_consent(save=False)
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": DASHBOARD_URL,
+        "User-Agent": LEAKER_PROXY_USER_AGENT,
+    }
+    with LEAKER_PROXY_LOCK:
+        response = LEAKER_PROXY_SESSION.get(
+            DASHBOARD_RESOURCES_URL,
+            headers=headers,
+            allow_redirects=True,
+            timeout=24,
+        )
+        try:
+            LEAKER_PROXY_SESSION.cookies.save(ignore_discard=True, ignore_expires=True)
+        except Exception:
+            pass
+
+    text = response.text or ""
+    if response.status_code >= 400:
+        raise ValueError(f"Dashboard resources returned HTTP {response.status_code}.")
+    if (
+        "NEXT_REDIRECT" in text
+        and "callbackUrl=/dashboard/resources" in text
+    ) or "Login with Discord" in text:
+        raise PermissionError("Sign in to 6ureleaks to load your dashboard resources.")
+
+    records = extract_dashboard_resource_records(text)
+    meta = {
+        "source": "dashboard",
+        "url": DASHBOARD_RESOURCES_URL,
+        "status": response.status_code,
+        "count": len(records),
+    }
+    with DASHBOARD_RESOURCES_LOCK:
+        DASHBOARD_RESOURCES_CACHE[cache_key] = {
+            "records": records,
+            "meta": meta,
+            "expiresAt": time.time() + DASHBOARD_RESOURCES_CACHE_SECONDS,
+        }
+    return list(records), dict(meta)
+
+
+def clear_resources_caches() -> None:
+    with PUBLIC_RESOURCES_LOCK:
+        PUBLIC_RESOURCES_CACHE.clear()
+    with DASHBOARD_RESOURCES_LOCK:
+        DASHBOARD_RESOURCES_CACHE.clear()
+    with MY_RESOURCES_LOCK:
+        MY_RESOURCES_CACHE.clear()
+    with EDITOR_RESOURCES_LOCK:
+        EDITOR_RESOURCES_CACHE.clear()
+    with RESOURCE_DETAIL_LOCK:
+        RESOURCE_DETAIL_CACHE.clear()
+    with RESOURCES_SCAN_LOCK:
+        RESOURCES_SCAN_CACHE.clear()
+
+
+def fetch_resources_page(
+    page: int,
+    *,
+    skip_metadata: bool = True,
+    limit: int | None = None,
+    search: str = "",
+    category: str = "",
+) -> dict:
+    page_limit = max(1, min(100, safe_int(limit, MY_RESOURCES_PAGE_LIMIT)))
     params = {
         "page": max(1, int(page or 1)),
-        "limit": MY_RESOURCES_PAGE_LIMIT,
+        "limit": page_limit,
         "sort": "recent",
         "order": "desc",
     }
+    clean_search = str(search or "").strip()
+    clean_category = str(category or "").strip()
+    if clean_search:
+        params["search"] = clean_search
+    if clean_category:
+        params["category"] = clean_category
     if skip_metadata:
         params["skipMetadata"] = "1"
 
@@ -1619,6 +1955,162 @@ def fetch_resources_page(page: int, *, skip_metadata: bool = True) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def fetch_resources_scan(*, refresh: bool = False) -> tuple[list[dict], dict, int]:
+    now = time.time()
+    with RESOURCES_SCAN_LOCK:
+        cached_entry = RESOURCES_SCAN_CACHE.get("recent") or {}
+        if not refresh and float(cached_entry.get("expiresAt") or 0) > now:
+            return (
+                list(cached_entry.get("rawItems") or []),
+                dict(cached_entry.get("pagination") or {}),
+                safe_int(cached_entry.get("totalPages"), 1),
+            )
+
+    first_page = fetch_resources_page(1, skip_metadata=False)
+    pagination = first_page.get("pagination") if isinstance(first_page.get("pagination"), dict) else {}
+    total_pages = max(1, safe_int(pagination.get("totalPages"), 1))
+    total_pages = min(total_pages, MY_RESOURCES_MAX_PAGES)
+
+    raw_items: list[dict] = []
+    if isinstance(first_page.get("items"), list):
+        raw_items.extend(item for item in first_page["items"] if isinstance(item, dict))
+
+    if total_pages > 1:
+        workers = min(8, total_pages - 1)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(fetch_resources_page, page, skip_metadata=True): page
+                for page in range(2, total_pages + 1)
+            }
+            for future in concurrent.futures.as_completed(futures):
+                page_payload = future.result()
+                page_items = page_payload.get("items")
+                if isinstance(page_items, list):
+                    raw_items.extend(item for item in page_items if isinstance(item, dict))
+
+    with RESOURCES_SCAN_LOCK:
+        RESOURCES_SCAN_CACHE["recent"] = {
+            "rawItems": raw_items,
+            "pagination": pagination,
+            "totalPages": total_pages,
+            "expiresAt": time.time() + RESOURCES_SCAN_CACHE_SECONDS,
+        }
+
+    return list(raw_items), dict(pagination), total_pages
+
+
+def sanitize_public_resources_stats(payload: dict, items: list[dict]) -> dict:
+    raw_stats = payload.get("stats") if isinstance(payload.get("stats"), dict) else {}
+    pagination = payload.get("pagination") if isinstance(payload.get("pagination"), dict) else {}
+    active_filter = bool(str(payload.get("_search") or "").strip() or str(payload.get("_category") or "").strip())
+    return {
+        "total": safe_int(pagination.get("total"), len(items)) if active_filter else safe_int(raw_stats.get("total"), safe_int(pagination.get("total"), len(items))),
+        "downloads": safe_int(raw_stats.get("total_downloads"), sum(safe_int(item.get("downloadCount")) for item in items)),
+        "views": safe_int(raw_stats.get("total_views"), sum(safe_int(item.get("viewCount")) for item in items)),
+        "editors": safe_int(raw_stats.get("editors"), len({item.get("editorName") for item in items if item.get("editorName")})),
+        "premium": sum(1 for item in items if item.get("isPremium")),
+        "protected": sum(1 for item in items if item.get("isProtected")),
+    }
+
+
+def sanitize_public_resource_categories(payload: dict) -> list[dict]:
+    raw_categories = payload.get("categories")
+    categories: list[dict] = []
+    if isinstance(raw_categories, list):
+        for item in raw_categories:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("category") or item.get("name") or "Uncategorized").strip() or "Uncategorized"
+            categories.append({"name": name, "count": safe_int(item.get("count"))})
+    return categories[:24]
+
+
+def sanitize_public_resource_top_editors(payload: dict) -> list[dict]:
+    raw_editors = payload.get("topEditors")
+    editors: list[dict] = []
+    if isinstance(raw_editors, list):
+        for item in raw_editors:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or "").strip()
+            if not name:
+                continue
+            editors.append({"name": name, "count": safe_int(item.get("resource_count") or item.get("count"))})
+    return editors[:24]
+
+
+def get_public_resources_payload(
+    *,
+    page: int = 1,
+    limit: int = 32,
+    search: str = "",
+    category: str = "",
+    refresh: bool = False,
+) -> dict:
+    clean_page = max(1, safe_int(page, 1))
+    clean_limit = max(12, min(32, safe_int(limit, 32)))
+    clean_search = sanitize_resource_description(search, limit=120)
+    clean_category = sanitize_resource_description(category, limit=80)
+    cache_key = f"{clean_page}|{clean_limit}|{clean_search.casefold()}|{clean_category.casefold()}"
+    now = time.time()
+    with PUBLIC_RESOURCES_LOCK:
+        cached_entry = PUBLIC_RESOURCES_CACHE.get(cache_key) or {}
+        cached_payload = cached_entry.get("payload")
+        if not refresh and cached_payload and float(cached_entry.get("expiresAt") or 0) > now:
+            payload = dict(cached_payload)
+            payload["cached"] = True
+            return payload
+
+    started_at = time.time()
+    raw_payload = fetch_resources_page(
+        clean_page,
+        skip_metadata=False,
+        limit=clean_limit,
+        search=clean_search,
+        category=clean_category,
+    )
+    raw_payload["_search"] = clean_search
+    raw_payload["_category"] = clean_category
+    raw_items = raw_payload.get("items")
+    items = []
+    if isinstance(raw_items, list):
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            clean_item = sanitize_my_resource_item(item)
+            clean_item["editable"] = False
+            items.append(clean_item)
+
+    pagination = raw_payload.get("pagination") if isinstance(raw_payload.get("pagination"), dict) else {}
+    payload = {
+        "success": True,
+        "profileUrl": RESOURCES_URL,
+        "items": items,
+        "stats": sanitize_public_resources_stats(raw_payload, items),
+        "categories": sanitize_public_resource_categories(raw_payload),
+        "topEditors": sanitize_public_resource_top_editors(raw_payload),
+        "pagination": {
+            "page": safe_int(pagination.get("page"), clean_page),
+            "limit": safe_int(pagination.get("limit"), clean_limit),
+            "total": safe_int(pagination.get("total"), len(items)),
+            "totalPages": safe_int(pagination.get("totalPages"), clean_page),
+        },
+        "filters": {
+            "search": clean_search,
+            "category": clean_category,
+        },
+        "cached": False,
+        "durationMs": max(0, round((time.time() - started_at) * 1000)),
+        "updatedAt": int(time.time() * 1000),
+    }
+    with PUBLIC_RESOURCES_LOCK:
+        PUBLIC_RESOURCES_CACHE[cache_key] = {
+            "payload": payload,
+            "expiresAt": time.time() + PUBLIC_RESOURCES_CACHE_SECONDS,
+        }
+    return dict(payload)
 
 
 def fetch_resource_detail(resource_id: int) -> dict:
@@ -1638,8 +2130,22 @@ def fetch_resource_detail(resource_id: int) -> dict:
     response.raise_for_status()
     payload = response.json()
     if not isinstance(payload, dict):
-        raise ValueError("Resource API returned an invalid response.")
+        raise ValueError("Resource details could not be loaded.")
     return payload
+
+
+def find_dashboard_resource_record(resource_id: int, *, refresh: bool = False) -> dict | None:
+    clean_resource_id = safe_int(resource_id)
+    if clean_resource_id <= 0:
+        return None
+    try:
+        records, _meta = fetch_dashboard_resources_records(refresh=refresh)
+    except Exception:
+        return None
+    for record in records:
+        if safe_int(resource_field(record, "id", "resource_id", "resourceId")) == clean_resource_id:
+            return record
+    return None
 
 
 def get_resource_detail_payload(resource_id: int, *, refresh: bool = False) -> dict:
@@ -1657,12 +2163,25 @@ def get_resource_detail_payload(resource_id: int, *, refresh: bool = False) -> d
             return payload
 
     started_at = time.time()
-    raw_payload = fetch_resource_detail(clean_resource_id)
-    raw_item = raw_payload.get("item")
+    raw_payload: dict = {}
+    raw_item: dict | None = None
+    raw_related = []
+    public_error = None
+    try:
+        raw_payload = fetch_resource_detail(clean_resource_id)
+        raw_item = raw_payload.get("item")
+        raw_related = raw_payload.get("related")
+    except Exception as error:
+        public_error = error
+
+    dashboard_item = find_dashboard_resource_record(clean_resource_id, refresh=refresh)
+    if isinstance(dashboard_item, dict):
+        raw_item = {**(raw_item or {}), **dashboard_item}
     if not isinstance(raw_item, dict):
+        if public_error:
+            raise public_error
         raise ValueError("Resource was not found.")
 
-    raw_related = raw_payload.get("related")
     related = [
         sanitize_related_resource_item(item)
         for item in raw_related
@@ -1671,7 +2190,6 @@ def get_resource_detail_payload(resource_id: int, *, refresh: bool = False) -> d
 
     payload = {
         "success": True,
-        "sourceUrl": f"{RESOURCES_API_URL}/{clean_resource_id}",
         "profileUrl": f"{RESOURCES_URL}/{clean_resource_id}",
         "item": sanitize_resource_detail_item(raw_item),
         "related": related,
@@ -1686,6 +2204,90 @@ def get_resource_detail_payload(resource_id: int, *, refresh: bool = False) -> d
             "expiresAt": time.time() + RESOURCE_DETAIL_CACHE_SECONDS,
         }
     return dict(payload)
+
+
+def clean_resource_update_payload(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        raise ValueError("Resource changes are invalid.")
+
+    def clean_text(key: str, limit: int = 1000) -> str:
+        text = str(payload.get(key) or "").strip()
+        if len(text) > limit:
+            text = text[:limit].rstrip()
+        return text
+
+    name = clean_text("name", 180)
+    editor_name = clean_text("editor_name", 120)
+    category = clean_text("category", 80)
+    if not name:
+        raise ValueError("Resource name is required.")
+    if not editor_name:
+        raise ValueError("Editor name is required.")
+    if not category:
+        category = "Other"
+
+    return {
+        "name": name,
+        "editor_name": editor_name,
+        "description": clean_text("description", 5000),
+        "hide_description": bool(payload.get("hide_description")),
+        "thumbnail_url": clean_text("thumbnail_url", 1200),
+        "category": category,
+        "editor_social_url": clean_text("editor_social_url", 1200),
+        "place_url": clean_text("place_url", 1200),
+        "tags": clean_text("tags", 500),
+    }
+
+
+def update_dashboard_resource(resource_id: int, payload: dict) -> dict:
+    clean_resource_id = safe_int(resource_id)
+    if clean_resource_id <= 0:
+        raise ValueError("Resource could not be found.")
+    changes = clean_resource_update_payload(payload)
+    ensure_leaker_cookie_consent(save=False)
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Origin": LEAKER_SITE_BASE_URL,
+        "Referer": DASHBOARD_RESOURCES_URL,
+        "User-Agent": LEAKER_PROXY_USER_AGENT,
+    }
+    with LEAKER_PROXY_LOCK:
+        response = LEAKER_PROXY_SESSION.put(
+            f"{RESOURCES_API_URL}/{clean_resource_id}",
+            headers=headers,
+            data=json.dumps(changes),
+            allow_redirects=False,
+            timeout=24,
+        )
+        try:
+            LEAKER_PROXY_SESSION.cookies.save(ignore_discard=True, ignore_expires=True)
+        except Exception:
+            pass
+
+    response_payload = {}
+    try:
+        response_payload = response.json()
+    except Exception:
+        response_payload = {}
+    if response.status_code in {401, 403} or response.status_code in {301, 302, 303, 307, 308}:
+        raise PermissionError("Sign in to 6ureleaks to edit this resource.")
+    if response.status_code >= 400:
+        message = ""
+        if isinstance(response_payload, dict):
+            message = str(response_payload.get("error") or response_payload.get("msg") or "").strip()
+        raise ValueError(message or "Resource changes could not be saved.")
+
+    clear_resources_caches()
+    detail = get_resource_detail_payload(clean_resource_id, refresh=True)
+    detail.update(
+        {
+            "success": True,
+            "saved": True,
+            "updatedAt": int(time.time() * 1000),
+        }
+    )
+    return detail
 
 
 def get_hlx_api_key() -> str:
@@ -1865,8 +2467,8 @@ def hlx_cache_set(key: str, payload: dict) -> None:
 def hlx_tiktok_get(path: str, params: dict) -> dict:
     api_key = get_hlx_api_key()
     if not api_key:
-        raise ValueError("HLX API key is missing.")
-    last_error = "HLX API request failed."
+        raise ValueError("Search service is not configured.")
+    last_error = "Search service request failed."
     attempts = max(1, min(3, HLX_API_RETRIES + 1))
     read_timeout = max(1.0, HLX_API_TIMEOUT_SECONDS)
     connect_timeout = max(0.5, min(HLX_API_CONNECT_TIMEOUT_SECONDS, read_timeout))
@@ -1884,24 +2486,24 @@ def hlx_tiktok_get(path: str, params: dict) -> dict:
             )
             content_type = response.headers.get("Content-Type", "")
             if "application/json" not in content_type.lower():
-                last_error = f"HLX API returned HTTP {response.status_code}."
+                last_error = f"Search service returned HTTP {response.status_code}."
                 if response.status_code not in {408, 409, 425, 429, 500, 502, 503, 504}:
                     break
             else:
                 payload = response.json()
                 if response.status_code >= 400:
-                    last_error = str(payload.get("detail") or payload.get("error") or f"HLX API HTTP {response.status_code}")
+                    last_error = f"Search service returned HTTP {response.status_code}."
                     if response.status_code not in {408, 409, 425, 429, 500, 502, 503, 504}:
                         break
                 elif isinstance(payload, dict) and str(payload.get("status") or "").lower() in {"error", "failed"}:
-                    last_error = str(payload.get("message") or payload.get("error") or "HLX API request failed.")
+                    last_error = "Search service request failed."
                 elif isinstance(payload, dict):
                     return payload
                 else:
-                    last_error = "HLX API returned an invalid response."
+                    last_error = "Search service returned an invalid response."
                     break
-        except (requests.Timeout, requests.ConnectionError) as error:
-            last_error = f"HLX API connection was slow: {error}"
+        except (requests.Timeout, requests.ConnectionError):
+            last_error = "Search service connection was slow."
         except ValueError as error:
             last_error = str(error)
             break
@@ -2025,7 +2627,6 @@ def fetch_hlx_tiktok_profile(username: str, *, limit: int = 0, refresh: bool = F
         profile["url"] = format_tiktok_profile_url(clean_username)
     payload = {
         "success": True,
-        "sourceUrl": f"{HLX_API_BASE_URL}/tiktok/profile",
         "profile": profile,
         "rawSource": str(raw.get("source") or "").strip(),
         "cached": False,
@@ -2060,7 +2661,6 @@ def fetch_hlx_tiktok_video(url: str, *, refresh: bool = False) -> dict:
         raise
     payload = {
         "success": True,
-        "sourceUrl": f"{HLX_API_BASE_URL}/tiktok/video",
         "video": sanitize_hlx_tiktok_video({"url": clean_url}, raw),
         "cached": False,
         "updatedAt": int(time.time() * 1000),
@@ -2133,7 +2733,6 @@ def get_hlx_tiktok_search_payload(
     results = results[:result_limit]
     return {
         "success": True,
-        "sourceUrl": f"{HLX_API_BASE_URL}/tiktok/profile",
         "query": query,
         "candidates": candidates,
         "results": results,
@@ -2897,7 +3496,6 @@ def fetch_hlx_youtube_channel(value: str, *, limit: int = 0, refresh: bool = Fal
     profile = sanitize_hlx_youtube_channel(raw, include_videos=True, fallback_url=channel_url)
     payload = {
         "success": True,
-        "sourceUrl": f"{HLX_API_BASE_URL}/youtube/channel",
         "profile": profile,
         "rawSource": str(raw.get("source") or "").strip(),
         "cached": False,
@@ -2922,7 +3520,6 @@ def fetch_hlx_youtube_video(url: str, *, refresh: bool = False) -> dict:
     raw = hlx_tiktok_get("/youtube/video", {"url": clean_url})
     payload = {
         "success": True,
-        "sourceUrl": f"{HLX_API_BASE_URL}/youtube/video",
         "video": sanitize_hlx_youtube_video({"url": clean_url}, raw),
         "cached": False,
         "updatedAt": int(time.time() * 1000),
@@ -3048,7 +3645,6 @@ def get_hlx_youtube_search_payload(
     results.sort(key=lambda item: score_hlx_youtube_search_result(item, query, candidate_order))
     return {
         "success": True,
-        "sourceUrl": f"{HLX_API_BASE_URL}/youtube/channel",
         "query": query,
         "candidates": candidates,
         "results": results[:result_limit],
@@ -3120,34 +3716,44 @@ def get_my_resources_payload(*, refresh: bool = False) -> dict:
             return payload
 
     started_at = time.time()
-    first_page = fetch_resources_page(1, skip_metadata=False)
-    pagination = first_page.get("pagination") if isinstance(first_page.get("pagination"), dict) else {}
-    total_pages = max(1, safe_int(pagination.get("totalPages"), 1))
-    total_pages = min(total_pages, MY_RESOURCES_MAX_PAGES)
-
-    raw_items: list[dict] = []
-    if isinstance(first_page.get("items"), list):
-        raw_items.extend(item for item in first_page["items"] if isinstance(item, dict))
-
-    if total_pages > 1:
-        workers = min(8, total_pages - 1)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {
-                executor.submit(fetch_resources_page, page, skip_metadata=True): page
-                for page in range(2, total_pages + 1)
-            }
-            for future in concurrent.futures.as_completed(futures):
-                page_payload = future.result()
-                page_items = page_payload.get("items")
-                if isinstance(page_items, list):
-                    raw_items.extend(item for item in page_items if isinstance(item, dict))
-
     seen_ids: set[int] = set()
     items: list[dict] = []
+    scanned = {
+        "source": "dashboard",
+        "pages": 1,
+        "items": 0,
+        "total": 0,
+        "totalPages": 1,
+    }
+
+    try:
+        raw_items, dashboard_meta = fetch_dashboard_resources_records(refresh=refresh)
+        scanned.update(
+            {
+                "items": len(raw_items),
+                "total": len(raw_items),
+                "source": dashboard_meta.get("source") or "dashboard",
+            }
+        )
+    except PermissionError:
+        raise
+    except Exception as error:
+        raw_items, pagination, total_pages = fetch_resources_scan(refresh=refresh)
+        scanned.update(
+            {
+                "source": "public-fallback",
+                "pages": total_pages,
+                "items": len(raw_items),
+                "total": safe_int(pagination.get("total")),
+                "totalPages": safe_int(pagination.get("totalPages")),
+            }
+        )
+
     for item in raw_items:
-        if not resource_matches_uploader(item, uploader_id, uploader_aliases):
+        if scanned.get("source") != "dashboard" and not resource_matches_uploader(item, uploader_id, uploader_aliases):
             continue
         clean_item = sanitize_my_resource_item(item)
+        clean_item["editable"] = not bool(clean_item.get("isProtected"))
         resource_id = clean_item.get("id")
         if resource_id in seen_ids:
             continue
@@ -3157,21 +3763,16 @@ def get_my_resources_payload(*, refresh: bool = False) -> dict:
     items.sort(key=lambda item: str(item.get("leakedAt") or ""), reverse=True)
     payload = {
         "success": True,
-        "sourceUrl": RESOURCES_API_URL,
         "profileUrl": RESOURCES_URL,
         "uploader": {
             "id": uploader_id,
             "aliases": list(uploader_aliases),
             "displayName": str(uploader.get("displayName") or "username"),
+            "avatarUrl": str(uploader.get("avatarUrl") or ""),
         },
         "items": items,
         "stats": build_my_resources_stats(items),
-        "scanned": {
-            "pages": total_pages,
-            "items": len(raw_items),
-            "apiTotal": safe_int(pagination.get("total")),
-            "apiTotalPages": safe_int(pagination.get("totalPages")),
-        },
+        "scanned": scanned,
         "cached": False,
         "durationMs": max(0, round((time.time() - started_at) * 1000)),
         "updatedAt": int(time.time() * 1000),
@@ -3181,6 +3782,102 @@ def get_my_resources_payload(*, refresh: bool = False) -> dict:
         MY_RESOURCES_CACHE[uploader_cache_key] = {
             "payload": payload,
             "expiresAt": time.time() + MY_RESOURCES_CACHE_SECONDS,
+        }
+    return dict(payload)
+
+
+def get_editor_resources_payload(editor_name: str, *, refresh: bool = False) -> dict:
+    clean_editor_name = re.sub(r"\s+", " ", str(editor_name or "").strip())
+    editor_key = normalize_resource_editor_name(clean_editor_name)
+    if not editor_key:
+        raise ValueError("Editor name is required.")
+
+    uploader = current_resources_uploader()
+    uploader_id = str(uploader.get("id") or "").strip()
+    uploader_aliases = tuple(uploader.get("aliases") or ())
+    uploader_cache_key = f"{uploader_id}|{','.join(uploader_aliases)}"
+    cache_key = f"{uploader_cache_key}|{editor_key}"
+    now = time.time()
+    with EDITOR_RESOURCES_LOCK:
+        cached_entry = EDITOR_RESOURCES_CACHE.get(cache_key) or {}
+        cached_payload = cached_entry.get("payload")
+        if not refresh and cached_payload and float(cached_entry.get("expiresAt") or 0) > now:
+            payload = dict(cached_payload)
+            payload["cached"] = True
+            return payload
+
+    started_at = time.time()
+    raw_items, pagination, total_pages = fetch_resources_scan(refresh=refresh)
+    dashboard_my_items: list[dict] = []
+    try:
+        dashboard_records, _dashboard_meta = fetch_dashboard_resources_records(refresh=refresh)
+        for item in dashboard_records:
+            if normalize_resource_editor_name(resource_field(item, "editor_name", "editorName", default="") or "") != editor_key:
+                continue
+            clean_item = sanitize_my_resource_item(item)
+            clean_item["editable"] = not bool(clean_item.get("isProtected"))
+            if safe_int(clean_item.get("id")) > 0:
+                dashboard_my_items.append(clean_item)
+    except Exception:
+        dashboard_my_items = []
+
+    dashboard_my_ids = {safe_int(item.get("id")) for item in dashboard_my_items if safe_int(item.get("id")) > 0}
+    seen_ids: set[int] = set()
+    my_items: list[dict] = list(dashboard_my_items)
+    other_items: list[dict] = []
+
+    for item in raw_items:
+        if normalize_resource_editor_name(resource_field(item, "editor_name", "editorName", default="") or "") != editor_key:
+            continue
+        clean_item = sanitize_my_resource_item(item)
+        resource_id = clean_item.get("id")
+        if resource_id in seen_ids:
+            continue
+        seen_ids.add(resource_id)
+        if resource_id in dashboard_my_ids:
+            continue
+        if not dashboard_my_items and resource_matches_uploader(item, uploader_id, uploader_aliases):
+            clean_item["editable"] = not bool(clean_item.get("isProtected"))
+            my_items.append(clean_item)
+        else:
+            clean_item["editable"] = False
+            other_items.append(clean_item)
+
+    my_items.sort(key=lambda item: str(item.get("leakedAt") or ""), reverse=True)
+    other_items.sort(key=lambda item: str(item.get("leakedAt") or ""), reverse=True)
+    combined_items = [*my_items, *other_items]
+    editor_display_name = clean_editor_name
+    if combined_items:
+        editor_display_name = str(combined_items[0].get("editorName") or clean_editor_name).strip() or clean_editor_name
+
+    payload = {
+        "success": True,
+        "profileUrl": RESOURCES_URL,
+        "editorName": editor_display_name,
+        "myItems": my_items,
+        "otherItems": other_items,
+        "stats": {
+            "total": len(combined_items),
+            "mine": len(my_items),
+            "other": len(other_items),
+            "downloads": sum(safe_int(item.get("downloadCount")) for item in combined_items),
+            "views": sum(safe_int(item.get("viewCount")) for item in combined_items),
+        },
+        "scanned": {
+            "pages": total_pages,
+            "items": len(raw_items),
+            "total": safe_int(pagination.get("total")),
+            "totalPages": safe_int(pagination.get("totalPages")),
+        },
+        "cached": False,
+        "durationMs": max(0, round((time.time() - started_at) * 1000)),
+        "updatedAt": int(time.time() * 1000),
+    }
+
+    with EDITOR_RESOURCES_LOCK:
+        EDITOR_RESOURCES_CACHE[cache_key] = {
+            "payload": payload,
+            "expiresAt": time.time() + EDITOR_RESOURCES_CACHE_SECONDS,
         }
     return dict(payload)
 
@@ -3712,8 +4409,6 @@ def get_protected_list_payload() -> dict:
     users = [normalize_protected_user(item) for item in fetch_protected_users()]
     users = [item for item in users if item["aliases"]]
     return {
-        "sourceUrl": PROTECTED_LIST_PAGE_URL,
-        "apiUrl": PROTECTED_LIST_API_URL,
         "checkedAt": int(time.time() * 1000),
         "count": len(users),
         "users": users,
@@ -3775,7 +4470,6 @@ def check_protected_names(candidate_names: list[str]) -> dict:
                 break
 
     return {
-        "sourceUrl": protected_payload["sourceUrl"],
         "checkedAt": protected_payload["checkedAt"],
         "protectedCount": protected_payload["count"],
         "checkedNames": clean_candidates,
@@ -4461,12 +5155,11 @@ def check_for_update() -> dict:
             try:
                 manifest = read_update_json(source_url, config)
                 latest_payload = normalize_update_manifest(manifest, source_url)
-                latest_payload["sourceUrl"] = source_url
                 candidates.append({"url": source_url, "latest": latest_payload})
             except Exception as source_error:
-                source_errors.append(f"{source_url}: {source_error}")
+                source_errors.append(str(source_error))
         if not candidates:
-            raise FilesAutomationError("; ".join(source_errors) or "Update manifest could not be loaded.")
+            raise FilesAutomationError("Update information could not be loaded.")
         selected = choose_latest_update_candidate(candidates)
         latest = selected["latest"]
         result = {
@@ -4475,10 +5168,7 @@ def check_for_update() -> dict:
             "latest": latest,
             "updateAvailable": bool(latest["updateAvailable"]),
             "msg": "Update available." if latest["updateAvailable"] else "You are on the latest version.",
-            "checkedSources": [candidate["url"] for candidate in candidates],
         }
-        if source_errors:
-            result["sourceWarnings"] = source_errors
         with UPDATE_STATE_LOCK:
             UPDATE_STATE["lastCheckAt"] = int(time.time() * 1000)
             UPDATE_STATE["latest"] = latest
@@ -6313,26 +7003,26 @@ class FilesUploadJob:
 
         if status in {"queued", "running"}:
             if phase == "Uploading":
-                details = "Uploading leak"
+                details = "Uploading Leak"
                 state = f"{self.editor_name} - {progress}%"
                 if total_files:
                     state = f"{state} ({uploaded_files}/{total_files})"
                 set_discord_presence_activity(details=details, state=state)
                 return
-            set_discord_presence_activity(details="Preparing upload", state=phase or "Queued")
+            set_discord_presence_activity(details="Preparing Leak", state=phase or "Queued")
             return
 
         if status == "cancelling":
-            set_discord_presence_activity(details="Cancelling upload", state=phase or "Rolling back")
+            set_discord_presence_activity(details="Cancelling Upload", state=phase or "Rolling back")
             return
         if status == "success":
-            set_discord_presence_activity(details="Upload complete", state="Ready")
+            set_discord_presence_activity(details="Leak Published", state="Ready for the next one")
             return
         if status == "cancelled":
-            set_discord_presence_activity(details="Upload cancelled", state="Ready")
+            set_discord_presence_activity(details="Upload Cancelled", state="Rolled back safely")
             return
         if status == "failed":
-            set_discord_presence_activity(details="Upload failed", state="Needs attention")
+            set_discord_presence_activity(details="Upload Needs Attention", state="Check the result panel")
 
     def set_protected_warning(self, matches: list[dict], warning: str = "") -> None:
         clean_matches = [match for match in matches if isinstance(match, dict)]
@@ -6900,8 +7590,7 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         response_payload.setdefault("success", 200 <= status < 400)
         response_payload.setdefault("requestId", self._request_id())
         if status >= 400:
-            response_payload.setdefault("errorType", "api_error")
-            response_payload.setdefault("path", urllib.parse.urlsplit(self.path).path)
+            response_payload.setdefault("errorType", "request_error")
             response_payload.setdefault("msg", self.responses.get(status, ("Request failed.",))[0])
         self._send(status, json_bytes(response_payload))
 
@@ -6975,8 +7664,14 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/app-auth/status":
             self._app_auth_status(parsed.query)
             return
+        if parsed.path == "/api/resources/public":
+            self._public_resources(parsed.query)
+            return
         if parsed.path == "/api/resources/mine":
             self._my_resources(parsed.query)
+            return
+        if parsed.path == "/api/resources/editor":
+            self._editor_resources(parsed.query)
             return
         resource_detail_match = re.fullmatch(r"/api/resources/(\d+)", parsed.path)
         if resource_detail_match:
@@ -7029,6 +7724,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/window-action":
             self._window_action()
             return
+        if parsed.path == "/api/webview/memory/trim":
+            self._webview_memory_trim()
+            return
         if parsed.path == "/api/open-url":
             self._open_url()
             return
@@ -7058,6 +7756,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/files/select-folder":
             self._files_select_folder()
+            return
+        if parsed.path == "/api/webview-upload-selection":
+            self._webview_upload_selection()
             return
         if parsed.path == "/api/files/folder-summary":
             self._files_folder_summary()
@@ -7094,6 +7795,10 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == "/api/discord-presence/clear":
             self._discord_presence_clear()
+            return
+        resource_update_match = re.fullmatch(r"/api/resources/(\d+)/edit", parsed.path)
+        if resource_update_match:
+            self._resource_update(resource_update_match.group(1))
             return
         if is_leaker_proxy_path(parsed.path):
             self._leaker_proxy(parsed)
@@ -7269,6 +7974,18 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                 raise ValueError("URL is not allowed.")
             webbrowser.open(url)
             self._send_json(200, {"success": True})
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
+    def _webview_memory_trim(self) -> None:
+        try:
+            payload = self._read_json()
+            reason = str(payload.get("reason") or "manual").strip()[:80]
+            bridge = getattr(self.server, "window_bridge", None)
+            if bridge is None or not hasattr(bridge, "trim_webview_memory"):
+                self._send_json(200, {"success": True, "skipped": True})
+                return
+            self._send_json(200, bridge.trim_webview_memory(reason))
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
 
@@ -7453,6 +8170,36 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         except Exception as error:
             self._send_json(400, {"success": False, "msg": f"Resources could not be loaded: {error}"})
 
+    def _public_resources(self, query: str) -> None:
+        try:
+            params = urllib.parse.parse_qs(query or "", keep_blank_values=True)
+            page = safe_int((params.get("page") or ["1"])[0], 1)
+            limit = safe_int((params.get("limit") or ["32"])[0], 32)
+            search = str((params.get("search") or [""])[0]).strip()
+            category = str((params.get("category") or [""])[0]).strip()
+            refresh = str(params.get("refresh", [""])[0]).strip().lower() in {"1", "true", "yes"}
+            self._send_json(
+                200,
+                get_public_resources_payload(
+                    page=page,
+                    limit=limit,
+                    search=search,
+                    category=category,
+                    refresh=refresh,
+                ),
+            )
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": f"Resources could not be loaded: {error}"})
+
+    def _editor_resources(self, query: str) -> None:
+        try:
+            params = urllib.parse.parse_qs(query or "", keep_blank_values=True)
+            editor_name = str((params.get("name") or [""])[0]).strip()
+            refresh = str(params.get("refresh", [""])[0]).strip().lower() in {"1", "true", "yes"}
+            self._send_json(200, get_editor_resources_payload(editor_name, refresh=refresh))
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": f"Editor resources could not be loaded: {error}"})
+
     def _resource_detail(self, resource_id: str, query: str) -> None:
         try:
             params = urllib.parse.parse_qs(query or "")
@@ -7460,6 +8207,13 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             self._send_json(200, get_resource_detail_payload(safe_int(resource_id), refresh=refresh))
         except Exception as error:
             self._send_json(400, {"success": False, "msg": f"Resource could not be loaded: {error}"})
+
+    def _resource_update(self, resource_id: str) -> None:
+        try:
+            payload = self._read_json()
+            self._send_json(200, update_dashboard_resource(safe_int(resource_id), payload))
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": f"Resource could not be saved: {error}"})
 
     def _hlx_tiktok_search(self, query: str) -> None:
         try:
@@ -7670,6 +8424,16 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                     "folders": folder_payload,
                 },
             )
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
+    def _webview_upload_selection(self) -> None:
+        try:
+            payload = self._read_json()
+            bridge = getattr(self.server, "window_bridge", None)
+            if bridge is None:
+                raise ValueError("Window bridge is unavailable.")
+            self._send_json(200, bridge.apply_webview_upload_selection(payload))
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
 
