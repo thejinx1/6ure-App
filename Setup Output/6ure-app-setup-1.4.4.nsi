@@ -24,7 +24,7 @@ VIAddVersionKey "LegalCopyright" "reyli"
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  File /r "C:\Users\alkim\AppData\Local\Temp\6ure-setup-staging-19792\6ure™ App\*"
+  File /r "C:\Users\alkim\AppData\Local\Temp\6ure-setup-staging-19292\6ure™ App\*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   Delete "$DESKTOP\6ure Files.lnk"
   Delete "$SMPROGRAMS\6ure Files\6ure Files.lnk"

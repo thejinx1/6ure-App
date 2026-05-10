@@ -43,7 +43,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.4.4"
+DEFAULT_APP_VERSION = "1.4.5"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
@@ -1560,7 +1560,7 @@ def sanitize_my_resource_item(item: dict) -> dict:
         "editorSocialUrl": make_6ure_absolute_url(item.get("editor_social_url") or ""),
         "editorAvatarUrl": make_6ure_absolute_url(item.get("editor_avatar_url") or ""),
         "uploaderName": str(item.get("discord_member_name") or "").strip(),
-        "uploaderId": str(item.get("discord_member_id") or "").strip(),
+        "uploaderId": "",
         "uploaderAvatarUrl": make_6ure_absolute_url(item.get("discord_member_avatar") or ""),
         "leakedAt": leaked_at,
     }
@@ -3957,6 +3957,34 @@ def get_update_manifest_url(config: dict | None = None) -> str:
     return github_latest_manifest_url(releases_url) or releases_url
 
 
+def get_update_releases_url(config: dict | None = None) -> str:
+    current = config if isinstance(config, dict) else load_update_config()
+    return str(
+        current.get("githubReleasesUrl")
+        or current.get("github_releases_url")
+        or current.get("releasesUrl")
+        or current.get("releases_url")
+        or ""
+    ).strip()
+
+
+def update_manifest_source_urls(config: dict | None = None) -> list[str]:
+    current = config if isinstance(config, dict) else load_update_config()
+    candidates = [get_update_manifest_url(current), get_update_releases_url(current)]
+    unique: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        clean = str(candidate or "").strip()
+        if not clean:
+            continue
+        key = clean.rstrip("/").lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(clean)
+    return unique
+
+
 def github_release_api_url(url: str) -> str:
     parsed = urllib.parse.urlsplit(str(url or "").strip())
     host = parsed.netloc.lower()
@@ -4220,6 +4248,18 @@ def is_newer_version(candidate: str, current: str = APP_VERSION) -> bool:
     return tuple(candidate_parts) > tuple(current_parts)
 
 
+def choose_latest_update_candidate(candidates: list[dict]) -> dict:
+    if not candidates:
+        raise FilesAutomationError("No update manifest sources returned a valid payload.")
+    best = candidates[0]
+    for candidate in candidates[1:]:
+        latest = candidate.get("latest") if isinstance(candidate, dict) else {}
+        best_latest = best.get("latest") if isinstance(best, dict) else {}
+        if is_newer_version(str(latest.get("version") or ""), str(best_latest.get("version") or "")):
+            best = candidate
+    return best
+
+
 def current_update_platform_key() -> str:
     if sys.platform.startswith("win"):
         return "windows"
@@ -4251,6 +4291,18 @@ def is_windows_setup_payload(payload: dict) -> bool:
     package_type = payload_package_type(payload)
     package_url = str(payload.get("url") or "").strip().lower()
     return package_type in {"installer", "setup", "exe", "msi"} or package_url.endswith((".exe", ".msi"))
+
+
+def automatic_install_supported_for_platform(platform_key: str, package_type: str) -> bool:
+    platform = str(platform_key or "").strip().lower()
+    clean_type = str(package_type or "").strip().lower()
+    if platform == "windows":
+        return clean_type in {"installer", "zip"}
+    if platform == "macos":
+        return clean_type == "dmg"
+    if platform == "linux":
+        return clean_type in {"tar.gz", "tgz"}
+    return False
 
 
 def merge_update_payload_defaults(parent: dict, child: dict) -> dict:
@@ -4360,7 +4412,7 @@ def normalize_update_manifest(manifest: dict, manifest_url: str) -> dict:
             raise FilesAutomationError("Update manifest is missing a valid SHA-256 checksum.")
 
     package_name = posixpath.basename(urllib.parse.urlsplit(package_url).path) if package_url else ""
-    install_mode = "automatic" if platform_key == "windows" and package_type == "installer" else "manual"
+    install_mode = "automatic" if automatic_install_supported_for_platform(platform_key, package_type) else "manual"
 
     return {
         "version": version,
@@ -4403,15 +4455,30 @@ def check_for_update() -> dict:
         UPDATE_STATE["lastError"] = ""
 
     try:
-        manifest = read_update_json(manifest_url, config)
-        latest = normalize_update_manifest(manifest, manifest_url)
+        candidates: list[dict] = []
+        source_errors: list[str] = []
+        for source_url in update_manifest_source_urls(config):
+            try:
+                manifest = read_update_json(source_url, config)
+                latest_payload = normalize_update_manifest(manifest, source_url)
+                latest_payload["sourceUrl"] = source_url
+                candidates.append({"url": source_url, "latest": latest_payload})
+            except Exception as source_error:
+                source_errors.append(f"{source_url}: {source_error}")
+        if not candidates:
+            raise FilesAutomationError("; ".join(source_errors) or "Update manifest could not be loaded.")
+        selected = choose_latest_update_candidate(candidates)
+        latest = selected["latest"]
         result = {
             "configured": True,
             "currentVersion": APP_VERSION,
             "latest": latest,
             "updateAvailable": bool(latest["updateAvailable"]),
             "msg": "Update available." if latest["updateAvailable"] else "You are on the latest version.",
+            "checkedSources": [candidate["url"] for candidate in candidates],
         }
+        if source_errors:
+            result["sourceWarnings"] = source_errors
         with UPDATE_STATE_LOCK:
             UPDATE_STATE["lastCheckAt"] = int(time.time() * 1000)
             UPDATE_STATE["latest"] = latest
@@ -4498,6 +4565,16 @@ def download_update_package(update_info: dict) -> Path:
     url_path = urllib.parse.urlsplit(package_url).path.lower()
     if package_type == "installer":
         extension = ".msi" if url_path.endswith(".msi") else ".exe"
+    elif package_type == "dmg" or url_path.endswith(".dmg"):
+        extension = ".dmg"
+    elif package_type in {"tar.gz", "tgz"} or url_path.endswith((".tar.gz", ".tgz")):
+        extension = ".tgz" if url_path.endswith(".tgz") else ".tar.gz"
+    elif package_type == "appimage" or url_path.endswith(".appimage"):
+        extension = ".AppImage"
+    elif package_type == "deb" or url_path.endswith(".deb"):
+        extension = ".deb"
+    elif package_type == "rpm" or url_path.endswith(".rpm"):
+        extension = ".rpm"
     else:
         extension = ".zip"
     package_path = UPDATE_DOWNLOAD_DIR / f"6ure-app-{version}{extension}"
@@ -4587,6 +4664,18 @@ def ps_array(values: list[str | int]) -> str:
     if not values:
         return "@()"
     return "@(" + ", ".join(ps_single_quote(str(value)) for value in values) + ")"
+
+
+def sh_single_quote(value: str | Path) -> str:
+    return "'" + str(value).replace("'", "'\"'\"'") + "'"
+
+
+def macos_app_bundle_path() -> Path:
+    exe_path = Path(sys.executable).resolve()
+    for parent in exe_path.parents:
+        if parent.suffix.lower() == ".app":
+            return parent
+    raise FilesAutomationError("Automatic macOS updates require running from a .app bundle.")
 
 
 def write_windows_zip_update_script(package_path: Path) -> Path:
@@ -4791,6 +4880,270 @@ try {{
     return script_path
 
 
+def write_macos_dmg_update_script(package_path: Path) -> Path:
+    if sys.platform != "darwin":
+        raise FilesAutomationError("Automatic macOS updates are only available on macOS.")
+    if not getattr(sys, "frozen", False):
+        raise FilesAutomationError("Automatic install is only available in the packaged app.")
+
+    UPDATE_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    UPDATE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    script_path = UPDATE_DOWNLOAD_DIR / "apply-6ure-app-macos-update.sh"
+    app_bundle = macos_app_bundle_path().resolve()
+    backup_root = UPDATE_BACKUP_DIR.resolve()
+    target_config = (APP_ROOT.resolve() / UPDATE_CONFIG_FILE_NAME).resolve()
+
+    script = f"""#!/usr/bin/env bash
+set -Eeuo pipefail
+
+APP_BUNDLE={sh_single_quote(app_bundle)}
+DMG_PATH={sh_single_quote(package_path.resolve())}
+BACKUP_ROOT={sh_single_quote(backup_root)}
+TARGET_CONFIG={sh_single_quote(target_config)}
+PID_TO_WAIT={os.getpid()}
+LOG_PATH="$BACKUP_ROOT/last-update.log"
+MOUNT_DIR=""
+BACKUP_APP=""
+
+log_update() {{
+  mkdir -p "$BACKUP_ROOT"
+  local stamp
+  stamp=$(date "+%Y-%m-%d %H:%M:%S")
+  printf "%s %s\\n" "$stamp" "$1" >> "$LOG_PATH"
+}}
+
+cleanup() {{
+  if [ -n "$MOUNT_DIR" ]; then
+    hdiutil detach "$MOUNT_DIR" -quiet >/dev/null 2>&1 || true
+    rmdir "$MOUNT_DIR" >/dev/null 2>&1 || true
+  fi
+}}
+
+restore_backup() {{
+  if [ -n "$BACKUP_APP" ] && [ -d "$BACKUP_APP" ]; then
+    rm -rf "$APP_BUNDLE"
+    ditto "$BACKUP_APP" "$APP_BUNDLE" >/dev/null 2>&1 || true
+  fi
+}}
+
+restart_app() {{
+  if [ -d "$APP_BUNDLE" ]; then
+    open "$APP_BUNDLE" >/dev/null 2>&1 || true
+  fi
+}}
+
+on_error() {{
+  local code="$?"
+  local line="$1"
+  trap - ERR
+  set +e
+  log_update "Update failed at line $line with exit code $code."
+  restore_backup
+  restart_app
+  exit "$code"
+}}
+
+wait_for_app_exit() {{
+  local i=0
+  while kill -0 "$PID_TO_WAIT" >/dev/null 2>&1 && [ "$i" -lt 90 ]; do
+    sleep 1
+    i=$((i + 1))
+  done
+  sleep 1
+}}
+
+trap 'on_error $LINENO' ERR
+trap cleanup EXIT
+
+mkdir -p "$BACKUP_ROOT"
+log_update "Waiting for process $PID_TO_WAIT"
+wait_for_app_exit
+
+STAMP=$(date "+%Y%m%d%H%M%S")
+MOUNT_DIR=$(mktemp -d "${{TMPDIR:-/tmp}}/6ure-update-mount.XXXXXX")
+log_update "Mounting $DMG_PATH"
+hdiutil attach "$DMG_PATH" -nobrowse -readonly -mountpoint "$MOUNT_DIR" >/dev/null
+
+APP_NAME=$(basename "$APP_BUNDLE")
+if [ -d "$MOUNT_DIR/$APP_NAME" ]; then
+  PAYLOAD_APP="$MOUNT_DIR/$APP_NAME"
+else
+  PAYLOAD_APP=$(find "$MOUNT_DIR" -maxdepth 3 -type d -name "*.app" -print -quit)
+fi
+
+if [ -z "$PAYLOAD_APP" ] || [ ! -d "$PAYLOAD_APP" ]; then
+  log_update "Update failed: DMG does not contain an app bundle."
+  restart_app
+  exit 2
+fi
+
+BACKUP_DIR="$BACKUP_ROOT/backup-$STAMP"
+BACKUP_APP="$BACKUP_DIR/$APP_NAME"
+PRESERVED_CONFIG="$BACKUP_ROOT/preserved-update-config-$STAMP.json"
+mkdir -p "$BACKUP_DIR"
+
+if [ -f "$TARGET_CONFIG" ]; then
+  cp -p "$TARGET_CONFIG" "$PRESERVED_CONFIG"
+fi
+
+if [ -d "$APP_BUNDLE" ]; then
+  log_update "Backing up $APP_BUNDLE"
+  ditto "$APP_BUNDLE" "$BACKUP_APP"
+fi
+
+log_update "Replacing app bundle"
+rm -rf "$APP_BUNDLE"
+ditto "$PAYLOAD_APP" "$APP_BUNDLE"
+
+if [ -f "$PRESERVED_CONFIG" ]; then
+  mkdir -p "$(dirname "$TARGET_CONFIG")"
+  cp -p "$PRESERVED_CONFIG" "$TARGET_CONFIG"
+fi
+
+xattr -dr com.apple.quarantine "$APP_BUNDLE" >/dev/null 2>&1 || true
+log_update "Starting updated app"
+open "$APP_BUNDLE" >/dev/null 2>&1 || log_update "Updated app could not be started automatically."
+log_update "Update completed"
+""".strip()
+    script_path.write_text(script + "\n", encoding="utf-8")
+    script_path.chmod(script_path.stat().st_mode | 0o700)
+    return script_path
+
+
+def write_linux_archive_update_script(package_path: Path, update_info: dict) -> Path:
+    if not sys.platform.startswith("linux"):
+        raise FilesAutomationError("Automatic Linux updates are only available on Linux.")
+    if not getattr(sys, "frozen", False):
+        raise FilesAutomationError("Automatic install is only available in the packaged app.")
+
+    package_type = str(update_info.get("packageType") or "").strip().lower()
+    if package_type not in {"tar.gz", "tgz"}:
+        raise FilesAutomationError("Automatic Linux updates require a tar.gz package.")
+
+    UPDATE_DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    UPDATE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    script_path = UPDATE_DOWNLOAD_DIR / "apply-6ure-app-linux-update.sh"
+    app_dir = APP_ROOT.resolve()
+    exe_path = Path(sys.executable).resolve()
+    exe_name = exe_path.name
+    backup_root = UPDATE_BACKUP_DIR.resolve()
+    target_config = (app_dir / UPDATE_CONFIG_FILE_NAME).resolve()
+
+    script = f"""#!/usr/bin/env bash
+set -Eeuo pipefail
+
+APP_DIR={sh_single_quote(app_dir)}
+PACKAGE_PATH={sh_single_quote(package_path.resolve())}
+EXE_NAME={sh_single_quote(exe_name)}
+BACKUP_ROOT={sh_single_quote(backup_root)}
+TARGET_CONFIG={sh_single_quote(target_config)}
+PID_TO_WAIT={os.getpid()}
+LOG_PATH="$BACKUP_ROOT/last-update.log"
+BACKUP_DIR=""
+EXTRACT_DIR=""
+
+log_update() {{
+  mkdir -p "$BACKUP_ROOT"
+  local stamp
+  stamp=$(date "+%Y-%m-%d %H:%M:%S")
+  printf "%s %s\\n" "$stamp" "$1" >> "$LOG_PATH"
+}}
+
+cleanup() {{
+  if [ -n "$EXTRACT_DIR" ] && [ -d "$EXTRACT_DIR" ]; then
+    rm -rf "$EXTRACT_DIR" >/dev/null 2>&1 || true
+  fi
+}}
+
+restore_backup() {{
+  if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR/app" ] && [ -d "$APP_DIR" ]; then
+    find "$APP_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {{}} +
+    cp -a "$BACKUP_DIR/app"/. "$APP_DIR"/
+  fi
+}}
+
+restart_app() {{
+  if [ -x "$APP_DIR/$EXE_NAME" ]; then
+    nohup "$APP_DIR/$EXE_NAME" >/dev/null 2>&1 &
+  fi
+}}
+
+on_error() {{
+  local code="$?"
+  local line="$1"
+  trap - ERR
+  set +e
+  log_update "Update failed at line $line with exit code $code."
+  restore_backup
+  restart_app
+  exit "$code"
+}}
+
+wait_for_app_exit() {{
+  local i=0
+  while kill -0 "$PID_TO_WAIT" >/dev/null 2>&1 && [ "$i" -lt 90 ]; do
+    sleep 1
+    i=$((i + 1))
+  done
+  sleep 1
+}}
+
+trap 'on_error $LINENO' ERR
+trap cleanup EXIT
+
+mkdir -p "$BACKUP_ROOT"
+log_update "Waiting for process $PID_TO_WAIT"
+wait_for_app_exit
+
+STAMP=$(date "+%Y%m%d%H%M%S")
+EXTRACT_DIR="$BACKUP_ROOT/payload-$STAMP"
+BACKUP_DIR="$BACKUP_ROOT/backup-$STAMP"
+PRESERVED_CONFIG="$BACKUP_ROOT/preserved-update-config-$STAMP.json"
+mkdir -p "$EXTRACT_DIR" "$BACKUP_DIR/app"
+
+log_update "Extracting $PACKAGE_PATH"
+tar -xzf "$PACKAGE_PATH" -C "$EXTRACT_DIR"
+
+PAYLOAD_DIR="$EXTRACT_DIR"
+if [ ! -f "$PAYLOAD_DIR/$EXE_NAME" ]; then
+  CANDIDATE=$(find "$EXTRACT_DIR" -maxdepth 3 -type f -name "$EXE_NAME" -print -quit)
+  if [ -n "$CANDIDATE" ]; then
+    PAYLOAD_DIR=$(dirname "$CANDIDATE")
+  fi
+fi
+
+if [ ! -f "$PAYLOAD_DIR/$EXE_NAME" ]; then
+  log_update "Update failed: archive does not contain $EXE_NAME."
+  restart_app
+  exit 2
+fi
+
+if [ -f "$TARGET_CONFIG" ]; then
+  cp -p "$TARGET_CONFIG" "$PRESERVED_CONFIG"
+fi
+
+log_update "Backing up $APP_DIR"
+cp -a "$APP_DIR"/. "$BACKUP_DIR/app"/
+
+log_update "Replacing app files"
+find "$APP_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {{}} +
+cp -a "$PAYLOAD_DIR"/. "$APP_DIR"/
+
+if [ -f "$PRESERVED_CONFIG" ]; then
+  mkdir -p "$(dirname "$TARGET_CONFIG")"
+  cp -p "$PRESERVED_CONFIG" "$TARGET_CONFIG"
+fi
+
+chmod +x "$APP_DIR/$EXE_NAME" >/dev/null 2>&1 || true
+log_update "Starting updated app"
+nohup "$APP_DIR/$EXE_NAME" >/dev/null 2>&1 &
+log_update "Update completed"
+""".strip()
+    script_path.write_text(script + "\n", encoding="utf-8")
+    script_path.chmod(script_path.stat().st_mode | 0o700)
+    return script_path
+
+
 def launch_windows_update_installer(package_path: Path, update_info: dict) -> None:
     package_type = str(update_info.get("packageType") or "").strip().lower()
     script_path = (
@@ -4812,6 +5165,42 @@ def launch_windows_update_installer(package_path: Path, update_info: dict) -> No
         close_fds=True,
         creationflags=creationflags,
     )
+
+
+def launch_macos_update_installer(package_path: Path, update_info: dict) -> None:
+    package_type = str(update_info.get("packageType") or "").strip().lower()
+    if package_type != "dmg":
+        raise FilesAutomationError("Automatic macOS updates require a DMG package.")
+    script_path = write_macos_dmg_update_script(package_path)
+    subprocess.Popen(
+        ["/bin/bash", str(script_path)],
+        cwd=str(macos_app_bundle_path().parent),
+        close_fds=True,
+        start_new_session=True,
+    )
+
+
+def launch_linux_update_installer(package_path: Path, update_info: dict) -> None:
+    script_path = write_linux_archive_update_script(package_path, update_info)
+    subprocess.Popen(
+        ["/bin/bash", str(script_path)],
+        cwd=str(APP_ROOT),
+        close_fds=True,
+        start_new_session=True,
+    )
+
+
+def launch_platform_update_installer(package_path: Path, update_info: dict) -> None:
+    if sys.platform.startswith("win"):
+        launch_windows_update_installer(package_path, update_info)
+        return
+    if sys.platform == "darwin":
+        launch_macos_update_installer(package_path, update_info)
+        return
+    if sys.platform.startswith("linux"):
+        launch_linux_update_installer(package_path, update_info)
+        return
+    raise FilesAutomationError("Automatic update install is not supported on this platform.")
 
 
 def open_update_download(update_info: dict) -> None:
@@ -4839,7 +5228,10 @@ def prepare_update_install() -> dict:
         if not isinstance(latest, dict) or not latest.get("updateAvailable"):
             raise FilesAutomationError("No update is available.")
 
-        auto_install_supported = sys.platform.startswith("win") and getattr(sys, "frozen", False)
+        auto_install_supported = getattr(sys, "frozen", False) and automatic_install_supported_for_platform(
+            current_update_platform_key(),
+            str(latest.get("packageType") or ""),
+        )
         if str(latest.get("installMode") or "").lower() == "manual" or not auto_install_supported:
             platform_label = str(latest.get("platformLabel") or update_platform_label(latest.get("platform", ""))).strip()
             set_update_install_status("manual", f"Opening {platform_label} update download.", progress=100)
@@ -4854,9 +5246,9 @@ def prepare_update_install() -> dict:
 
         set_update_install_status("download", f"Starting update v{latest.get('version', '')}.", progress=6)
         package_path = download_update_package(latest)
-        set_update_install_status("launch", "Launching installer and closing app.", progress=94)
-        launch_windows_update_installer(package_path, latest)
-        set_update_install_status("handoff", "Installer launched. The app will close now.", progress=100)
+        set_update_install_status("launch", "Starting updater and closing app.", progress=94)
+        launch_platform_update_installer(package_path, latest)
+        set_update_install_status("handoff", "Updater started. The app will close now.", progress=100)
         return {
             "currentVersion": APP_VERSION,
             "latest": latest,

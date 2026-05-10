@@ -79,6 +79,7 @@ if (Test-Path -LiteralPath $stageRoot) {
 New-Item -ItemType Directory -Force -Path $stageAppDir | Out-Null
 
 Get-ChildItem -LiteralPath $resolvedSourceAppDir -Force | Copy-Item -Destination $stageAppDir -Recurse -Force
+Get-ChildItem -LiteralPath $stageAppDir -Recurse -Force -Filter "*.lnk" | Remove-Item -Force
 
 foreach ($required in @($exeName, "_internal", "update-config.json")) {
   if (-not (Test-Path -LiteralPath (Join-Path $stageAppDir $required))) {
@@ -118,22 +119,35 @@ VIAddVersionKey "LegalCopyright" "reyli"
 !define MUI_ABORTWARNING
 !define MUI_ICON "$iconPath"
 !define MUI_UNICON "$iconPath"
+!define MUI_FINISHPAGE_RUN "`$INSTDIR\$exeName"
+!define MUI_FINISHPAGE_RUN_TEXT "Launch $appName"
 !insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 
-Section "Install"
+Function .onInit
+  SetShellVarContext current
+FunctionEnd
+
+Function un.onInit
+  SetShellVarContext current
+FunctionEnd
+
+Section "$appName" SEC_APP
+  SectionIn RO
   SetOutPath "`$INSTDIR"
   File /r "$stageAppDir\*"
   WriteUninstaller "`$INSTDIR\Uninstall.exe"
+  Delete "`$DESKTOP\$appName.lnk"
   Delete "`$DESKTOP\$legacyAppName.lnk"
   Delete "`$SMPROGRAMS\$legacyAppName\$legacyAppName.lnk"
   RMDir "`$SMPROGRAMS\$legacyAppName"
   CreateDirectory "`$SMPROGRAMS\$appName"
   CreateShortcut "`$SMPROGRAMS\$appName\$appName.lnk" "`$INSTDIR\$exeName"
-  CreateShortcut "`$DESKTOP\$appName.lnk" "`$INSTDIR\$exeName"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$legacyAppName"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "DisplayName" "$appName"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "DisplayVersion" "$Version"
@@ -142,6 +156,11 @@ Section "Install"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "UninstallString" '"`$INSTDIR\Uninstall.exe"'
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "NoRepair" 1
+SectionEnd
+
+Section "Create desktop shortcut" SEC_DESKTOP
+  SetOutPath "`$INSTDIR"
+  CreateShortcut "`$DESKTOP\$appName.lnk" "`$INSTDIR\$exeName"
 SectionEnd
 
 Section "Uninstall"

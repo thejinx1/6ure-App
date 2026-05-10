@@ -4640,6 +4640,357 @@
       grid-template-columns: 104px minmax(0, 1fr);
     }
 
+    .files-editors-rail {
+      min-width: 0;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 2px 2px 8px;
+      scrollbar-width: thin;
+    }
+
+    .files-editor-chip {
+      width: 176px;
+      min-width: 176px;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      padding: 9px;
+      border: 1px solid rgba(167, 139, 250, 0.2);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(82, 247, 255, 0.12), transparent 44%),
+        linear-gradient(145deg, rgba(21, 16, 35, 0.94), rgba(8, 7, 15, 0.96));
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .files-editor-chip:hover {
+      transform: translateY(-1px);
+      border-color: rgba(82, 247, 255, 0.28);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(82, 247, 255, 0.18), transparent 44%),
+        linear-gradient(145deg, rgba(27, 21, 43, 0.98), rgba(9, 8, 17, 0.98));
+    }
+
+    .files-editor-chip img,
+    .files-editor-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.07);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .files-editor-chip strong,
+    .files-editor-chip span {
+      min-width: 0;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-editor-chip strong {
+      color: #f7f5ff;
+      font-size: 12px;
+      line-height: 1.15;
+      font-weight: 950;
+    }
+
+    .files-editor-chip span {
+      margin-top: 3px;
+      color: #a7a3c8;
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .files-resource-storefront {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(218px, 1fr));
+      align-content: start;
+      gap: 12px;
+    }
+
+    .files-resource-storefront .files-resource-card {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 9px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(82, 247, 255, 0.09), transparent 42%),
+        linear-gradient(180deg, rgba(22, 17, 35, 0.96), rgba(9, 7, 16, 0.98));
+    }
+
+    .files-resource-storefront .files-resource-thumb {
+      aspect-ratio: 4 / 3;
+    }
+
+    .files-resource-storefront .files-resource-description {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+    }
+
+    .files-resource-product-page {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 34%);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .files-resource-product-media,
+    .files-resource-product-summary {
+      min-width: 0;
+      border: 1px solid rgba(167, 139, 250, 0.18);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.11), transparent 44%),
+        linear-gradient(180deg, rgba(18, 13, 31, 0.96), rgba(8, 7, 15, 0.98));
+      overflow: hidden;
+    }
+
+    .files-resource-product-media {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .files-resource-product-summary {
+      display: grid;
+      gap: 13px;
+      padding: 16px;
+      position: sticky;
+      top: 0;
+    }
+
+    .files-resource-product-kicker {
+      color: #c4b5fd;
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .files-resource-product-summary h2 {
+      margin: 0;
+      color: #f7f5ff;
+      font-size: 24px;
+      line-height: 1.05;
+      font-weight: 950;
+      overflow-wrap: anywhere;
+    }
+
+    .files-resource-product-byline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #a7a3c8;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .files-resource-product-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .files-resource-product-stat {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+      padding: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .files-resource-product-stat strong {
+      color: #f7f5ff;
+      font-size: 15px;
+      line-height: 1.05;
+      font-weight: 950;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-resource-product-stat span {
+      color: #a7a3c8;
+      font-size: 9px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .files-editor-overlay,
+    .webview-consent-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 39;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(3, 4, 10, 0.76);
+      backdrop-filter: blur(14px);
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .files-editor-overlay.show,
+    .webview-consent-overlay.show {
+      opacity: 1;
+    }
+
+    .files-editor-dialog,
+    .webview-consent-card {
+      transform: translateY(12px) scale(0.985);
+      transition: transform 220ms cubic-bezier(0.2, 0.86, 0.2, 1);
+    }
+
+    .files-editor-overlay.show .files-editor-dialog,
+    .webview-consent-overlay.show .webview-consent-card {
+      transform: translateY(0) scale(1);
+    }
+
+    .files-editor-dialog {
+      width: min(960px, calc(100vw - 28px));
+      height: min(760px, calc(100vh - 32px));
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(167, 139, 250, 0.24);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.09), transparent 38%),
+        rgba(10, 12, 22, 0.98);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    .files-editor-head {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .files-editor-profile {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    .files-editor-profile .files-editor-avatar {
+      width: 86px;
+      height: 86px;
+    }
+
+    .files-editor-copy {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .files-editor-copy h3 {
+      margin: 0;
+      color: #f7f5ff;
+      font-size: 22px;
+      line-height: 1.1;
+      font-weight: 950;
+      overflow-wrap: anywhere;
+    }
+
+    .files-editor-copy p {
+      margin: 0;
+      color: #a7a3c8;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .files-editor-stats {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .files-editor-stats span {
+      color: #a7a3c8;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .files-editor-stats strong {
+      color: #f7f5ff;
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .files-editor-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 10px;
+      overflow: auto;
+      padding-right: 3px;
+    }
+
+    .files-editor-grid .files-resource-card {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .webview-consent-card {
+      width: min(520px, calc(100vw - 32px));
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(167, 139, 250, 0.26);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(82, 247, 255, 0.14), transparent 42%),
+        linear-gradient(180deg, rgba(23, 18, 35, 0.98), rgba(9, 8, 17, 0.99));
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), 0 0 40px rgba(82, 247, 255, 0.08);
+    }
+
+    .webview-consent-title {
+      display: grid;
+      gap: 6px;
+    }
+
+    .webview-consent-title strong {
+      color: #f7f5ff;
+      font-size: 18px;
+      line-height: 1.25;
+      font-weight: 950;
+    }
+
+    .webview-consent-title span,
+    .webview-consent-card p {
+      margin: 0;
+      color: #b9b4d6;
+      font-size: 12px;
+      line-height: 1.5;
+      font-weight: 800;
+    }
+
+    .webview-consent-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .files-legacy-upload-controls {
       display: none;
     }
@@ -4683,6 +5034,35 @@
       .files-resource-detail-grid,
       .files-resource-detail-related-list .files-resource-card {
         grid-template-columns: minmax(0, 1fr);
+      }
+
+      .files-resource-product-page {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .files-resource-product-summary {
+        position: static;
+      }
+
+      .files-editor-dialog {
+        width: calc(100vw - 20px);
+        height: calc(100vh - 20px);
+      }
+
+      .files-editor-head,
+      .webview-consent-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .files-editor-profile {
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .files-editor-profile .files-editor-avatar {
+        width: 64px;
+        height: 64px;
       }
     }
 
@@ -5396,6 +5776,34 @@
             </div>
           </div>
 
+          <div id="filesEditorOverlay" class="files-editor-overlay hidden" aria-hidden="true">
+            <div class="files-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="filesEditorTitle">
+              <div class="files-editor-head">
+                <div id="filesEditorProfile" class="files-editor-profile"></div>
+                <div class="files-resource-detail-actions">
+                  <button id="filesEditorOpenBtn" class="chip-action" type="button">Open Profile</button>
+                  <button id="filesEditorCloseBtn" class="chip-action" type="button">Close</button>
+                </div>
+              </div>
+              <div id="filesEditorGrid" class="files-editor-grid"></div>
+              <div id="filesEditorStatus" class="files-resources-status"></div>
+            </div>
+          </div>
+
+          <div id="webviewUploadConsentOverlay" class="webview-consent-overlay hidden" aria-hidden="true">
+            <div class="webview-consent-card" role="dialog" aria-modal="true" aria-labelledby="webviewUploadConsentTitle">
+              <div class="webview-consent-title">
+                <strong id="webviewUploadConsentTitle">Bu siteye dosya yüklensin mi?</strong>
+                <span id="webviewUploadConsentScope">6ureleaks.com upload dashboard</span>
+              </div>
+              <p id="webviewUploadConsentMessage">Seçtiğin leak klasörü upload dashboard tarafından karşıya yüklenebilir. Yalnızca bu işleme güveniyorsan devam et.</p>
+              <div class="webview-consent-actions">
+                <button id="webviewUploadConsentCancelBtn" class="chip-action" type="button">İptal</button>
+                <button id="webviewUploadConsentAllowBtn" class="primary-action" type="button">Karşıya Yükle</button>
+              </div>
+            </div>
+          </div>
+
           <div class="files-uploader-card files-resources-card">
             <div class="files-resources-head">
               <div class="files-hero">
@@ -5429,6 +5837,8 @@
                 <span>Premium</span>
               </div>
             </div>
+
+            <div id="filesEditorsRail" class="files-editors-rail" aria-label="Leaked editor categories"></div>
 
             <div id="filesResourcesList" class="files-resources-list" aria-live="polite">
               <div class="files-resource-empty">Loading resources...</div>
@@ -5588,6 +5998,11 @@
     let filesResourceDetailBusy = false;
     let filesResourceDetailId = '';
     let filesResourceDetailUrl = '';
+    let filesResourcesItems = [];
+    let filesEditorGroups = [];
+    let filesActiveEditorKey = '';
+    let webviewUploadConsentRequest = null;
+    let webviewUploadConsentTimer = null;
     let leakerModePhase = 'idle';
     let leakerModePollTimer = null;
     let leakerOauthPollTimer = null;
@@ -5860,6 +6275,19 @@
       filesResourceDetailSubtitle: $('#filesResourceDetailSubtitle'),
       filesResourceDetailBody: $('#filesResourceDetailBody'),
       filesResourceDetailStatus: $('#filesResourceDetailStatus'),
+      filesEditorOverlay: $('#filesEditorOverlay'),
+      filesEditorProfile: $('#filesEditorProfile'),
+      filesEditorGrid: $('#filesEditorGrid'),
+      filesEditorStatus: $('#filesEditorStatus'),
+      filesEditorOpenBtn: $('#filesEditorOpenBtn'),
+      filesEditorCloseBtn: $('#filesEditorCloseBtn'),
+      webviewUploadConsentOverlay: $('#webviewUploadConsentOverlay'),
+      webviewUploadConsentTitle: $('#webviewUploadConsentTitle'),
+      webviewUploadConsentScope: $('#webviewUploadConsentScope'),
+      webviewUploadConsentMessage: $('#webviewUploadConsentMessage'),
+      webviewUploadConsentAllowBtn: $('#webviewUploadConsentAllowBtn'),
+      webviewUploadConsentCancelBtn: $('#webviewUploadConsentCancelBtn'),
+      filesEditorsRail: $('#filesEditorsRail'),
       filesResourcesRefreshBtn: $('#filesResourcesRefreshBtn'),
       filesResourcesUploadBtn: $('#filesResourcesUploadBtn'),
       filesResourcesTotal: $('#filesResourcesTotal'),
@@ -6512,6 +6940,77 @@
       }
     }
 
+    function normalizeResourceEditorKey(value) {
+      return String(value || 'Unknown').trim().toLowerCase().replace(/\s+/g, ' ') || 'unknown';
+    }
+
+    function buildResourceEditorGroups(items = []) {
+      const groups = new Map();
+      for (const item of items) {
+        const name = String(item?.editorName || 'Unknown').trim() || 'Unknown';
+        const key = normalizeResourceEditorKey(name);
+        if (!groups.has(key)) {
+          groups.set(key, {
+            key,
+            name,
+            avatar: String(item?.editorAvatarUrl || '').trim(),
+            socialUrl: String(item?.editorSocialUrl || '').trim(),
+            items: [],
+            downloads: 0,
+            views: 0,
+            premium: 0,
+            categories: new Set(),
+            latestAt: ''
+          });
+        }
+        const group = groups.get(key);
+        if (!group.avatar && item?.editorAvatarUrl) group.avatar = String(item.editorAvatarUrl).trim();
+        if (!group.socialUrl && item?.editorSocialUrl) group.socialUrl = String(item.editorSocialUrl).trim();
+        group.items.push(item);
+        group.downloads += Number(item?.downloadCount) || 0;
+        group.views += Number(item?.viewCount) || 0;
+        if (item?.isPremium) group.premium += 1;
+        if (item?.category) group.categories.add(String(item.category));
+        const leakedAt = String(item?.leakedAt || '').trim();
+        if (leakedAt && (!group.latestAt || Date.parse(leakedAt) > Date.parse(group.latestAt))) {
+          group.latestAt = leakedAt;
+        }
+      }
+      return Array.from(groups.values()).sort((a, b) => {
+        if (b.items.length !== a.items.length) return b.items.length - a.items.length;
+        return b.downloads - a.downloads;
+      });
+    }
+
+    function renderEditorRail(groups = []) {
+      if (!els.filesEditorsRail) return;
+      if (!groups.length) {
+        els.filesEditorsRail.innerHTML = '';
+        return;
+      }
+      els.filesEditorsRail.innerHTML = groups.map(group => {
+        const avatar = group.avatar || makeFilesAvatarDataUri(group.name);
+        const meta = [
+          `${formatResourceNumber(group.items.length)} leaks`,
+          `${formatResourceNumber(group.downloads)} downloads`
+        ].join(' - ');
+        return `
+          <button class="files-editor-chip" type="button" data-editor-key="${escapeHtml(group.key)}">
+            <img src="${escapeHtml(avatar)}" alt="" loading="lazy" decoding="async">
+            <span>
+              <strong>${escapeHtml(group.name)}</strong>
+              <span>${escapeHtml(meta)}</span>
+            </span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function getResourceEditorGroup(key) {
+      const cleanKey = normalizeResourceEditorKey(key);
+      return filesEditorGroups.find(group => group.key === cleanKey) || null;
+    }
+
     function setResourceDetailBusy(active, message = '') {
       filesResourceDetailBusy = Boolean(active);
       if (els.filesResourceDetailRefreshBtn) {
@@ -6566,7 +7065,7 @@
       const socialUrl = isUploader ? '' : String(item?.editorSocialUrl || '').trim();
       const fallback = makeFilesAvatarDataUri(name);
       const meta = isUploader
-        ? (item?.uploaderId ? `Discord ID ${item.uploaderId}` : 'Uploader')
+        ? 'Uploader'
         : [
             Number(item?.editorResourceCount) > 0 ? `${formatResourceNumber(item.editorResourceCount)} resources` : '',
             Number(item?.editorTotalDownloads) > 0 ? `${formatResourceNumber(item.editorTotalDownloads)} downloads` : ''
@@ -6613,7 +7112,7 @@
       filesResourceDetailUrl = resourceUrl;
       if (els.filesResourceDetailTitle) els.filesResourceDetailTitle.textContent = title;
       if (els.filesResourceDetailSubtitle) {
-        els.filesResourceDetailSubtitle.textContent = `Resource #${resourceId || '-'} - ${editor}`;
+        els.filesResourceDetailSubtitle.textContent = [editor, category].filter(Boolean).join(' - ');
       }
       if (els.filesResourceDetailOpenBtn) {
         if (resourceUrl) {
@@ -6624,14 +7123,14 @@
       }
 
       els.filesResourceDetailBody.innerHTML = `
-        <div class="files-resource-detail-grid">
-          <div class="files-resource-detail-main">
+        <div class="files-resource-product-page">
+          <div class="files-resource-product-media">
             <div class="files-resource-detail-hero">
               <div>${escapeHtml(getResourceInitials(title))}</div>
               ${heroHtml}
             </div>
             <div class="files-resource-detail-panel files-resource-detail-section">
-              <div class="files-resource-detail-label">Overview</div>
+              <div class="files-resource-detail-label">Description</div>
               <div class="files-resource-topline">
                 ${detailPills.map(value => `<span class="files-resource-pill">${escapeHtml(value)}</span>`).join('')}
               </div>
@@ -6645,31 +7144,28 @@
               </div>
             </div>
           </div>
-          <aside class="files-resource-detail-side">
-            <div class="files-resource-detail-panel files-resource-detail-section">
-              <div class="files-resource-detail-label">Stats</div>
-              <div class="files-resource-detail-info">
-                ${renderResourceDetailRow('Downloads', formatResourceNumber(item.downloadCount))}
-                ${renderResourceDetailRow('Views', formatResourceNumber(item.viewCount))}
-                ${renderResourceDetailRow('Comments', formatResourceNumber(item.commentsCount))}
-                ${Number(item.fileSizeBytes) > 0 ? renderResourceDetailRow('Size', formatFilesBytes(item.fileSizeBytes)) : ''}
-                ${renderResourceDetailRow('Leaked', formatResourceDate(item.leakedAt))}
-              </div>
+          <aside class="files-resource-product-summary">
+            <div class="files-resource-product-kicker">6ure resource</div>
+            <h2>${escapeHtml(title)}</h2>
+            <div class="files-resource-product-byline">
+              <img class="files-editor-avatar" src="${escapeHtml(item.editorAvatarUrl || makeFilesAvatarDataUri(editor))}" alt="">
+              <span>${escapeHtml(editor)}</span>
+            </div>
+            <div class="files-resource-product-stats">
+              <div class="files-resource-product-stat"><strong>${escapeHtml(formatResourceNumber(item.downloadCount))}</strong><span>Downloads</span></div>
+              <div class="files-resource-product-stat"><strong>${escapeHtml(formatResourceNumber(item.viewCount))}</strong><span>Views</span></div>
+              <div class="files-resource-product-stat"><strong>${escapeHtml(formatResourceDate(item.leakedAt))}</strong><span>Leaked</span></div>
             </div>
             <div class="files-resource-detail-panel files-resource-detail-section">
               <div class="files-resource-detail-label">Creator</div>
               ${renderResourceDetailProfile(item, 'editor')}
             </div>
             <div class="files-resource-detail-panel files-resource-detail-section">
-              <div class="files-resource-detail-label">Uploader</div>
-              ${renderResourceDetailProfile(item, 'uploader')}
-            </div>
-            <div class="files-resource-detail-panel files-resource-detail-section">
               <div class="files-resource-detail-label">Links</div>
               <div class="files-resource-detail-info">
                 ${renderResourceDetailRow('Resource', '6ureleaks.com', resourceUrl)}
                 ${productUrl ? renderResourceDetailRow('Product', getResourceDomainLabel(productUrl, 'Product'), productUrl) : ''}
-                ${item.filePath ? renderResourceDetailRow('File path', item.filePath) : ''}
+                ${Number(item.fileSizeBytes) > 0 ? renderResourceDetailRow('Size', formatFilesBytes(item.fileSizeBytes)) : ''}
               </div>
             </div>
           </aside>
@@ -6680,7 +7176,7 @@
       const updatedText = Number.isFinite(updatedAt) && updatedAt > 0
         ? new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         : 'now';
-      els.filesResourceDetailStatus.textContent = `Loaded from ${payload.sourceUrl || 'resource API'} at ${updatedText}.`;
+      els.filesResourceDetailStatus.textContent = `Resource detail updated at ${updatedText}.`;
       updateDiscordPresence('Viewing resource', `${formatResourceNumber(item.downloadCount)} downloads`, { force: true });
     }
 
@@ -6710,7 +7206,7 @@
       if (!resourceId) return;
       filesResourceDetailId = resourceId;
       filesResourceDetailUrl = getResourceUrl(resourceId);
-      if (els.filesResourceDetailTitle) els.filesResourceDetailTitle.textContent = `Resource #${resourceId}`;
+      if (els.filesResourceDetailTitle) els.filesResourceDetailTitle.textContent = 'Loading resource';
       if (els.filesResourceDetailSubtitle) els.filesResourceDetailSubtitle.textContent = 'Loading resource API.';
       if (els.filesResourceDetailOpenBtn) {
         els.filesResourceDetailOpenBtn.dataset.externalUrl = filesResourceDetailUrl;
@@ -6724,6 +7220,58 @@
       els.filesResourceDetailOverlay.classList.add('hidden');
       els.filesResourceDetailOverlay.setAttribute('aria-hidden', 'true');
       filesResourceDetailBusy = false;
+      if (filesAuthenticated && !filesActiveJobId) {
+        updateDiscordPresence('Browsing resources', filesUsername || 'username');
+      }
+    }
+
+    function showResourceEditorProfile(editorKey) {
+      const group = getResourceEditorGroup(editorKey);
+      if (!group || !els.filesEditorOverlay) return;
+      filesActiveEditorKey = group.key;
+      const avatar = group.avatar || makeFilesAvatarDataUri(group.name);
+      const categoryList = Array.from(group.categories).slice(0, 4).join(' - ') || 'Leaked editor';
+      if (els.filesEditorProfile) {
+        els.filesEditorProfile.innerHTML = `
+          <img class="files-editor-avatar" src="${escapeHtml(avatar)}" alt="">
+          <div class="files-editor-copy">
+            <h3 id="filesEditorTitle">${escapeHtml(group.name)}</h3>
+            <div class="files-editor-stats">
+              <span><strong>${escapeHtml(formatResourceNumber(group.items.length))}</strong> leaks</span>
+              <span><strong>${escapeHtml(formatResourceNumber(group.downloads))}</strong> downloads</span>
+              <span><strong>${escapeHtml(formatResourceNumber(group.views))}</strong> views</span>
+            </div>
+            <p>${escapeHtml(categoryList)}</p>
+          </div>
+        `;
+      }
+      if (els.filesEditorGrid) {
+        els.filesEditorGrid.innerHTML = group.items.map(item => renderResourceCard(item)).join('');
+      }
+      if (els.filesEditorStatus) {
+        els.filesEditorStatus.textContent = `${formatResourceNumber(group.items.length)} leaks from ${group.name}.`;
+      }
+      if (els.filesEditorOpenBtn) {
+        if (group.socialUrl) {
+          els.filesEditorOpenBtn.disabled = false;
+          els.filesEditorOpenBtn.dataset.externalUrl = group.socialUrl;
+        } else {
+          els.filesEditorOpenBtn.disabled = true;
+          delete els.filesEditorOpenBtn.dataset.externalUrl;
+        }
+      }
+      els.filesEditorOverlay.classList.remove('hidden');
+      els.filesEditorOverlay.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => els.filesEditorOverlay.classList.add('show'));
+      updateDiscordPresence('Viewing editor', group.name, { force: true });
+    }
+
+    function hideResourceEditorProfile() {
+      if (!els.filesEditorOverlay) return;
+      els.filesEditorOverlay.classList.remove('show');
+      els.filesEditorOverlay.setAttribute('aria-hidden', 'true');
+      filesActiveEditorKey = '';
+      setTimeout(() => els.filesEditorOverlay.classList.add('hidden'), 180);
       if (filesAuthenticated && !filesActiveJobId) {
         updateDiscordPresence('Browsing resources', filesUsername || 'username');
       }
@@ -6749,12 +7297,13 @@
 
     function renderResourceSkeleton() {
       if (!els.filesResourcesList) return;
+      els.filesResourcesList.classList.remove('files-resource-storefront');
       els.filesResourcesList.innerHTML = Array.from({ length: 5 })
         .map(() => '<div class="files-resource-skeleton" aria-hidden="true"></div>')
         .join('');
     }
 
-    function renderResourceCard(item) {
+    function renderResourceCard(item, options = {}) {
       const title = String(item?.name || 'Untitled resource');
       const editor = String(item?.editorName || 'Unknown');
       const category = String(item?.category || 'Uncategorized');
@@ -6778,8 +7327,9 @@
         ? `<img src="${escapeHtml(thumbnail)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">`
         : '';
 
+      const extraClass = String(options.className || '').trim();
       return `
-        <a class="files-resource-card" href="${escapeHtml(url)}" ${linkAttrs}>
+        <a class="files-resource-card${extraClass ? ` ${escapeHtml(extraClass)}` : ''}" href="${escapeHtml(url)}" ${linkAttrs}>
           <div class="files-resource-thumb" aria-hidden="true">
             <div class="files-resource-thumb-fallback">${escapeHtml(getResourceInitials(title))}</div>
             ${thumbnailHtml}
@@ -6806,16 +7356,21 @@
 
     function renderMyResources(payload = {}) {
       const items = Array.isArray(payload.items) ? payload.items : [];
+      filesResourcesItems = items;
+      filesEditorGroups = buildResourceEditorGroups(items);
       setResourceStats(payload.stats || {});
       const owner = formatDiscordDisplayName(payload.uploader?.displayName || filesUsername || 'username');
       setResourcesOwnerLabel(owner);
+      renderEditorRail(filesEditorGroups);
 
       if (!els.filesResourcesList || !els.filesResourcesStatus) return;
 
       if (!items.length) {
+        els.filesResourcesList.classList.remove('files-resource-storefront');
         els.filesResourcesList.innerHTML = `<div class="files-resource-empty">No ${escapeHtml(owner)} uploads were found in the resources API.</div>`;
       } else {
-        els.filesResourcesList.innerHTML = items.map(renderResourceCard).join('');
+        els.filesResourcesList.classList.add('files-resource-storefront');
+        els.filesResourcesList.innerHTML = items.map(item => renderResourceCard(item)).join('');
       }
 
       const stats = payload.stats || {};
@@ -6825,8 +7380,9 @@
         : 'now';
       const scanned = payload.scanned || {};
       els.filesResourcesStatus.textContent = [
-        `${formatResourceNumber(stats.total)} ${owner} resources loaded.`,
-        `Scanned ${formatResourceNumber(scanned.items)} API items across ${formatResourceNumber(scanned.pages)} pages.`,
+        `${formatResourceNumber(stats.total)} resources loaded.`,
+        `${formatResourceNumber(filesEditorGroups.length)} editor categories.`,
+        `Scanned ${formatResourceNumber(scanned.items)} items across ${formatResourceNumber(scanned.pages)} pages.`,
         `Updated ${updatedText}.`
       ].join(' ');
     }
@@ -6847,7 +7403,11 @@
         updateDiscordPresence('Browsing resources', `${formatResourceNumber(payload.stats?.total)} uploads`, { force: true });
       } catch (error) {
         setResourceStats({});
+        filesResourcesItems = [];
+        filesEditorGroups = [];
+        renderEditorRail([]);
         if (els.filesResourcesList) {
+          els.filesResourcesList.classList.remove('files-resource-storefront');
           els.filesResourcesList.innerHTML = '<div class="files-resource-empty">Resources could not be loaded.</div>';
         }
         if (els.filesResourcesStatus) {
@@ -7086,8 +7646,11 @@
       if (normalized.includes('update manifest is not valid json') || normalized.includes('update manifest is invalid')) return 'The update manifest is invalid.';
       if (normalized.includes('checksum did not match')) return 'The downloaded update failed checksum verification.';
       if (normalized.includes('no update is available')) return 'No update is available.';
-      if (normalized.includes('automatic update install is currently supported on windows only')) return 'Automatic install is currently supported on Windows only.';
+      if (normalized.includes('automatic update install is not supported')) return 'Automatic install is not supported for this platform package.';
       if (normalized.includes('automatic update install is only available in the packaged app')) return 'Automatic install works in the packaged app only.';
+      if (normalized.includes('automatic macos updates require running from a .app bundle')) return 'Automatic macOS updates require the app bundle install.';
+      if (normalized.includes('automatic macos updates require a dmg package')) return 'Automatic macOS updates require a DMG package.';
+      if (normalized.includes('automatic linux updates require a tar.gz package')) return 'Automatic Linux updates require a tar.gz package.';
       return text;
     }
 
@@ -7790,8 +8353,8 @@
       if (value === 'download') return 'Downloading';
       if (value === 'verify') return 'Verifying';
       if (value === 'ready') return 'Ready';
-      if (value === 'launch') return 'Launching installer';
-      if (value === 'handoff') return 'Installer launched';
+      if (value === 'launch') return 'Starting updater';
+      if (value === 'handoff') return 'Updater started';
       if (value === 'manual') return 'Download ready';
       if (value === 'error') return 'Update error';
       return 'Update status';
@@ -8019,8 +8582,8 @@
           );
           return;
         }
-        els.updateMonitorMessage.textContent = 'Installer launched. The app will close now.';
-        pushUpdateMonitorLine('Installer launched. The app will close now.');
+        els.updateMonitorMessage.textContent = 'Updater started. The app will close now.';
+        pushUpdateMonitorLine('Updater started. The app will close now.');
         showToast('Installing update. The app will restart.', 'ok');
       } catch (error) {
         updateBusy = false;
@@ -10896,6 +11459,135 @@
       }
     }
 
+    function hideWebviewUploadConsent() {
+      if (!els.webviewUploadConsentOverlay) return;
+      els.webviewUploadConsentOverlay.classList.remove('show');
+      els.webviewUploadConsentOverlay.setAttribute('aria-hidden', 'true');
+      if (webviewUploadConsentTimer) clearTimeout(webviewUploadConsentTimer);
+      webviewUploadConsentTimer = setTimeout(() => {
+        els.webviewUploadConsentOverlay.classList.add('hidden');
+      }, 180);
+    }
+
+    function resolveWebviewUploadConsent(approved) {
+      const request = webviewUploadConsentRequest;
+      webviewUploadConsentRequest = null;
+      hideWebviewUploadConsent();
+      const message = { type: '6ure:webview-upload-consent-result', approved: Boolean(approved) };
+      try {
+        request?.source?.postMessage(message, '*');
+      } catch {}
+      try {
+        if (!request?.source && els.leakerUploadFrame?.contentWindow) {
+          els.leakerUploadFrame.contentWindow.postMessage(message, '*');
+        }
+      } catch {}
+      showToast(approved ? 'Upload permission approved.' : 'Upload cancelled.', approved ? 'ok' : 'err');
+    }
+
+    function showWebviewUploadConsent(payload = {}, source = null) {
+      if (webviewUploadConsentTimer) clearTimeout(webviewUploadConsentTimer);
+      webviewUploadConsentRequest = { payload, source };
+      const directory = Boolean(payload.directory);
+      const scope = String(payload.scope || payload.title || '6ureleaks upload dashboard').trim();
+      if (els.webviewUploadConsentTitle) {
+        els.webviewUploadConsentTitle.textContent = directory
+          ? 'Bu siteye klasör yüklensin mi?'
+          : 'Bu siteye dosya yüklensin mi?';
+      }
+      if (els.webviewUploadConsentScope) {
+        els.webviewUploadConsentScope.textContent = scope;
+      }
+      if (els.webviewUploadConsentMessage) {
+        els.webviewUploadConsentMessage.textContent = directory
+          ? 'Seçtiğin leak klasöründeki dosyalar upload dashboard tarafından karşıya yüklenebilir. Yalnızca bu işleme güveniyorsan devam et.'
+          : 'Seçtiğin dosyalar upload dashboard tarafından karşıya yüklenebilir. Yalnızca bu işleme güveniyorsan devam et.';
+      }
+      els.webviewUploadConsentOverlay.classList.remove('hidden');
+      els.webviewUploadConsentOverlay.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => els.webviewUploadConsentOverlay.classList.add('show'));
+    }
+
+    function handleWebviewUploadConsentMessage(event) {
+      const data = event?.data || {};
+      if (!data || data.type !== '6ure:webview-upload-consent') return;
+      showWebviewUploadConsent(data, event.source);
+    }
+
+    function installWebviewUploadConsentBridge(frame) {
+      if (!frame) return false;
+      try {
+        const doc = frame.contentDocument;
+        if (!doc || doc.__sixureUploadConsentInstalled) return false;
+        doc.__sixureUploadConsentInstalled = true;
+        const script = doc.createElement('script');
+        script.textContent = `
+          (() => {
+            if (window.__sixureUploadConsentInstalled) return;
+            window.__sixureUploadConsentInstalled = true;
+            let pendingInput = null;
+            let allowUntil = 0;
+
+            function findUploadInput(target) {
+              if (!target || !target.closest) return null;
+              const direct = target.closest('input[type="file"]');
+              if (direct) return direct;
+              const label = target.closest('label');
+              if (label) {
+                if (label.control && label.control.matches && label.control.matches('input[type="file"]')) return label.control;
+                const nested = label.querySelector && label.querySelector('input[type="file"]');
+                if (nested) return nested;
+              }
+              const labelled = target.closest('[for]');
+              if (labelled) {
+                const id = labelled.getAttribute('for');
+                if (id) {
+                  try {
+                    const control = document.getElementById(id);
+                    if (control && control.matches('input[type="file"]')) return control;
+                  } catch {}
+                }
+              }
+              return null;
+            }
+
+            document.addEventListener('click', event => {
+              const input = findUploadInput(event.target);
+              if (!input) return;
+              if (Date.now() < allowUntil) return;
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              pendingInput = input;
+              const scope = location.host ? location.host + location.pathname : document.title || 'upload dashboard';
+              parent.postMessage({
+                type: '6ure:webview-upload-consent',
+                scope,
+                title: document.title || '',
+                directory: Boolean(input.webkitdirectory || input.hasAttribute('webkitdirectory') || input.hasAttribute('directory')),
+                multiple: Boolean(input.multiple),
+                accept: input.accept || ''
+              }, '*');
+            }, true);
+
+            window.addEventListener('message', event => {
+              const data = event.data || {};
+              if (!data || data.type !== '6ure:webview-upload-consent-result') return;
+              const input = pendingInput;
+              pendingInput = null;
+              if (!data.approved || !input) return;
+              allowUntil = Date.now() + 4000;
+              setTimeout(() => input.click(), 40);
+            });
+          })();
+        `;
+        doc.documentElement.appendChild(script);
+        script.remove();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     function getLeakerFramePath(frame) {
       try {
         const location = frame.contentWindow?.location;
@@ -11185,7 +11877,14 @@
 
     function bindEvents() {
       window.addEventListener('message', handleLeakerOAuthMessage);
+      window.addEventListener('message', handleWebviewUploadConsentMessage);
       document.addEventListener('click', event => {
+        const editorButton = event.target.closest('[data-editor-key]');
+        if (editorButton) {
+          event.preventDefault();
+          showResourceEditorProfile(editorButton.dataset.editorKey || '');
+          return;
+        }
         const resourceLink = event.target.closest('[data-resource-id]');
         if (resourceLink) {
           event.preventDefault();
@@ -11283,8 +11982,10 @@
         setLeakerFrameLoading(els.leakerUploadFrame, false);
         acceptLeakerCookiesInFrame(els.leakerUploadFrame);
         installLeakerLoginOAuthBridge(els.leakerUploadFrame);
+        installWebviewUploadConsentBridge(els.leakerUploadFrame);
         setTimeout(() => acceptLeakerCookiesInFrame(els.leakerUploadFrame), 160);
         setTimeout(() => acceptLeakerCookiesInFrame(els.leakerUploadFrame), 700);
+        setTimeout(() => installWebviewUploadConsentBridge(els.leakerUploadFrame), 700);
         if (leakerModePhase === 'active' && leakerFrameHasLoginSignals(els.leakerUploadFrame)) {
           syncAppAuthFromSite({ silent: true, refreshResources: false });
           showLeakerLoginView(true);
@@ -11354,6 +12055,20 @@
       els.filesResourceDetailRefreshBtn.addEventListener('click', () => {
         if (filesResourceDetailId) loadResourceDetail(filesResourceDetailId, true);
       });
+      els.filesEditorCloseBtn?.addEventListener('click', hideResourceEditorProfile);
+      els.filesEditorOpenBtn?.addEventListener('click', event => {
+        event.preventDefault();
+        const url = els.filesEditorOpenBtn?.dataset.externalUrl || '';
+        if (url) openExternalUrl(url);
+      });
+      els.filesEditorOverlay?.addEventListener('click', event => {
+        if (event.target === els.filesEditorOverlay) hideResourceEditorProfile();
+      });
+      els.webviewUploadConsentAllowBtn?.addEventListener('click', () => resolveWebviewUploadConsent(true));
+      els.webviewUploadConsentCancelBtn?.addEventListener('click', () => resolveWebviewUploadConsent(false));
+      els.webviewUploadConsentOverlay?.addEventListener('click', event => {
+        if (event.target === els.webviewUploadConsentOverlay) resolveWebviewUploadConsent(false);
+      });
       els.filesResourceDetailOverlay.addEventListener('click', event => {
         if (event.target === els.filesResourceDetailOverlay && !filesResourceDetailBusy) {
           hideFilesResourceDetail();
@@ -11390,6 +12105,14 @@
         }
         if (!els.filesSettingsOverlay.classList.contains('hidden')) {
           hideFilesSettingsOverlay();
+          return;
+        }
+        if (!els.webviewUploadConsentOverlay.classList.contains('hidden')) {
+          resolveWebviewUploadConsent(false);
+          return;
+        }
+        if (!els.filesEditorOverlay.classList.contains('hidden')) {
+          hideResourceEditorProfile();
           return;
         }
         if (leakerModePhase !== 'idle') {
