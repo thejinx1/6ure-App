@@ -4846,20 +4846,64 @@
     .files-resources-insight {
       min-width: 0;
       display: grid;
-      gap: 4px;
+      align-content: start;
+      gap: 8px;
       padding: 11px 12px;
       border: 1px solid rgba(167, 139, 250, 0.14);
       border-radius: 18px;
       background:
         radial-gradient(circle at 18% 0%, rgba(167, 139, 250, 0.11), transparent 44%),
         rgba(19, 13, 32, 0.62);
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
     }
 
-    .files-resources-insight span {
+    .files-resources-insight.is-clickable {
+      cursor: pointer;
+    }
+
+    .files-resources-insight.is-clickable:hover,
+    .files-resources-insight:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(82, 247, 255, 0.28);
+      background:
+        radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.13), transparent 44%),
+        rgba(22, 16, 36, 0.72);
+      outline: none;
+    }
+
+    .files-resources-insight-kicker {
       color: #c4b5fd;
       font-size: 9px;
       font-weight: 950;
       text-transform: uppercase;
+    }
+
+    .files-resources-insight-main {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .files-resources-insight-main.has-avatar {
+      grid-template-columns: 38px minmax(0, 1fr);
+      align-items: center;
+    }
+
+    .files-resources-insight-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 18px rgba(82, 247, 255, 0.1);
+    }
+
+    .files-resources-insight-copy {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
     }
 
     .files-resources-insight strong {
@@ -4879,6 +4923,50 @@
       font-size: 10px;
       line-height: 1.25;
       font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-resources-insight-editor {
+      min-width: 0;
+      justify-self: start;
+      max-width: 100%;
+      min-height: 28px;
+      display: inline-grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      align-items: center;
+      gap: 7px;
+      padding: 3px 8px 3px 3px;
+      border: 1px solid rgba(82, 247, 255, 0.16);
+      border-radius: 999px;
+      background: rgba(82, 247, 255, 0.075);
+      color: #d7fff6;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .files-resources-insight-editor:hover,
+    .files-resources-insight-editor:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(82, 247, 255, 0.34);
+      background: rgba(82, 247, 255, 0.13);
+      outline: none;
+    }
+
+    .files-resources-insight-editor img {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .files-resources-insight-editor span {
+      min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -5207,9 +5295,12 @@
     .files-resource-detail-hero,
     .files-resource-detail-panel {
       min-width: 0;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(196, 181, 253, 0.16);
       border-radius: 8px;
-      background: linear-gradient(135deg, rgba(19, 13, 32, 0.9), rgba(8, 7, 15, 0.94));
+      background:
+        radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.13), transparent 42%),
+        linear-gradient(135deg, rgba(21, 16, 35, 0.94), rgba(8, 7, 15, 0.96));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 18px 42px rgba(0, 0, 0, 0.2);
       overflow: hidden;
     }
 
@@ -5237,10 +5328,29 @@
     }
 
     .files-resource-detail-label {
-      color: #c4b5fd;
-      font-size: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      justify-self: start;
+      min-height: 22px;
+      padding: 3px 8px;
+      border: 1px solid rgba(196, 181, 253, 0.16);
+      border-radius: 999px;
+      background: rgba(196, 181, 253, 0.08);
+      color: #d7fff6;
+      font-size: 9px;
       font-weight: 950;
       text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .files-resource-detail-label::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #52f7ff;
+      box-shadow: 0 0 14px rgba(82, 247, 255, 0.55);
     }
 
     .files-resource-detail-description {
@@ -5255,46 +5365,127 @@
 
     .files-resource-detail-info {
       display: grid;
-      gap: 8px;
+      gap: 7px;
     }
 
     .files-resource-detail-row {
       min-width: 0;
-      display: flex;
+      min-height: 38px;
+      display: grid;
+      grid-template-columns: minmax(88px, auto) minmax(0, 1fr);
       align-items: center;
-      justify-content: space-between;
       gap: 10px;
+      padding: 8px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.075);
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
       color: #a7a3c8;
       font-size: 11px;
       font-weight: 800;
     }
 
+    .files-resource-detail-row > span {
+      min-width: 0;
+      color: #bbb4da;
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .files-resource-detail-row strong,
     .files-resource-detail-row a {
       min-width: 0;
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      max-width: 100%;
+      min-height: 24px;
+      padding: 3px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.055);
       color: #f7f5ff;
-      font-size: 12px;
-      font-weight: 900;
+      font-size: 11px;
+      font-weight: 950;
       text-align: right;
       overflow-wrap: anywhere;
+      text-decoration: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .files-resource-detail-row a {
+      color: #d7fff6;
+      border-color: rgba(82, 247, 255, 0.2);
+      background: rgba(82, 247, 255, 0.085);
+    }
+
+    .files-resource-detail-row a:hover {
+      border-color: rgba(82, 247, 255, 0.38);
+      background: rgba(82, 247, 255, 0.14);
+    }
+
+    .files-resource-detail-row[data-detail-key="status"] strong,
+    .files-resource-detail-row[data-detail-key="visibility"] strong {
+      color: #b9ffd6;
+      border-color: rgba(45, 199, 112, 0.23);
+      background: rgba(45, 199, 112, 0.1);
+    }
+
+    .files-resource-detail-row[data-detail-key="payout"] strong {
+      color: #ffe2a3;
+      border-color: rgba(255, 209, 102, 0.24);
+      background: rgba(255, 209, 102, 0.1);
+    }
+
+    .files-resource-detail-row[data-detail-key="size"] strong {
+      color: #d6d1ff;
+      border-color: rgba(196, 181, 253, 0.2);
+      background: rgba(196, 181, 253, 0.08);
     }
 
     .files-resource-detail-profile {
+      position: relative;
       min-width: 0;
       max-width: 100%;
-      display: flex;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 11px;
       align-items: center;
-      padding: 2px 0 4px;
+      padding: 10px;
+      border: 1px solid rgba(82, 247, 255, 0.16);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 16% 0%, rgba(82, 247, 255, 0.16), transparent 48%),
+        linear-gradient(135deg, rgba(16, 26, 32, 0.72), rgba(12, 9, 22, 0.78));
+      overflow: hidden;
+    }
+
+    .files-resource-detail-profile::after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #00e0a4;
+      box-shadow: 0 0 14px rgba(0, 224, 164, 0.5);
     }
 
     .files-resource-detail-avatar {
-      width: 42px;
-      height: 42px;
-      flex: 0 0 42px;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 48px;
       border-radius: 50%;
       object-fit: cover;
       background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 22px rgba(82, 247, 255, 0.11);
     }
 
     .files-resource-detail-profile-copy {
@@ -5306,7 +5497,7 @@
     .files-resource-detail-profile-name {
       min-width: 0;
       color: #f7f5ff;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 950;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -5315,9 +5506,9 @@
 
     .files-resource-detail-profile-meta {
       min-width: 0;
-      color: #a7a3c8;
+      color: #c4b5fd;
       font-size: 11px;
-      font-weight: 800;
+      font-weight: 900;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -5550,6 +5741,238 @@
       margin-top: 3px;
       color: #a7a3c8;
       font-size: 10px;
+      font-weight: 850;
+    }
+
+    #filesMyResourcesCard {
+      --files-summary-height: 336px;
+      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    }
+
+    #filesMyResourcesCard.is-summary-collapsed {
+      --files-summary-height: 86px;
+    }
+
+    .files-resources-summary-panel {
+      min-width: 0;
+      min-height: 0;
+      height: var(--files-summary-height);
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      overflow: hidden;
+      transform-origin: top center;
+      contain: layout paint style;
+      will-change: transform, opacity;
+    }
+
+    #filesMyResourcesCard.is-summary-collapsed .files-resources-summary-panel {
+      opacity: 0.9;
+    }
+
+    #filesMyResourcesCard.is-summary-resizing .files-resources-summary-panel {
+      transition: none;
+    }
+
+    #filesMyResourcesCard.is-summary-animating .files-resources-splitter,
+    #filesMyResourcesCard.is-summary-animating .files-my-resources-toolbar,
+    #filesMyResourcesCard.is-summary-animating .files-resources-list,
+    #filesMyResourcesCard.is-summary-animating .files-resources-status {
+      will-change: transform;
+    }
+
+    .files-resources-splitter {
+      min-width: 0;
+      min-height: 26px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      color: #bfb8df;
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+      cursor: row-resize;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .files-resources-splitter span {
+      height: 1px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(196, 181, 253, 0.28), transparent);
+    }
+
+    .files-resources-splitter button {
+      min-height: 26px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(196, 181, 253, 0.18);
+      background: rgba(16, 10, 27, 0.82);
+      color: #d7fff6;
+      font: inherit;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+    }
+
+    .files-resources-splitter:hover button,
+    .files-resources-splitter.is-dragging button {
+      border-color: rgba(82, 247, 255, 0.32);
+      background: rgba(28, 21, 46, 0.94);
+    }
+
+    .files-editors-launch-row {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border: 1px solid rgba(167, 139, 250, 0.18);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(82, 247, 255, 0.12), transparent 40%),
+        rgba(9, 7, 16, 0.72);
+    }
+
+    .files-editors-launch-row .chip-action {
+      min-height: 34px;
+      border-radius: 8px;
+    }
+
+    .files-editors-preview {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    .files-editors-preview .files-editor-avatar {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      margin-left: -8px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      box-shadow: 0 0 0 2px rgba(9, 7, 16, 0.92);
+    }
+
+    .files-editors-preview .files-editor-avatar:first-child {
+      margin-left: 0;
+    }
+
+    .files-editors-preview-text {
+      min-width: 0;
+      color: #a7a3c8;
+      font-size: 11px;
+      font-weight: 850;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .files-editors-overlay .files-editor-dialog {
+      width: min(860px, calc(100vw - 28px));
+      height: min(720px, calc(100vh - 28px));
+    }
+
+    .files-editors-toolbar {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .files-editors-toolbar input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid rgba(167, 139, 250, 0.2);
+      border-radius: 8px;
+      padding: 10px 13px;
+      background: rgba(7, 5, 12, 0.82);
+      color: #f8f6ff;
+      font: inherit;
+      font-weight: 850;
+      outline: none;
+    }
+
+    .files-editors-toolbar input:focus {
+      border-color: rgba(82, 247, 255, 0.32);
+      box-shadow: 0 0 0 3px rgba(82, 247, 255, 0.08);
+    }
+
+    .files-editors-modal-grid {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      align-content: start;
+      gap: 10px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .files-editor-modal-card {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      align-items: center;
+      gap: 11px;
+      padding: 10px;
+      border: 1px solid rgba(167, 139, 250, 0.18);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 16% 0%, rgba(82, 247, 255, 0.13), transparent 44%),
+        linear-gradient(145deg, rgba(19, 14, 31, 0.94), rgba(8, 7, 15, 0.96));
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .files-editor-modal-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(82, 247, 255, 0.3);
+      background:
+        radial-gradient(circle at 16% 0%, rgba(82, 247, 255, 0.2), transparent 44%),
+        linear-gradient(145deg, rgba(27, 21, 43, 0.98), rgba(9, 8, 17, 0.98));
+    }
+
+    .files-editor-modal-avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: rgba(255, 255, 255, 0.07);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 22px rgba(82, 247, 255, 0.08);
+    }
+
+    .files-editor-modal-copy {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .files-editor-modal-copy strong,
+    .files-editor-modal-copy span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-editor-modal-copy strong {
+      color: #f7f5ff;
+      font-size: 13px;
+      font-weight: 950;
+      line-height: 1.16;
+    }
+
+    .files-editor-modal-copy span {
+      color: #a7a3c8;
+      font-size: 11px;
       font-weight: 850;
     }
 
@@ -6863,7 +7286,7 @@
                 </section>
 
                 <section class="files-settings-group">
-                  <h4>Studio</h4>
+                  <h4>App</h4>
                   <label class="files-setting-row">
                     <span class="files-setting-copy">
                       <span>Auto update checks</span>
@@ -6875,13 +7298,6 @@
 
                 <section class="files-settings-group">
                   <h4>Maintenance</h4>
-                  <label class="files-setting-row">
-                    <span class="files-setting-copy">
-                      <span>Local encrypted vault</span>
-                    </span>
-                    <input id="settingEncryptedVault" class="files-setting-toggle" type="checkbox" data-security-setting-key="encryptedVault">
-                    <span class="files-setting-switch" aria-hidden="true"></span>
-                  </label>
                   <label class="files-setting-row">
                     <span class="files-setting-copy">
                       <span>Silent repair mode</span>
@@ -7110,6 +7526,30 @@
             </div>
           </div>
 
+          <div id="filesEditorsOverlay" class="files-editor-overlay files-editors-overlay hidden" aria-hidden="true">
+            <div class="files-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="filesEditorsTitle">
+              <div class="files-editor-head">
+                <div class="files-editor-copy">
+                  <h3 id="filesEditorsTitle">Editors</h3>
+                  <p id="filesEditorsMeta">Browse editor profiles from your Leaker Zone.</p>
+                </div>
+                <div class="files-resource-detail-actions">
+                  <button id="filesEditorsCloseBtn" class="chip-action back-action" type="button" aria-label="Back" title="Back">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M15 6 9 12l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                    <span class="sr-only">Back</span>
+                  </button>
+                </div>
+              </div>
+              <div class="files-editors-toolbar">
+                <input id="filesEditorsSearch" type="search" placeholder="Search editors" autocomplete="off" spellcheck="false">
+              </div>
+              <div id="filesEditorsModalGrid" class="files-editors-modal-grid"></div>
+              <div id="filesEditorsStatus" class="files-resources-status"></div>
+            </div>
+          </div>
+
           <div id="webviewUploadConsentOverlay" class="webview-consent-overlay hidden" aria-hidden="true">
             <div class="webview-consent-card" role="dialog" aria-modal="true" aria-labelledby="webviewUploadConsentTitle">
               <div class="webview-consent-title">
@@ -7228,6 +7668,7 @@
           </div>
 
           <div id="filesMyResourcesCard" class="files-uploader-card files-resources-card">
+            <div id="filesResourcesSummaryPanel" class="files-resources-summary-panel">
             <div class="files-resources-head">
               <div class="files-resources-profile">
                 <div class="files-resources-avatar-shell" aria-hidden="true">
@@ -7270,28 +7711,50 @@
             </div>
 
             <div class="files-resources-insights" aria-label="Personal upload insights">
-              <div class="files-resources-insight">
-                <span>Top drop</span>
-                <strong id="filesResourcesTopResource">Waiting for uploads</strong>
-                <small id="filesResourcesTopResourceMeta">Downloads will appear here.</small>
+              <div id="filesResourcesTopResourceInsight" class="files-resources-insight">
+                <span class="files-resources-insight-kicker">Top drop</span>
+                <div class="files-resources-insight-main">
+                  <span class="files-resources-insight-copy">
+                    <strong id="filesResourcesTopResource">Waiting for uploads</strong>
+                    <small id="filesResourcesTopResourceMeta">Downloads will appear here.</small>
+                  </span>
+                </div>
               </div>
-              <div class="files-resources-insight">
-                <span>Favorite editor</span>
-                <strong id="filesResourcesTopEditor">No editor yet</strong>
-                <small id="filesResourcesTopEditorMeta">Categories will appear here.</small>
+              <div id="filesResourcesTopEditorInsight" class="files-resources-insight">
+                <span class="files-resources-insight-kicker">Favorite editor</span>
+                <div class="files-resources-insight-main">
+                  <span class="files-resources-insight-copy">
+                    <strong id="filesResourcesTopEditor">No editor yet</strong>
+                    <small id="filesResourcesTopEditorMeta">Categories will appear here.</small>
+                  </span>
+                </div>
               </div>
-              <div class="files-resources-insight">
-                <span>Latest leak</span>
-                <strong id="filesResourcesLatestLeak">Loading latest leak</strong>
-                <small id="filesResourcesLatestLeakMeta">Recent uploads will appear here.</small>
+              <div id="filesResourcesLatestLeakInsight" class="files-resources-insight">
+                <span class="files-resources-insight-kicker">Latest leak</span>
+                <div class="files-resources-insight-main">
+                  <span class="files-resources-insight-copy">
+                    <strong id="filesResourcesLatestLeak">Loading latest leak</strong>
+                    <small id="filesResourcesLatestLeakMeta">Recent uploads will appear here.</small>
+                  </span>
+                </div>
               </div>
+            </div>
+
+            <div class="files-editors-launch-row">
+              <button id="filesEditorsOpenBtn" class="chip-action" type="button">Editors</button>
+              <div id="filesEditorsPreview" class="files-editors-preview" aria-label="Editor preview"></div>
+            </div>
+            </div>
+
+            <div id="filesResourcesSplitter" class="files-resources-splitter" role="separator" aria-orientation="horizontal" aria-valuemin="86" aria-valuemax="460" aria-valuenow="336" tabindex="0">
+              <span aria-hidden="true"></span>
+              <button id="filesResourcesSummaryToggle" type="button">Collapse</button>
+              <span aria-hidden="true"></span>
             </div>
 
             <div class="files-general-toolbar files-my-resources-toolbar">
               <input id="filesResourcesSearch" type="search" placeholder="Search all your leaks" autocomplete="off" spellcheck="false">
             </div>
-
-            <div id="filesEditorsRail" class="files-editors-rail" aria-label="Leaked editor categories"></div>
 
             <div id="filesResourcesList" class="files-resources-list" aria-live="polite">
               <div class="files-resource-empty">Loading resources...</div>
@@ -7503,8 +7966,16 @@
     let filesRequestsSearchQuery = '';
     let filesRequestsStatusFilter = 'pending';
     let filesRequestsSearchTimer = null;
+    let filesRequestsCounts = { total: null, pending: null, completed: null };
     let filesEditorGroups = [];
     let filesActiveEditorKey = '';
+    let filesEditorsModalSearchQuery = '';
+    let filesEditorsAvatarHydrationToken = 0;
+    const filesEditorsAvatarHydrated = new Set();
+    let filesResourcesSummaryHeight = 336;
+    let filesResourcesSummaryCollapsed = false;
+    let filesResourcesSplitterDrag = null;
+    let filesResourcesSummaryAnimations = [];
     let webviewUploadConsentRequest = null;
     let webviewUploadConsentTimer = null;
     let webviewUploadConsentResolving = false;
@@ -7560,6 +8031,8 @@
     let lastDiscordPresenceKey = '';
     let lastDiscordPresenceSentAt = 0;
     let discordPresenceClearToken = 0;
+    let discordPresenceDesired = null;
+    let discordPresenceSending = false;
     let openingStartedAt = Date.now();
     let openingFinished = false;
     let openingSoundCleanup = null;
@@ -7689,6 +8162,8 @@
       'Almost ready to move.'
     ];
     const FILES_SETTINGS_STORAGE_KEY = '6ure.files.settings.v1';
+    const FILES_RESOURCES_SUMMARY_HEIGHT_KEY = '6ure.files.resources.summaryHeight';
+    const FILES_RESOURCES_SUMMARY_COLLAPSED_KEY = '6ure.files.resources.summaryCollapsed';
     const UPDATE_SKIP_STORAGE_KEY = '6ure.files.update.skipVersion';
     const DEFAULT_FILES_SETTINGS = {
       discordPresenceEnabled: true,
@@ -7832,13 +8307,23 @@
       filesEditorStatus: $('#filesEditorStatus'),
       filesEditorOpenBtn: $('#filesEditorOpenBtn'),
       filesEditorCloseBtn: $('#filesEditorCloseBtn'),
+      filesEditorsOverlay: $('#filesEditorsOverlay'),
+      filesEditorsCloseBtn: $('#filesEditorsCloseBtn'),
+      filesEditorsSearch: $('#filesEditorsSearch'),
+      filesEditorsModalGrid: $('#filesEditorsModalGrid'),
+      filesEditorsStatus: $('#filesEditorsStatus'),
+      filesEditorsMeta: $('#filesEditorsMeta'),
       webviewUploadConsentOverlay: $('#webviewUploadConsentOverlay'),
       webviewUploadConsentTitle: $('#webviewUploadConsentTitle'),
       webviewUploadConsentScope: $('#webviewUploadConsentScope'),
       webviewUploadConsentMessage: $('#webviewUploadConsentMessage'),
       webviewUploadConsentAllowBtn: $('#webviewUploadConsentAllowBtn'),
       webviewUploadConsentCancelBtn: $('#webviewUploadConsentCancelBtn'),
-      filesEditorsRail: $('#filesEditorsRail'),
+      filesEditorsOpenBtn: $('#filesEditorsOpenBtn'),
+      filesEditorsPreview: $('#filesEditorsPreview'),
+      filesResourcesSummaryPanel: $('#filesResourcesSummaryPanel'),
+      filesResourcesSplitter: $('#filesResourcesSplitter'),
+      filesResourcesSummaryToggle: $('#filesResourcesSummaryToggle'),
       filesResourcesRefreshBtn: $('#filesResourcesRefreshBtn'),
       filesResourcesUploadBtn: $('#filesResourcesUploadBtn'),
       filesResourcesTotal: $('#filesResourcesTotal'),
@@ -7852,10 +8337,13 @@
       filesResourcesSubtitle: $('#filesResourcesSubtitle'),
       filesResourcesKicker: $('#filesResourcesKicker'),
       filesResourcesAvatar: $('#filesResourcesAvatar'),
+      filesResourcesTopResourceInsight: $('#filesResourcesTopResourceInsight'),
       filesResourcesTopResource: $('#filesResourcesTopResource'),
       filesResourcesTopResourceMeta: $('#filesResourcesTopResourceMeta'),
+      filesResourcesTopEditorInsight: $('#filesResourcesTopEditorInsight'),
       filesResourcesTopEditor: $('#filesResourcesTopEditor'),
       filesResourcesTopEditorMeta: $('#filesResourcesTopEditorMeta'),
+      filesResourcesLatestLeakInsight: $('#filesResourcesLatestLeakInsight'),
       filesResourcesLatestLeak: $('#filesResourcesLatestLeak'),
       filesResourcesLatestLeakMeta: $('#filesResourcesLatestLeakMeta'),
       filesMyResourcesCard: $('#filesMyResourcesCard'),
@@ -7969,6 +8457,7 @@
       if (!left || !right || left.type !== right.type) return false;
       if (left.type === 'editor') return String(left.key || '') === String(right.key || '');
       if (left.type === 'resource') return String(left.resourceId || '') === String(right.resourceId || '');
+      if (left.type === 'editors') return true;
       return false;
     }
 
@@ -7995,6 +8484,10 @@
         if (entry.type === 'resource' && entry.resourceId) {
           if (isOverlayVisible(els.filesResourceDetailOverlay) && String(filesResourceDetailId || '') === String(entry.resourceId || '')) return true;
           await showFilesResourceDetail(entry.resourceId, { restored: true });
+          return true;
+        }
+        if (entry.type === 'editors') {
+          showEditorsModal({ restored: true });
           return true;
         }
       } finally {
@@ -8051,14 +8544,11 @@
 
     function syncSecurityControls(status = {}) {
       const settings = status.settings || {};
-      if (els.settingEncryptedVault) els.settingEncryptedVault.checked = settings.encryptedVault !== false;
       if (els.settingSilentRepair) els.settingSilentRepair.checked = settings.silentRepairMode !== false;
-      const vault = status.vault || {};
       const repair = status.repair || {};
       const repairCount = Array.isArray(repair.lastRepairActions) ? repair.lastRepairActions.length : 0;
-      const vaultLabel = vault.enabled === false ? 'Vault off' : vault.hasCredentials ? 'Vault locked.' : 'Vault ready.';
       const repairLabel = repair.lastRepairAt ? `Repair checked${repairCount ? ` (${repairCount})` : ''}.` : 'Ready.';
-      setFilesSettingsStatus([vaultLabel, repairLabel].filter(Boolean).join(' '));
+      setFilesSettingsStatus(repairLabel);
     }
 
     async function loadSecurityStatus() {
@@ -8125,6 +8615,7 @@
 
     async function clearDiscordPresenceActivity() {
       const token = ++discordPresenceClearToken;
+      discordPresenceDesired = null;
       try {
         await filesApi('/api/discord-presence/clear', { method: 'POST', body: JSON.stringify({}) });
       } catch {}
@@ -8682,7 +9173,128 @@
       });
     }
 
+    function renderEditorPreview(groups = []) {
+      if (!els.filesEditorsPreview) return;
+      const list = Array.isArray(groups) ? groups : [];
+      if (!list.length) {
+        els.filesEditorsPreview.innerHTML = '<span class="files-editors-preview-text">No editors yet</span>';
+        return;
+      }
+      const previewAvatars = list.slice(0, 6)
+        .map(group => renderFilesAvatarImage('files-editor-avatar', group.avatar, group.name, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"'))
+        .join('');
+      const remaining = Math.max(0, list.length - 6);
+      els.filesEditorsPreview.innerHTML = `
+        ${previewAvatars}
+        <span class="files-editors-preview-text">${escapeHtml(formatResourceNumber(list.length))} editors${remaining ? `, +${escapeHtml(formatResourceNumber(remaining))}` : ''}</span>
+      `;
+    }
+
+    function getFilteredEditorGroups(groups = filesEditorGroups) {
+      const query = filesEditorsModalSearchQuery.trim().toLowerCase();
+      const list = Array.isArray(groups) ? groups : [];
+      if (!query) return list;
+      return list.filter(group => {
+        const haystack = [
+          group?.name,
+          Array.from(group?.categories || []).join(' '),
+          String(group?.items?.map(item => item?.name || item?.category || '').join(' ') || '')
+        ].join(' ').toLowerCase();
+        return haystack.includes(query);
+      });
+    }
+
+    function renderEditorsModal(groups = filesEditorGroups) {
+      if (!els.filesEditorsModalGrid) return;
+      const allGroups = Array.isArray(groups) ? groups : [];
+      const visibleGroups = getFilteredEditorGroups(allGroups);
+      if (els.filesEditorsMeta) {
+        els.filesEditorsMeta.textContent = `${formatResourceNumber(allGroups.length)} editor profiles from your Leaker Zone.`;
+      }
+      if (!visibleGroups.length) {
+        els.filesEditorsModalGrid.innerHTML = `
+          <div class="files-resource-empty">
+            <strong>No editors found.</strong>
+            ${filesEditorsModalSearchQuery ? 'Try another editor search.' : 'Editor profiles will appear after resources load.'}
+          </div>
+        `;
+      } else {
+        els.filesEditorsModalGrid.innerHTML = visibleGroups.map(group => {
+          const meta = [
+            `${formatResourceNumber(group.items.length)} leaks`,
+            `${formatResourceNumber(group.downloads)} downloads`,
+            group.latestAt ? `Updated ${formatResourceDate(group.latestAt)}` : ''
+          ].filter(Boolean).join(' - ');
+          return `
+            <button class="files-editor-modal-card" type="button" data-editor-key="${escapeHtml(group.key)}">
+              ${renderFilesAvatarImage('files-editor-modal-avatar', group.avatar, group.name, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
+              <span class="files-editor-modal-copy">
+                <strong>${escapeHtml(group.name)}</strong>
+                <span>${escapeHtml(meta)}</span>
+              </span>
+            </button>
+          `;
+        }).join('');
+      }
+      if (els.filesEditorsStatus) {
+        els.filesEditorsStatus.textContent = [
+          `${formatResourceNumber(visibleGroups.length)} shown.`,
+          filesEditorsModalSearchQuery ? `Search: ${filesEditorsModalSearchQuery.trim()}.` : ''
+        ].filter(Boolean).join(' ');
+      }
+    }
+
+    function mergeEditorGroupAvatar(editorKey, avatarUrl = '') {
+      const cleanKey = normalizeResourceEditorKey(editorKey);
+      const cleanAvatar = String(avatarUrl || '').trim();
+      if (!cleanKey || !cleanAvatar) return false;
+      const group = getResourceEditorGroup(cleanKey);
+      if (!group || group.avatar) return false;
+      group.avatar = cleanAvatar;
+      for (const item of group.items || []) {
+        if (!item.editorAvatarUrl) item.editorAvatarUrl = cleanAvatar;
+      }
+      return true;
+    }
+
+    async function hydrateEditorsModalAvatars() {
+      filesEditorsAvatarHydrationToken += 1;
+      const targets = getFilteredEditorGroups(filesEditorGroups)
+        .filter(group => group && !group.avatar && !filesEditorsAvatarHydrated.has(group.key))
+        .slice(0, 18);
+      if (!targets.length) return;
+      for (const group of targets) {
+        filesEditorsAvatarHydrated.add(group.key);
+        try {
+          const query = new URLSearchParams({ name: group.name });
+          const payload = await filesApi(`/api/resources/editor?${query.toString()}`, { method: 'GET' });
+          const allItems = [
+            ...(Array.isArray(payload.myItems) ? payload.myItems : []),
+            ...(Array.isArray(payload.otherItems) ? payload.otherItems : [])
+          ];
+          const avatar = String(allItems.find(item => item?.editorAvatarUrl)?.editorAvatarUrl || '').trim();
+          if (avatar && mergeEditorGroupAvatar(group.key, avatar) && isOverlayVisible(els.filesEditorsOverlay)) {
+            renderEditorRail(filesEditorGroups);
+          }
+        } catch {}
+      }
+    }
+
     function renderEditorRail(groups = []) {
+      const list = Array.isArray(groups) ? groups : [];
+      if (els.filesEditorsOpenBtn) {
+        els.filesEditorsOpenBtn.disabled = !list.length;
+        els.filesEditorsOpenBtn.textContent = list.length
+          ? `Editors (${formatResourceNumber(list.length)})`
+          : 'Editors';
+      }
+      renderEditorPreview(list);
+      if (isOverlayVisible(els.filesEditorsOverlay)) {
+        renderEditorsModal(list);
+      }
+    }
+
+    function renderLegacyEditorRail(groups = []) {
       if (!els.filesEditorsRail) return;
       if (!groups.length) {
         els.filesEditorsRail.innerHTML = '';
@@ -8979,11 +9591,15 @@
       const cleanValue = String(value || '').trim();
       if (!cleanValue) return '';
       const cleanUrl = String(url || '').trim();
+      const detailKey = String(label || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'detail';
       const valueHtml = cleanUrl
         ? `<a href="${escapeHtml(cleanUrl)}" data-external-url="${escapeHtml(cleanUrl)}">${escapeHtml(cleanValue)}</a>`
         : `<strong>${escapeHtml(cleanValue)}</strong>`;
       return `
-        <div class="files-resource-detail-row">
+        <div class="files-resource-detail-row" data-detail-key="${escapeHtml(detailKey)}">
           <span>${escapeHtml(label)}</span>
           ${valueHtml}
         </div>
@@ -9319,6 +9935,37 @@
       }
     }
 
+    function showEditorsModal(options = {}) {
+      if (!els.filesEditorsOverlay) return;
+      renderEditorsModal(filesEditorGroups);
+      hydrateEditorsModalAvatars().catch(() => {});
+      els.filesEditorsOverlay.classList.remove('hidden');
+      els.filesEditorsOverlay.setAttribute('aria-hidden', 'false');
+      requestAnimationFrame(() => els.filesEditorsOverlay.classList.add('show'));
+      setTimeout(() => els.filesEditorsSearch?.focus?.(), 80);
+      if (!options.restored) {
+        updateDiscordPresence('Leaker Zone', 'Browsing editor profiles', { force: true });
+      }
+    }
+
+    function hideEditorsModal(options = {}) {
+      if (!els.filesEditorsOverlay) return;
+      els.filesEditorsOverlay.classList.remove('show');
+      els.filesEditorsOverlay.setAttribute('aria-hidden', 'true');
+      setTimeout(() => els.filesEditorsOverlay.classList.add('hidden'), 180);
+      if (!options.silentPresence && filesAuthenticated && !filesActiveJobId) {
+        updateResourcesBrowsingPresence();
+      }
+    }
+
+    function handleEditorsModalBack() {
+      const previous = popModalBackEntry();
+      hideEditorsModal({ silentPresence: Boolean(previous) });
+      if (previous) {
+        restoreModalBackEntry(previous).catch(() => {});
+      }
+    }
+
     function showResourceEditorProfile(editorKey, options = {}) {
       const group = getResourceEditorGroup(editorKey);
       if (!group || !els.filesEditorOverlay) return;
@@ -9387,6 +10034,195 @@
       if (els.filesResourcesPremium) els.filesResourcesPremium.textContent = formatResourceNumber(stats.premium);
     }
 
+    function getResourcesSummaryMaxHeight() {
+      const cardHeight = Math.round(els.filesMyResourcesCard?.getBoundingClientRect?.().height || 620);
+      return Math.max(180, Math.min(520, cardHeight - 170));
+    }
+
+    function clampResourcesSummaryHeight(value) {
+      const min = 86;
+      const max = getResourcesSummaryMaxHeight();
+      const height = Number(value);
+      if (!Number.isFinite(height)) return filesResourcesSummaryHeight;
+      return Math.max(min, Math.min(max, Math.round(height)));
+    }
+
+    function applyResourcesSummaryLayout() {
+      const height = filesResourcesSummaryCollapsed ? 86 : clampResourcesSummaryHeight(filesResourcesSummaryHeight);
+      els.filesMyResourcesCard?.style.setProperty('--files-summary-height', `${height}px`);
+      els.filesMyResourcesCard?.classList.toggle('is-summary-collapsed', filesResourcesSummaryCollapsed);
+      if (els.filesResourcesSplitter) {
+        els.filesResourcesSplitter.setAttribute('aria-valuenow', String(height));
+        els.filesResourcesSplitter.setAttribute('aria-valuemax', String(getResourcesSummaryMaxHeight()));
+      }
+      if (els.filesResourcesSummaryToggle) {
+        els.filesResourcesSummaryToggle.textContent = filesResourcesSummaryCollapsed ? 'Expand' : 'Collapse';
+        els.filesResourcesSummaryToggle.setAttribute('aria-expanded', filesResourcesSummaryCollapsed ? 'false' : 'true');
+      }
+    }
+
+    function loadResourcesSummaryLayout() {
+      try {
+        const storedHeight = Number(window.localStorage?.getItem(FILES_RESOURCES_SUMMARY_HEIGHT_KEY));
+        if (Number.isFinite(storedHeight) && storedHeight > 0) {
+          filesResourcesSummaryHeight = clampResourcesSummaryHeight(storedHeight);
+        }
+        filesResourcesSummaryCollapsed = window.localStorage?.getItem(FILES_RESOURCES_SUMMARY_COLLAPSED_KEY) === '1';
+      } catch {}
+      applyResourcesSummaryLayout();
+    }
+
+    function saveResourcesSummaryLayout() {
+      try {
+        window.localStorage?.setItem(FILES_RESOURCES_SUMMARY_HEIGHT_KEY, String(filesResourcesSummaryHeight));
+        window.localStorage?.setItem(FILES_RESOURCES_SUMMARY_COLLAPSED_KEY, filesResourcesSummaryCollapsed ? '1' : '0');
+      } catch {}
+    }
+
+    function stopResourcesSummaryAnimation() {
+      for (const animation of filesResourcesSummaryAnimations) {
+        try {
+          animation.cancel();
+        } catch {}
+      }
+      filesResourcesSummaryAnimations = [];
+      els.filesMyResourcesCard?.classList.remove('is-summary-animating');
+    }
+
+    function getResourcesSummaryMotionElements() {
+      const toolbar = els.filesResourcesSearch?.closest?.('.files-my-resources-toolbar');
+      return [
+        els.filesResourcesSplitter,
+        toolbar,
+        els.filesResourcesList,
+        els.filesResourcesStatus
+      ].filter(Boolean);
+    }
+
+    function animateResourcesSummaryLayoutChange(nextCollapsed) {
+      const card = els.filesMyResourcesCard;
+      const panel = els.filesResourcesSummaryPanel;
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      if (!card || !panel || reducedMotion || typeof panel.animate !== 'function') {
+        filesResourcesSummaryCollapsed = Boolean(nextCollapsed);
+        applyResourcesSummaryLayout();
+        saveResourcesSummaryLayout();
+        return;
+      }
+
+      stopResourcesSummaryAnimation();
+      const motionElements = getResourcesSummaryMotionElements();
+      const beforeTops = new Map(motionElements.map(element => [element, element.getBoundingClientRect().top]));
+      const beforeHeight = Math.max(1, panel.getBoundingClientRect().height);
+
+      filesResourcesSummaryCollapsed = Boolean(nextCollapsed);
+      applyResourcesSummaryLayout();
+
+      const afterHeight = Math.max(1, panel.getBoundingClientRect().height);
+      const heightDelta = Math.abs(beforeHeight - afterHeight);
+      const duration = Math.max(150, Math.min(240, 130 + heightDelta * 0.45));
+      const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
+      const animations = [];
+
+      card.classList.add('is-summary-animating');
+
+      const scaleY = beforeHeight / afterHeight;
+      if (Number.isFinite(scaleY) && Math.abs(scaleY - 1) > 0.01) {
+        animations.push(panel.animate(
+          [
+            { transform: `scaleY(${scaleY})`, opacity: nextCollapsed ? 1 : 0.82 },
+            { transform: 'scaleY(1)', opacity: nextCollapsed ? 0.9 : 1 }
+          ],
+          { duration, easing, fill: 'none' }
+        ));
+      }
+
+      for (const element of motionElements) {
+        const beforeTop = beforeTops.get(element);
+        const afterTop = element.getBoundingClientRect().top;
+        const deltaY = Math.round((beforeTop || 0) - afterTop);
+        if (Math.abs(deltaY) < 1) continue;
+        animations.push(element.animate(
+          [
+            { transform: `translateY(${deltaY}px)` },
+            { transform: 'translateY(0)' }
+          ],
+          { duration, easing, fill: 'none' }
+        ));
+      }
+
+      filesResourcesSummaryAnimations = animations;
+      if (!animations.length) {
+        card.classList.remove('is-summary-animating');
+        saveResourcesSummaryLayout();
+        return;
+      }
+
+      Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+        if (filesResourcesSummaryAnimations !== animations) return;
+        filesResourcesSummaryAnimations = [];
+        card.classList.remove('is-summary-animating');
+        saveResourcesSummaryLayout();
+      });
+    }
+
+    function setResourcesSummaryHeight(height, options = {}) {
+      stopResourcesSummaryAnimation();
+      filesResourcesSummaryCollapsed = false;
+      filesResourcesSummaryHeight = clampResourcesSummaryHeight(height);
+      applyResourcesSummaryLayout();
+      if (options.save !== false) saveResourcesSummaryLayout();
+    }
+
+    function toggleResourcesSummaryPanel() {
+      animateResourcesSummaryLayoutChange(!filesResourcesSummaryCollapsed);
+    }
+
+    function startResourcesSummaryResize(event) {
+      if (!els.filesResourcesSplitter || event.target?.closest?.('button')) return;
+      event.preventDefault();
+      stopResourcesSummaryAnimation();
+      filesResourcesSummaryCollapsed = false;
+      filesResourcesSplitterDrag = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        startHeight: clampResourcesSummaryHeight(filesResourcesSummaryHeight)
+      };
+      els.filesMyResourcesCard?.classList.add('is-summary-resizing');
+      els.filesResourcesSplitter.classList.add('is-dragging');
+      try {
+        els.filesResourcesSplitter.setPointerCapture(event.pointerId);
+      } catch {}
+    }
+
+    function moveResourcesSummaryResize(event) {
+      if (!filesResourcesSplitterDrag || filesResourcesSplitterDrag.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      const delta = event.clientY - filesResourcesSplitterDrag.startY;
+      setResourcesSummaryHeight(filesResourcesSplitterDrag.startHeight + delta, { save: false });
+    }
+
+    function endResourcesSummaryResize(event) {
+      if (!filesResourcesSplitterDrag || filesResourcesSplitterDrag.pointerId !== event.pointerId) return;
+      filesResourcesSplitterDrag = null;
+      els.filesMyResourcesCard?.classList.remove('is-summary-resizing');
+      els.filesResourcesSplitter?.classList.remove('is-dragging');
+      saveResourcesSummaryLayout();
+    }
+
+    function handleResourcesSummaryKeydown(event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleResourcesSummaryPanel();
+        return;
+      }
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        const delta = event.key === 'ArrowUp' ? -18 : 18;
+        setResourcesSummaryHeight(filesResourcesSummaryHeight + delta);
+      }
+    }
+
     function setGeneralResourcesStats(stats = {}) {
       if (els.filesGeneralResourcesTotal) els.filesGeneralResourcesTotal.textContent = formatResourceNumber(stats.total);
       if (els.filesGeneralResourcesDownloads) els.filesGeneralResourcesDownloads.textContent = formatResourceNumber(stats.downloads);
@@ -9412,17 +10248,24 @@
     function setRequestsStats(payload = {}) {
       const items = Array.isArray(payload.items) ? payload.items : filesRequestsItems;
       const pagination = payload.pagination || {};
-      const total = Number(pagination.total);
-      const pendingLoaded = items.filter(item => String(item?.status || '').toLowerCase() === 'pending').length;
-      const completedLoaded = items.filter(item => String(item?.status || '').toLowerCase() === 'completed').length;
-      const filteredStatus = String(payload.filters?.status ?? filesRequestsStatusFilter ?? '').toLowerCase();
-      if (els.filesRequestsTotal) els.filesRequestsTotal.textContent = formatResourceNumber(Number.isFinite(total) ? total : items.length);
+      const counts = payload.counts || filesRequestsCounts || {};
+      const responseTotal = Number(pagination.total);
+      const pendingLoaded = items.filter(item => getRequestNormalizedStatus(item) === 'pending').length;
+      const completedLoaded = items.filter(item => getRequestNormalizedStatus(item) === 'completed').length;
+      const totalCount = Number(counts.total);
+      const pendingCount = Number(counts.pending);
+      const completedCount = Number(counts.completed);
+      if (els.filesRequestsTotal) {
+        els.filesRequestsTotal.textContent = formatResourceNumber(
+          Number.isFinite(totalCount) ? totalCount : (Number.isFinite(responseTotal) ? responseTotal : items.length)
+        );
+      }
       if (els.filesRequestsLoaded) els.filesRequestsLoaded.textContent = formatResourceNumber(items.length);
       if (els.filesRequestsPending) {
-        els.filesRequestsPending.textContent = formatResourceNumber(filteredStatus === 'pending' && Number.isFinite(total) ? total : pendingLoaded);
+        els.filesRequestsPending.textContent = formatResourceNumber(Number.isFinite(pendingCount) ? pendingCount : pendingLoaded);
       }
       if (els.filesRequestsCompleted) {
-        els.filesRequestsCompleted.textContent = formatResourceNumber(filteredStatus === 'completed' && Number.isFinite(total) ? total : completedLoaded);
+        els.filesRequestsCompleted.textContent = formatResourceNumber(Number.isFinite(completedCount) ? completedCount : completedLoaded);
       }
     }
 
@@ -9626,6 +10469,34 @@
       return String(item.creator_name || item.creatorName || item.creator || item.username || 'Unknown creator').trim() || 'Unknown creator';
     }
 
+    function getRequestNormalizedStatus(item = {}) {
+      const rawStatus = String(
+        item.status ||
+        item.request_status ||
+        item.requestStatus ||
+        item.state ||
+        ''
+      ).trim().toLowerCase();
+      const leakUrl = String(item.leak_message_url || item.leakMessageUrl || item.resource_url || item.resourceUrl || '').trim();
+      const completedAt = String(item.completed_at || item.completedAt || item.fulfilled_at || item.fulfilledAt || '').trim();
+      if (
+        rawStatus === 'completed' ||
+        rawStatus === 'complete' ||
+        rawStatus === 'fulfilled' ||
+        rawStatus === 'done' ||
+        item.completed === true ||
+        item.is_completed === true ||
+        item.isCompleted === true ||
+        Boolean(completedAt) ||
+        Boolean(leakUrl)
+      ) {
+        return 'completed';
+      }
+      if (rawStatus === 'rejected' || rawStatus === 'declined') return 'rejected';
+      if (rawStatus === 'approved') return 'approved';
+      return 'pending';
+    }
+
     function getRequestStatusLabel(value) {
       const status = String(value || 'pending').trim().toLowerCase();
       if (status === 'completed') return 'Completed';
@@ -9655,7 +10526,7 @@
       const requestId = getRequestItemId(item);
       const title = String(item.title || 'Untitled request').trim() || 'Untitled request';
       const creatorName = getRequestCreatorName(item);
-      const status = String(item.status || 'pending').trim().toLowerCase() || 'pending';
+      const status = getRequestNormalizedStatus(item);
       const statusLabel = getRequestStatusLabel(status);
       const productUrl = makeRequestAbsoluteUrl(item.product_url || item.productUrl || '', '');
       const creatorUrl = makeRequestAbsoluteUrl(item.creator_url || item.creatorUrl || '', '');
@@ -9755,6 +10626,28 @@
         .join('');
     }
 
+    async function loadRequestsCounts(search = '', refresh = false) {
+      const normalizedSearch = String(search || '').trim();
+      const makeCountQuery = status => {
+        const query = new URLSearchParams({ page: '1', limit: '1' });
+        if (normalizedSearch) query.set('search', normalizedSearch);
+        if (status) query.set('status', status);
+        if (refresh) query.set('_', String(Date.now()));
+        return query.toString();
+      };
+      const [allPayload, pendingPayload, completedPayload] = await Promise.all([
+        filesApi(`/api/requests?${makeCountQuery('')}`, { method: 'GET' }),
+        filesApi(`/api/requests?${makeCountQuery('pending')}`, { method: 'GET' }),
+        filesApi(`/api/requests?${makeCountQuery('completed')}`, { method: 'GET' })
+      ]);
+      filesRequestsCounts = {
+        total: Number(allPayload?.pagination?.total),
+        pending: Number(pendingPayload?.pagination?.total),
+        completed: Number(completedPayload?.pagination?.total)
+      };
+      return filesRequestsCounts;
+    }
+
     async function loadRequests(options = {}) {
       const refresh = Boolean(options.refresh);
       const append = Boolean(options.append);
@@ -9773,7 +10666,12 @@
         if (activeSearch) query.set('search', activeSearch);
         if (activeStatus) query.set('status', activeStatus);
         if (refresh) query.set('_', String(Date.now()));
-        const payload = await filesApi(`/api/requests?${query.toString()}`, { method: 'GET' });
+        const [payload, counts] = append
+          ? [await filesApi(`/api/requests?${query.toString()}`, { method: 'GET' }), filesRequestsCounts]
+          : await Promise.all([
+              filesApi(`/api/requests?${query.toString()}`, { method: 'GET' }),
+              loadRequestsCounts(activeSearch, refresh).catch(() => filesRequestsCounts)
+            ]);
         const items = Array.isArray(payload.requests) ? payload.requests : [];
         filesRequestsItems = append ? [...filesRequestsItems, ...items] : items;
         const pagination = payload.pagination || {};
@@ -9782,6 +10680,7 @@
         setRequestsStats({
           items: filesRequestsItems,
           pagination,
+          counts,
           filters: { search: activeSearch, status: activeStatus }
         });
         renderRequestsList({ preserveScrollTop: previousScrollTop });
@@ -9799,7 +10698,7 @@
           'Browsing Requests',
           activeSearch
             ? `Searching "${normalizeLeakerUploadNameText(activeSearch, 44)}"`
-            : `${formatResourceNumber(pagination.total)} ${activeStatus || 'all'} requests`,
+            : `${formatResourceNumber(counts?.total ?? pagination.total)} requests`,
           { force: true }
         );
       } catch (error) {
@@ -10039,6 +10938,7 @@
       filesResourcesItems = items;
       const visibleItems = getFilteredMyResources(items);
       filesEditorGroups = buildResourceEditorGroups(visibleItems);
+      filesEditorsAvatarHydrated.clear();
       setResourceStats(payload.stats || {});
       const owner = formatDiscordDisplayName(payload.uploader?.displayName || filesUsername || 'username');
       const loadedPayload = { ...payload, loaded: true };
@@ -10737,6 +11637,78 @@
       if (metaEl) metaEl.textContent = meta;
     }
 
+    function clearResourcesInsightAction(card) {
+      if (!card) return;
+      card.classList.remove('is-clickable');
+      card.removeAttribute('role');
+      card.removeAttribute('tabindex');
+      delete card.dataset.resourceId;
+      delete card.dataset.resourceUrl;
+      delete card.dataset.editorKey;
+    }
+
+    function setResourcesInsightAction(card, action = {}) {
+      clearResourcesInsightAction(card);
+      const resourceId = getResourceItemId(action.resourceId || action.resource);
+      const editorKey = normalizeResourceEditorKey(action.editorKey || '');
+      if (action.type === 'resource' && resourceId) {
+        card.dataset.resourceId = resourceId;
+        card.dataset.resourceUrl = getResourceUrl(resourceId);
+      } else if (action.type === 'editor' && editorKey) {
+        card.dataset.editorKey = editorKey;
+      } else {
+        return;
+      }
+      card.classList.add('is-clickable');
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+    }
+
+    function getResourceInsightEditor(item = {}) {
+      const name = String(item?.editorName || '').trim();
+      const key = normalizeResourceEditorKey(name);
+      if (!name || !key) return null;
+      const group = getResourceEditorGroup(key);
+      return {
+        name,
+        key,
+        avatar: String(item?.editorAvatarUrl || group?.avatar || '').trim()
+      };
+    }
+
+    function renderResourcesInsightEditorChip(editor) {
+      if (!editor?.key) return '';
+      return `
+        <button class="files-resources-insight-editor" type="button" data-editor-key="${escapeHtml(editor.key)}" title="Open ${escapeHtml(editor.name)} profile">
+          ${renderFilesAvatarImage('', editor.avatar, editor.name, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
+          <span>${escapeHtml(editor.name)}</span>
+        </button>
+      `;
+    }
+
+    function renderResourcesInsightCard(card, options = {}) {
+      if (!card) return;
+      const kicker = String(options.kicker || '').trim();
+      const title = String(options.title || '').trim();
+      const meta = String(options.meta || '').trim();
+      const avatar = String(options.avatar || '').trim();
+      const avatarName = String(options.avatarName || title || kicker || 'Insight').trim();
+      const editor = options.editor || null;
+      const hasAvatar = Boolean(avatar || options.forceAvatar);
+      card.innerHTML = `
+        <span class="files-resources-insight-kicker">${escapeHtml(kicker)}</span>
+        <div class="files-resources-insight-main ${hasAvatar ? 'has-avatar' : ''}">
+          ${hasAvatar ? renderFilesAvatarImage('files-resources-insight-avatar', avatar, avatarName, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"') : ''}
+          <span class="files-resources-insight-copy">
+            <strong>${escapeHtml(title)}</strong>
+            <small>${escapeHtml(meta)}</small>
+          </span>
+        </div>
+        ${renderResourcesInsightEditorChip(editor)}
+      `;
+      setResourcesInsightAction(card, options.action || {});
+    }
+
     function setResourcesPersonalInsights(items = [], groups = [], payload = {}) {
       const stats = payload.stats || {};
       const topResource = [...items].sort((a, b) => (Number(b?.downloadCount) || 0) - (Number(a?.downloadCount) || 0))[0];
@@ -10753,65 +11725,64 @@
 
       if (!items.length) {
         if (payload.loaded !== true) {
-          setResourcesInsightText(
-            els.filesResourcesTopResource,
-            els.filesResourcesTopResourceMeta,
-            payload.error ? 'Area unavailable' : 'Loading uploads',
-            payload.error ? 'Refresh can try again.' : 'Your stats are being synced.'
-          );
-          setResourcesInsightText(
-            els.filesResourcesTopEditor,
-            els.filesResourcesTopEditorMeta,
-            payload.error ? 'Editors unavailable' : 'Loading editors',
-            payload.error ? 'Editor categories could not be loaded.' : 'Categories will appear here.'
-          );
-          setResourcesInsightText(
-            els.filesResourcesLatestLeak,
-            els.filesResourcesLatestLeakMeta,
-            payload.error ? 'Latest leak unavailable' : 'Loading latest leak',
-            payload.error ? 'Recent uploads could not be loaded.' : 'Recent uploads will appear here.'
-          );
+          renderResourcesInsightCard(els.filesResourcesTopResourceInsight, {
+            kicker: 'Top drop',
+            title: payload.error ? 'Area unavailable' : 'Loading uploads',
+            meta: payload.error ? 'Refresh can try again.' : 'Your stats are being synced.'
+          });
+          renderResourcesInsightCard(els.filesResourcesTopEditorInsight, {
+            kicker: 'Favorite editor',
+            title: payload.error ? 'Editors unavailable' : 'Loading editors',
+            meta: payload.error ? 'Editor categories could not be loaded.' : 'Categories will appear here.'
+          });
+          renderResourcesInsightCard(els.filesResourcesLatestLeakInsight, {
+            kicker: 'Latest leak',
+            title: payload.error ? 'Latest leak unavailable' : 'Loading latest leak',
+            meta: payload.error ? 'Recent uploads could not be loaded.' : 'Recent uploads will appear here.'
+          });
           return;
         }
-        setResourcesInsightText(
-          els.filesResourcesTopResource,
-          els.filesResourcesTopResourceMeta,
-          'No drops yet',
-          'Upload your first leak to start the board.'
-        );
-        setResourcesInsightText(
-          els.filesResourcesTopEditor,
-          els.filesResourcesTopEditorMeta,
-          'No editor yet',
-          'Editor categories appear after upload.'
-        );
-        setResourcesInsightText(
-          els.filesResourcesLatestLeak,
-          els.filesResourcesLatestLeakMeta,
-          'Nothing leaked yet',
-          'The next upload starts your feed.'
-        );
+        renderResourcesInsightCard(els.filesResourcesTopResourceInsight, {
+          kicker: 'Top drop',
+          title: 'No drops yet',
+          meta: 'Upload your first leak to start the board.'
+        });
+        renderResourcesInsightCard(els.filesResourcesTopEditorInsight, {
+          kicker: 'Favorite editor',
+          title: 'No editor yet',
+          meta: 'Editor categories appear after upload.'
+        });
+        renderResourcesInsightCard(els.filesResourcesLatestLeakInsight, {
+          kicker: 'Latest leak',
+          title: 'Nothing leaked yet',
+          meta: 'The next upload starts your feed.'
+        });
         return;
       }
 
-      setResourcesInsightText(
-        els.filesResourcesTopResource,
-        els.filesResourcesTopResourceMeta,
-        topResource?.name || 'Top resource',
-        `${formatResourceNumber(topResource?.downloadCount)} downloads - ${formatResourceNumber(topResource?.viewCount)} views`
-      );
-      setResourcesInsightText(
-        els.filesResourcesTopEditor,
-        els.filesResourcesTopEditorMeta,
-        topEditor?.name || 'Favorite editor',
-        `${formatResourceNumber(topEditor?.items?.length)} leaks - ${formatResourceNumber(topEditor?.downloads)} downloads`
-      );
-      setResourcesInsightText(
-        els.filesResourcesLatestLeak,
-        els.filesResourcesLatestLeakMeta,
-        latestResource?.name || 'Latest leak',
-        `${formatResourceDate(latestResource?.leakedAt)} - updated ${updatedText}`
-      );
+      renderResourcesInsightCard(els.filesResourcesTopResourceInsight, {
+        kicker: 'Top drop',
+        title: topResource?.name || 'Top resource',
+        meta: `${formatResourceNumber(topResource?.downloadCount)} downloads - ${formatResourceNumber(topResource?.viewCount)} views`,
+        editor: getResourceInsightEditor(topResource),
+        action: { type: 'resource', resource: topResource }
+      });
+      renderResourcesInsightCard(els.filesResourcesTopEditorInsight, {
+        kicker: 'Favorite editor',
+        title: topEditor?.name || 'Favorite editor',
+        meta: `${formatResourceNumber(topEditor?.items?.length)} leaks - ${formatResourceNumber(topEditor?.downloads)} downloads`,
+        avatar: topEditor?.avatar || '',
+        avatarName: topEditor?.name || 'Favorite editor',
+        forceAvatar: true,
+        action: { type: 'editor', editorKey: topEditor?.key }
+      });
+      renderResourcesInsightCard(els.filesResourcesLatestLeakInsight, {
+        kicker: 'Latest leak',
+        title: latestResource?.name || 'Latest leak',
+        meta: `${formatResourceDate(latestResource?.leakedAt)} - updated ${updatedText}`,
+        editor: getResourceInsightEditor(latestResource),
+        action: { type: 'resource', resource: latestResource }
+      });
     }
 
     function setAppAuthMessage(message, checking = false) {
@@ -11138,6 +12109,7 @@
         renderDiscordPresenceDisabled();
         return;
       }
+      if (discordPresenceDesired || discordPresenceSending) return;
       try {
         renderDiscordPresenceStatus(await filesApi('/api/discord-presence/status', { method: 'GET' }));
       } catch (error) {
@@ -11150,8 +12122,38 @@
       }
     }
 
-    async function updateDiscordPresence(details, state, options = {}) {
+    async function flushDiscordPresenceActivity() {
+      if (discordPresenceSending) return;
+      discordPresenceSending = true;
+      try {
+        while (discordPresenceDesired && getFilesSetting('discordPresenceEnabled')) {
+          const payload = discordPresenceDesired;
+          discordPresenceDesired = null;
+          try {
+            const status = await filesApi('/api/discord-presence/activity', {
+              method: 'POST',
+              body: JSON.stringify({ details: payload.details, state: payload.state })
+            });
+            lastDiscordPresenceKey = payload.key;
+            lastDiscordPresenceSentAt = Date.now();
+            if (!discordPresenceDesired) {
+              renderDiscordPresenceStatus(status);
+            }
+          } catch {
+            if (!discordPresenceDesired) loadDiscordPresenceStatus();
+          }
+        }
+      } finally {
+        discordPresenceSending = false;
+        if (discordPresenceDesired && getFilesSetting('discordPresenceEnabled')) {
+          flushDiscordPresenceActivity();
+        }
+      }
+    }
+
+    function updateDiscordPresence(details, state, options = {}) {
       if (!getFilesSetting('discordPresenceEnabled')) {
+        discordPresenceDesired = null;
         renderDiscordPresenceDisabled();
         return;
       }
@@ -11170,17 +12172,8 @@
       if (!options.force && key === lastDiscordPresenceKey && now - lastDiscordPresenceSentAt < 2500) {
         return;
       }
-      lastDiscordPresenceKey = key;
-      lastDiscordPresenceSentAt = now;
-      try {
-        const status = await filesApi('/api/discord-presence/activity', {
-          method: 'POST',
-          body: JSON.stringify({ details: cleanDetails, state: cleanState })
-        });
-        renderDiscordPresenceStatus(status);
-      } catch {
-        loadDiscordPresenceStatus();
-      }
+      discordPresenceDesired = { details: cleanDetails, state: cleanState, key };
+      flushDiscordPresenceActivity();
     }
 
     function startDiscordPresencePolling() {
@@ -15230,6 +16223,9 @@
           event.preventDefault();
           if (isOverlayVisible(els.filesResourceDetailOverlay) && els.filesResourceDetailOverlay.contains(editorButton) && filesResourceDetailId) {
             pushModalBackEntry({ type: 'resource', resourceId: filesResourceDetailId });
+          } else if (isOverlayVisible(els.filesEditorsOverlay) && els.filesEditorsOverlay.contains(editorButton)) {
+            pushModalBackEntry({ type: 'editors' });
+            hideEditorsModal({ silentPresence: true });
           }
           showResourceEditorProfile(editorButton.dataset.editorKey || '');
           return;
@@ -15260,6 +16256,14 @@
           event.preventDefault();
           openExternalUrl(externalLink.dataset.externalUrl || externalLink.href);
         }
+      });
+      document.addEventListener('keydown', event => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        if (event.target.closest?.('.files-resources-insight-editor,[data-editor-key]')) return;
+        const insight = event.target.closest?.('.files-resources-insight.is-clickable');
+        if (!insight) return;
+        event.preventDefault();
+        insight.click();
       });
       els.filesBackBtn?.addEventListener('click', () => {
         if (filesResourcesView === 'public' || filesResourcesView === 'requests') {
@@ -15308,6 +16312,25 @@
         filesResourcesSearchQuery = els.filesResourcesSearch.value;
         rerenderMyResourcesSearch();
       });
+      els.filesEditorsOpenBtn?.addEventListener('click', showEditorsModal);
+      els.filesEditorsCloseBtn?.addEventListener('click', handleEditorsModalBack);
+      els.filesEditorsSearch?.addEventListener('input', () => {
+        filesEditorsModalSearchQuery = els.filesEditorsSearch.value;
+        renderEditorsModal(filesEditorGroups);
+        hydrateEditorsModalAvatars().catch(() => {});
+      });
+      els.filesEditorsOverlay?.addEventListener('click', event => {
+        if (event.target === els.filesEditorsOverlay) handleEditorsModalBack();
+      });
+      els.filesResourcesSummaryToggle?.addEventListener('click', event => {
+        event.preventDefault();
+        toggleResourcesSummaryPanel();
+      });
+      els.filesResourcesSplitter?.addEventListener('pointerdown', startResourcesSummaryResize);
+      els.filesResourcesSplitter?.addEventListener('pointermove', moveResourcesSummaryResize);
+      els.filesResourcesSplitter?.addEventListener('pointerup', endResourcesSummaryResize);
+      els.filesResourcesSplitter?.addEventListener('pointercancel', endResourcesSummaryResize);
+      els.filesResourcesSplitter?.addEventListener('keydown', handleResourcesSummaryKeydown);
       els.filesResourcesRefreshBtn.addEventListener('click', () => loadMyResources(true));
       els.filesResourcesUploadBtn.addEventListener('click', startLeakerMode);
       els.filesCloudBtn.addEventListener('click', showFilesCloudOverlay);
@@ -15557,6 +16580,10 @@
           handleResourceEditorBack();
           return;
         }
+        if (!els.filesEditorsOverlay.classList.contains('hidden')) {
+          handleEditorsModalBack();
+          return;
+        }
         if (leakerModePhase !== 'idle') {
           exitLeakerMode();
           return;
@@ -15601,6 +16628,7 @@
 
     async function init() {
       bindEvents();
+      loadResourcesSummaryLayout();
       applyFilesSettings();
       filesUsername = 'username';
       setFilesAuthState(false, '');

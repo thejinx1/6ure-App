@@ -43,7 +43,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.4.5"
+DEFAULT_APP_VERSION = "1.5.0"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
