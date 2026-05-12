@@ -9466,6 +9466,8 @@
     const REQUESTS_URL = 'https://6ureleaks.com/requests';
     const OPENING_DURATION_MS = 3600;
     const OPENING_EXIT_MS = 950;
+    const STARTUP_AUTH_CACHE_TIMEOUT_MS = 1200;
+    const STARTUP_AUTH_REFRESH_TIMEOUT_MS = 4200;
     const LEAKER_TRANSITION_MIN_MS = 780;
     const LEAKER_LOGIN_POLL_MS = 2600;
     const LEAKER_AUTO_LOGIN_RETRY_MS = 12000;
@@ -14835,22 +14837,39 @@
 
     async function filesApi(path, options = {}) {
       let response;
+      const {
+        timeoutMs = 0,
+        silentConnection = false,
+        headers: optionHeaders = {},
+        signal: optionSignal,
+        ...fetchOptions
+      } = options || {};
+      const cleanTimeoutMs = Math.max(0, Number(timeoutMs) || 0);
+      const controller = cleanTimeoutMs > 0 && !optionSignal ? new AbortController() : null;
+      const timeoutId = controller
+        ? window.setTimeout(() => controller.abort(), cleanTimeoutMs)
+        : null;
       const requestId = (window.crypto?.randomUUID && window.crypto.randomUUID())
         || `req-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
       try {
         response = await fetch(path, {
           cache: 'no-store',
-          ...options,
+          ...fetchOptions,
+          signal: optionSignal || controller?.signal,
           headers: {
             'Content-Type': 'application/json',
             'X-Request-Id': requestId,
-            ...(options.headers || {})
+            ...optionHeaders
           }
         });
       } catch (error) {
         if (error?.name === 'AbortError') throw error;
-        showConnectionScreen('Connection unavailable', 'The local 6ure™ App service could not be reached. Retry in a moment.');
+        if (!silentConnection) {
+          showConnectionScreen('Connection unavailable', 'The local 6ure™ App service could not be reached. Retry in a moment.');
+        }
         throw error;
+      } finally {
+        if (timeoutId) window.clearTimeout(timeoutId);
       }
       const text = await response.text();
       let data = {};
@@ -15223,11 +15242,15 @@
           .catch(() => {});
       }
 
-      const resourcesPromise = loadMyResources(Boolean(options.refreshResources));
+      const resourcesPromise = options.loadResources === false
+        ? Promise.resolve(null)
+        : loadMyResources(Boolean(options.refreshResources));
       if (options.runOpening !== false) {
         await runOpeningScreen(displayName);
       }
-      await resourcesPromise;
+      if (options.waitForResources !== false) {
+        await resourcesPromise;
+      }
       if (els.filesLoginBtn) {
         els.filesLoginBtn.disabled = false;
         els.filesLoginBtn.innerHTML = discordLoginButtonHtml('Sign in with Discord');
@@ -15365,16 +15388,62 @@
       }
     }
 
+    function activateStartupAppAuth(user, options = {}) {
+      appDiscordUser = user || {};
+      const displayName = formatDiscordDisplayName(appDiscordUser);
+      setFilesAuthState(true, displayName);
+      setOpeningWelcome(displayName);
+      setAppAuthMessage('');
+      if (options.loadResources !== false) {
+        loadMyResources(Boolean(options.refreshResources)).catch(() => {});
+      }
+    }
+
+    function scheduleStartupAuthRetries() {
+      [900, 2600, 5200, 9000].forEach(delay => {
+        setTimeout(() => {
+          syncAppAuthFromSite({ silent: true, refreshResources: true }).catch(() => {});
+        }, delay);
+      });
+    }
+
     async function loadInitialAppAuth() {
       try {
-        const status = await filesApi('/api/app-auth/status?refresh=1', { method: 'GET' });
-        if (status.authenticated && status.user) {
-          await completeAppDiscordAuth(status.user, { refreshResources: false, runOpening: false });
+        const cachedStatus = await filesApi('/api/app-auth/status?cached=1', {
+          method: 'GET',
+          timeoutMs: STARTUP_AUTH_CACHE_TIMEOUT_MS,
+          silentConnection: true
+        });
+        if (cachedStatus.authenticated && cachedStatus.user) {
+          activateStartupAppAuth(cachedStatus.user, { loadResources: true, refreshResources: false });
+          setTimeout(() => {
+            syncAppAuthFromSite({ silent: true, refreshResources: true }).catch(() => {});
+          }, 600);
           return true;
         }
+      } catch {}
+
+      try {
+        const status = await filesApi('/api/app-auth/status?refresh=1&timeout=3', {
+          method: 'GET',
+          timeoutMs: STARTUP_AUTH_REFRESH_TIMEOUT_MS,
+          silentConnection: true
+        });
+        if (status.authenticated && status.user) {
+          activateStartupAppAuth(status.user, { loadResources: true, refreshResources: false });
+          return true;
+        }
+        if (status.refreshing) {
+          setAppAuthMessage('Checking sign-in in the background...');
+          scheduleStartupAuthRetries();
+          return false;
+        }
       } catch {
-        setAppAuthMessage('Discord sign-in status could not be checked.');
+        setAppAuthMessage('Checking sign-in in the background...');
+        scheduleStartupAuthRetries();
+        return false;
       }
+
       appDiscordUser = null;
       setFilesAuthState(false, '');
       setAppAuthMessage('Sign in with Discord to continue.');

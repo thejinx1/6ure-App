@@ -243,6 +243,7 @@ RESOURCE_DETAIL_CACHE: dict[int, dict] = {}
 APP_AUTH_PROFILE_CACHE_SECONDS = float(os.environ.get("REYLI_APP_AUTH_PROFILE_CACHE_SECONDS", "0"))
 APP_AUTH_NEGATIVE_CACHE_SECONDS = float(os.environ.get("REYLI_APP_AUTH_NEGATIVE_CACHE_SECONDS", "4"))
 APP_AUTH_LOCK = threading.RLock()
+APP_AUTH_REFRESH_LOCK = threading.Lock()
 APP_AUTH_STATE = {
     "authenticated": False,
     "user": None,
@@ -710,9 +711,36 @@ def sanitize_files_state(raw_files) -> dict:
     return clean_files
 
 
+def sanitize_app_auth_state(raw_auth) -> dict:
+    raw_auth = raw_auth if isinstance(raw_auth, dict) else {}
+    raw_user = raw_auth.get("user") if isinstance(raw_auth.get("user"), dict) else {}
+    user: dict[str, str] = {}
+    for key in ("id", "username", "displayName", "avatarUrl", "source"):
+        value = str(raw_user.get(key) or "").strip()
+        if value:
+            user[key] = value[:2048] if key == "avatarUrl" else value[:160]
+
+    authenticated = bool(raw_auth.get("authenticated") and user)
+    clean: dict[str, object] = {
+        "authenticated": authenticated,
+        "user": user if authenticated else None,
+    }
+    for key in ("checkedAt", "updatedAt"):
+        try:
+            value = int(float(raw_auth.get(key) or 0))
+        except Exception:
+            value = 0
+        if value > 0:
+            clean[key] = value
+    return clean if authenticated else {}
+
+
 def sanitize_persisted_state(payload: dict | None) -> dict:
     raw = payload if isinstance(payload, dict) else {}
     clean = {"files": sanitize_files_state(raw.get("files"))}
+    app_auth = sanitize_app_auth_state(raw.get("appAuth"))
+    if app_auth:
+        clean["appAuth"] = app_auth
     saved_at = raw.get("_savedAt")
     if isinstance(saved_at, int):
         clean["_savedAt"] = saved_at
@@ -1311,7 +1339,9 @@ def set_app_auth_user(user: dict | None) -> dict:
         APP_AUTH_STATE["checkedAt"] = now
         APP_AUTH_STATE["updatedAt"] = now
         APP_AUTH_STATE["lastError"] = ""
-        return get_app_auth_snapshot()
+        snapshot = get_app_auth_snapshot()
+    persist_app_auth_snapshot(snapshot)
+    return snapshot
 
 
 def mark_app_auth_checked(*, error: str = "") -> dict:
@@ -1336,7 +1366,9 @@ def clear_app_auth_state(*, clear_cookies: bool = False) -> dict:
                 LEAKER_PROXY_SESSION.cookies.save(ignore_discard=True, ignore_expires=True)
             except Exception:
                 pass
-    return get_app_auth_snapshot()
+    snapshot = get_app_auth_snapshot()
+    clear_persisted_app_auth()
+    return snapshot
 
 
 def get_app_auth_snapshot() -> dict:
@@ -1351,6 +1383,53 @@ def get_app_auth_snapshot() -> dict:
         }
 
 
+def persist_app_auth_snapshot(snapshot: dict) -> None:
+    try:
+        clean = sanitize_app_auth_state(
+            {
+                "authenticated": snapshot.get("authenticated"),
+                "user": snapshot.get("user"),
+                "checkedAt": snapshot.get("checkedAt"),
+                "updatedAt": snapshot.get("updatedAt"),
+            }
+        )
+        if not clean:
+            return
+        state = load_persisted_state()
+        state["appAuth"] = clean
+        save_persisted_state(state)
+    except Exception:
+        pass
+
+
+def clear_persisted_app_auth() -> None:
+    try:
+        state = load_persisted_state()
+        if "appAuth" not in state:
+            return
+        state.pop("appAuth", None)
+        save_persisted_state(state)
+    except Exception:
+        pass
+
+
+def restore_app_auth_from_state(state: dict | None = None) -> dict:
+    clean = sanitize_app_auth_state((state if isinstance(state, dict) else load_persisted_state()).get("appAuth"))
+    user = clean.get("user") if clean else None
+    if not isinstance(user, dict):
+        return get_app_auth_snapshot()
+    now = time.time()
+    checked_at = float(clean.get("checkedAt") or clean.get("updatedAt") or int(now * 1000)) / 1000
+    updated_at = float(clean.get("updatedAt") or clean.get("checkedAt") or int(now * 1000)) / 1000
+    with APP_AUTH_LOCK:
+        APP_AUTH_STATE["authenticated"] = True
+        APP_AUTH_STATE["user"] = dict(user)
+        APP_AUTH_STATE["checkedAt"] = checked_at
+        APP_AUTH_STATE["updatedAt"] = updated_at
+        APP_AUTH_STATE["lastError"] = ""
+        return get_app_auth_snapshot()
+
+
 def app_auth_cache_is_fresh(snapshot: dict) -> bool:
     checked_at = float(snapshot.get("checkedAt") or 0) / 1000
     if checked_at <= 0:
@@ -1361,7 +1440,7 @@ def app_auth_cache_is_fresh(snapshot: dict) -> bool:
     return age < APP_AUTH_NEGATIVE_CACHE_SECONDS
 
 
-def fetch_app_auth_user_from_leaker_session() -> dict | None:
+def fetch_app_auth_user_from_leaker_session(*, timeout_seconds: float = 16.0) -> dict | None:
     ensure_leaker_cookie_consent(save=False)
     endpoints = (
         ("/api/auth/session", "json"),
@@ -1374,6 +1453,7 @@ def fetch_app_auth_user_from_leaker_session() -> dict | None:
         "Referer": LEAKER_SITE_BASE_URL,
         "User-Agent": LEAKER_PROXY_USER_AGENT,
     }
+    request_timeout = max(1.0, float(timeout_seconds or 16.0))
 
     last_error = ""
     for path, expected in endpoints:
@@ -1384,7 +1464,7 @@ def fetch_app_auth_user_from_leaker_session() -> dict | None:
                     url,
                     headers=headers,
                     allow_redirects=True,
-                    timeout=16,
+                    timeout=request_timeout,
                 )
                 try:
                     LEAKER_PROXY_SESSION.cookies.save(ignore_discard=True, ignore_expires=True)
@@ -1416,17 +1496,33 @@ def fetch_app_auth_user_from_leaker_session() -> dict | None:
     return None
 
 
-def get_app_auth_status(*, refresh: bool = False) -> dict:
+def get_app_auth_status(*, refresh: bool = False, timeout_seconds: float = 16.0) -> dict:
     snapshot = get_app_auth_snapshot()
-    if not refresh and app_auth_cache_is_fresh(snapshot):
+    if not refresh and (snapshot.get("authenticated") or app_auth_cache_is_fresh(snapshot)):
         snapshot["success"] = True
         return snapshot
 
-    user = fetch_app_auth_user_from_leaker_session()
-    if user:
-        snapshot = set_app_auth_user(user)
-    else:
-        snapshot = clear_app_auth_state(clear_cookies=False)
+    acquired = APP_AUTH_REFRESH_LOCK.acquire(blocking=False)
+    if not acquired:
+        snapshot["success"] = True
+        snapshot["refreshing"] = True
+        return snapshot
+
+    try:
+        user = fetch_app_auth_user_from_leaker_session(timeout_seconds=timeout_seconds)
+        if user:
+            snapshot = set_app_auth_user(user)
+        else:
+            checked_snapshot = get_app_auth_snapshot()
+            if snapshot.get("authenticated") and checked_snapshot.get("lastError"):
+                snapshot = dict(snapshot)
+                snapshot["checkedAt"] = checked_snapshot.get("checkedAt", snapshot.get("checkedAt", 0))
+                snapshot["lastError"] = checked_snapshot.get("lastError", "")
+                snapshot["stale"] = True
+            else:
+                snapshot = clear_app_auth_state(clear_cookies=False)
+    finally:
+        APP_AUTH_REFRESH_LOCK.release()
     snapshot["success"] = True
     return snapshot
 
@@ -8316,7 +8412,17 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         try:
             params = urllib.parse.parse_qs(query or "", keep_blank_values=True)
             refresh = str(params.get("refresh", [""])[0]).strip().lower() in {"1", "true", "yes"}
-            payload = get_app_auth_status(refresh=refresh)
+            cached = str(params.get("cached", [""])[0]).strip().lower() in {"1", "true", "yes"}
+            if cached:
+                payload = get_app_auth_snapshot()
+                payload["success"] = True
+                payload["cached"] = True
+            else:
+                try:
+                    timeout_seconds = float(str(params.get("timeout", ["16"])[0]).strip() or "16")
+                except Exception:
+                    timeout_seconds = 16.0
+                payload = get_app_auth_status(refresh=refresh, timeout_seconds=timeout_seconds)
             try:
                 oauth_status = self._leaker_bridge().leaker_oauth_status()
             except Exception:
@@ -8892,6 +8998,7 @@ def create_server(port: int = PORT) -> ThreadingHTTPServer:
 def main() -> None:
     boot_state = clear_last_files_selection()
     sync_session_from_state(boot_state)
+    restore_app_auth_from_state(boot_state)
     server = create_server(PORT)
     print(f"6ure™ App local server running at http://localhost:{PORT}")
     server.serve_forever()
@@ -8901,6 +9008,7 @@ if get_app_setting("silentRepairMode"):
     run_silent_repair("startup")
 BOOT_STATE = clear_last_files_selection()
 sync_session_from_state(BOOT_STATE)
+restore_app_auth_from_state(BOOT_STATE)
 refresh_discord_presence_from_session()
 
 
