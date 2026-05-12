@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
 import html
 import gc
 import json
 import os
+import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -51,6 +54,198 @@ def webview_profile_dir() -> Path:
     return persistent_app_data_dir() / "webview-profile"
 
 
+def linux_xdg_user_dir(key: str) -> Path | None:
+    if not sys.platform.startswith("linux"):
+        return None
+    try:
+        config_root = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+        user_dirs_path = config_root / "user-dirs.dirs"
+        if not user_dirs_path.is_file():
+            return None
+        prefix = f"{key}="
+        for line in user_dirs_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            clean = line.strip()
+            if not clean or clean.startswith("#") or not clean.startswith(prefix):
+                continue
+            value = clean.split("=", 1)[1].strip()
+            if len(value) >= 2 and value[0] == value[-1] == '"':
+                value = value[1:-1]
+            home = str(Path.home())
+            value = value.replace("${HOME}", home).replace("$HOME", home)
+            value = os.path.expandvars(value)
+            if value:
+                return Path(value).expanduser()
+    except Exception:
+        return None
+    return None
+
+
+def desktop_dir() -> Path:
+    localized_desktop = "Masa\u00fcst\u00fc"
+    candidates: list[Path] = []
+    if sys.platform.startswith("win"):
+        for env_name in ("OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+            root = os.environ.get(env_name)
+            if root:
+                candidates.extend((Path(root) / localized_desktop, Path(root) / "Desktop"))
+        candidates.extend((Path.home() / localized_desktop, Path.home() / "Desktop"))
+    elif sys.platform.startswith("linux"):
+        xdg_desktop = linux_xdg_user_dir("XDG_DESKTOP_DIR")
+        if xdg_desktop:
+            candidates.append(xdg_desktop)
+        candidates.extend((Path.home() / "Desktop", Path.home() / localized_desktop, Path.home() / "Masaustu"))
+    else:
+        candidates.append(Path.home() / "Desktop")
+
+    for candidate in candidates:
+        try:
+            if candidate.exists() and candidate.is_dir():
+                return candidate
+        except OSError:
+            continue
+
+    fallback = candidates[0] if candidates else Path.home() / "Desktop"
+    fallback.mkdir(parents=True, exist_ok=True)
+    return fallback
+
+
+def downloads_dir() -> Path:
+    candidates: list[Path] = []
+    if sys.platform.startswith("win"):
+        for env_name in ("OneDrive", "OneDriveConsumer", "OneDriveCommercial"):
+            root = os.environ.get(env_name)
+            if root:
+                candidates.append(Path(root) / "Downloads")
+        candidates.append(Path.home() / "Downloads")
+    elif sys.platform.startswith("linux"):
+        xdg_downloads = linux_xdg_user_dir("XDG_DOWNLOAD_DIR")
+        if xdg_downloads:
+            candidates.append(xdg_downloads)
+        candidates.append(Path.home() / "Downloads")
+    else:
+        candidates.append(Path.home() / "Downloads")
+
+    for candidate in candidates:
+        try:
+            if candidate.exists() and candidate.is_dir():
+                return candidate
+        except OSError:
+            continue
+    return candidates[0] if candidates else Path.home() / "Downloads"
+
+
+def writable_ffx_output_dir() -> Path:
+    candidates = [
+        desktop_dir(),
+        downloads_dir(),
+        files_data_dir() / "ffx-exports",
+    ]
+    last_error: Exception | None = None
+    for candidate in candidates:
+        probe = candidate / ".sixure-ffx-write-test.tmp"
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            probe.write_bytes(b"ok")
+            probe.unlink(missing_ok=True)
+            return candidate
+        except Exception as error:
+            last_error = error
+            try:
+                probe.unlink(missing_ok=True)
+            except Exception:
+                pass
+    raise PermissionError(f"No writable FFX output folder was found: {last_error}")
+
+
+def safe_ffx_output_name(value: str) -> str:
+    name = Path(str(value or "preset-renamed.ffx")).name
+    invalid = '<>:"/\\|?*'
+    clean = "".join("_" if char in invalid or ord(char) < 32 else char for char in name).strip(" .")
+    if not clean:
+        clean = "preset-renamed.ffx"
+    if not clean.lower().endswith(".ffx"):
+        clean = f"{clean}.ffx"
+    return clean
+
+
+def unique_output_path(folder: Path, file_name: str) -> Path:
+    target = folder / safe_ffx_output_name(file_name)
+    if not target.exists():
+        return target
+
+    stem = target.stem
+    suffix = target.suffix or ".ffx"
+    counter = 2
+    while True:
+        candidate = folder / f"{stem} ({counter}){suffix}"
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+
+def first_dialog_path(selection) -> str:
+    if not selection:
+        return ""
+    if isinstance(selection, (str, os.PathLike)):
+        return str(selection)
+    try:
+        return str(selection[0]) if selection else ""
+    except (IndexError, TypeError, KeyError):
+        return str(selection)
+
+
+def dialog_paths(selection) -> list[str]:
+    if not selection:
+        return []
+    if isinstance(selection, (str, os.PathLike)):
+        return [str(selection)]
+    try:
+        return [str(item) for item in selection if item]
+    except TypeError:
+        return [str(selection)]
+
+
+def launch_detached(args: list[str], cwd: Path | None = None) -> None:
+    kwargs = {
+        "close_fds": True,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if sys.platform.startswith("win"):
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    else:
+        kwargs["start_new_session"] = True
+    subprocess.Popen(args, cwd=str(cwd) if cwd else None, **kwargs)
+
+
+def linux_open_command(target: Path) -> list[str] | None:
+    for command in ("xdg-open", "gio", "kde-open", "gnome-open", "exo-open"):
+        if not shutil.which(command):
+            continue
+        if command == "gio":
+            return [command, "open", str(target)]
+        return [command, str(target)]
+    return None
+
+
+def open_folder_native(path: Path) -> None:
+    target = path if path.is_dir() else path.parent
+    if not target.exists() or not target.is_dir():
+        raise ValueError("Saved folder could not be found.")
+
+    if sys.platform.startswith("win"):
+        os.startfile(str(target))  # type: ignore[attr-defined]
+        return
+    if sys.platform == "darwin":
+        launch_detached(["open", str(target)])
+        return
+
+    command = linux_open_command(target)
+    if not command:
+        raise RuntimeError("No Linux folder opener was found.")
+    launch_detached(command)
+
+
 WEBVIEW_LOW_MEMORY_BROWSER_ARGS = (
     "--disable-background-networking",
     "--disable-component-extensions-with-background-pages",
@@ -81,7 +276,8 @@ def configure_webview_runtime_environment() -> None:
         os.environ.setdefault("WEBVIEW2_USER_DATA_FOLDER", str(webview_profile_dir()))
         append_env_browser_args("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", WEBVIEW_LOW_MEMORY_BROWSER_ARGS)
     elif sys.platform.startswith("linux"):
-        os.environ.setdefault("GDK_BACKEND", "x11,wayland")
+        gdk_backend = str(os.environ.get("REYLI_GDK_BACKEND") or "").strip()
+        os.environ.setdefault("GDK_BACKEND", gdk_backend or ("wayland,x11" if os.environ.get("WAYLAND_DISPLAY") else "x11,wayland"))
         os.environ.setdefault("WEBKIT_DISABLE_COMPOSITING_MODE", "1")
         os.environ.setdefault("NO_AT_BRIDGE", "1")
         append_env_browser_args("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_LOW_MEMORY_BROWSER_ARGS)
@@ -113,8 +309,13 @@ WEBVIEW_USER_AGENT = (
     "Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0"
 )
 MAC_WEBVIEW_USER_AGENT = (
-    "Mozilla/5.0 (Macintosh; Apple Silicon Mac OS X 14_0) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
+)
+LINUX_WEBVIEW_USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
 )
 LEAKER_CLOUD_URL = "https://6ureleaks.com/dashboard/resources"
 LEAKER_UPLOAD_URL = "https://6ureleaks.com/dashboard/upload"
@@ -124,6 +325,9 @@ LEAKER_OAUTH_TIMEOUT_SECONDS = 10 * 60
 
 
 def webview_gui() -> str | None:
+    configured = str(os.environ.get("REYLI_WEBVIEW_GUI") or "").strip()
+    if configured:
+        return configured
     if sys.platform.startswith("win"):
         return "edgechromium"
     if sys.platform == "darwin":
@@ -143,12 +347,26 @@ def webview_gui() -> str | None:
                     continue
             return "gtk" if webkit_ready else None
         except Exception:
-            return None
+            pass
+        for module_name in ("PyQt6.QtWebEngineWidgets", "PyQt5.QtWebEngineWidgets"):
+            try:
+                __import__(module_name)
+                return "qt"
+            except Exception:
+                continue
+        return None
     return None
 
 
 def webview_user_agent() -> str:
-    return MAC_WEBVIEW_USER_AGENT if sys.platform == "darwin" else WEBVIEW_USER_AGENT
+    configured = str(os.environ.get("REYLI_WEBVIEW_USER_AGENT") or "").strip()
+    if configured:
+        return configured
+    if sys.platform == "darwin":
+        return MAC_WEBVIEW_USER_AGENT
+    if sys.platform.startswith("linux"):
+        return LINUX_WEBVIEW_USER_AGENT
+    return WEBVIEW_USER_AGENT
 
 
 def leaker_control_html() -> str:
@@ -521,7 +739,7 @@ class FilesWindowApi:
             return []
         try:
             result = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=True)
-            return [str(item) for item in result] if result else []
+            return dialog_paths(result)
         except Exception:
             return []
 
@@ -593,9 +811,10 @@ class FilesWindowApi:
         multiple = bool(payload.get("multiple")) or directory
         if directory:
             selected = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
-            if not selected:
+            selected_path = first_dialog_path(selected)
+            if not selected_path:
                 return [], "", 0
-            root = Path(str(selected[0])).expanduser().resolve()
+            root = Path(selected_path).expanduser().resolve()
             file_count = 0
             for current_root, _, file_names in os.walk(root):
                 for file_name in file_names:
@@ -608,8 +827,100 @@ class FilesWindowApi:
             return [str(root)], root.name, file_count
 
         selected = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=multiple)
-        files = [str(Path(item).expanduser().resolve()) for item in selected] if selected else []
+        files = [str(Path(item).expanduser().resolve()) for item in dialog_paths(selected)]
         return files, Path(files[0]).parent.name if files else "", len(files)
+
+    def select_ffx_files(self) -> dict:
+        if not self.window:
+            return {"success": False, "cancelled": True, "files": []}
+        try:
+            try:
+                selected = self.window.create_file_dialog(
+                    webview.OPEN_DIALOG,
+                    allow_multiple=True,
+                    file_types=("After Effects presets (*.ffx)", "All files (*.*)"),
+                )
+            except TypeError:
+                selected = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True)
+            if not selected:
+                return {"success": False, "cancelled": True, "files": []}
+
+            files = []
+            for item in dialog_paths(selected):
+                path = Path(str(item)).expanduser().resolve()
+                if path.suffix.lower() != ".ffx" or not path.is_file():
+                    continue
+                data = path.read_bytes()
+                files.append(
+                    {
+                        "name": path.name,
+                        "path": str(path),
+                        "size": len(data),
+                        "modified": int(path.stat().st_mtime * 1000),
+                        "data": base64.b64encode(data).decode("ascii"),
+                    }
+                )
+            return {"success": True, "files": files}
+        except Exception as error:
+            return {"success": False, "cancelled": False, "error": str(error), "files": []}
+
+    def save_ffx_files_to_folder(self, payload: dict) -> dict:
+        if not isinstance(payload, dict):
+            payload = {}
+        try:
+            items = payload.get("files")
+            if not isinstance(items, list) or not items:
+                raise ValueError("No .ffx files were provided.")
+
+            if self.window:
+                selected = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
+                selected_path = first_dialog_path(selected)
+                if not selected_path:
+                    return {"success": False, "cancelled": True, "error": "Save folder was not selected."}
+                target_dir = Path(selected_path).expanduser().resolve()
+            else:
+                target_dir = writable_ffx_output_dir()
+
+            target_dir.mkdir(parents=True, exist_ok=True)
+            if not target_dir.is_dir():
+                raise ValueError("Selected save location is not a folder.")
+
+            saved = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                file_name = safe_ffx_output_name(str(item.get("fileName") or item.get("name") or "preset-renamed.ffx"))
+                data_value = str(item.get("data") or "")
+                data = base64.b64decode(data_value.encode("ascii"), validate=True)
+                target = unique_output_path(target_dir, file_name)
+                target.write_bytes(data)
+                saved.append({"name": target.name, "path": str(target), "size": len(data)})
+
+            if not saved:
+                raise ValueError("No valid .ffx files were provided.")
+            return {"success": True, "folder": str(target_dir), "outputDir": str(target_dir), "count": len(saved), "files": saved}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
+
+    def open_ffx_save_location(self, payload: dict) -> dict:
+        if not isinstance(payload, dict):
+            payload = {}
+        try:
+            value = str(payload.get("folder") or payload.get("path") or "").strip()
+            if not value:
+                files = payload.get("files")
+                if isinstance(files, list) and files:
+                    first = files[0] if isinstance(files[0], dict) else {}
+                    value = str(first.get("path") or "").strip()
+            if not value:
+                raise ValueError("Saved folder was not provided.")
+
+            path = Path(value).expanduser().resolve()
+            target = path if path.is_dir() else path.parent
+            open_folder_native(target)
+            return {"success": True, "path": str(target)}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
 
     def apply_webview_upload_selection(self, payload: dict) -> dict:
         if not isinstance(payload, dict):
@@ -1352,6 +1663,7 @@ def main() -> None:
         resizable=True,
         background_color="#080910",
         text_select=False,
+        js_api=api,
     )
     api.bind(window)
     if server is not None:

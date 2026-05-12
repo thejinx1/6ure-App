@@ -43,7 +43,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.5.0"
+DEFAULT_APP_VERSION = "1.5.1"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
@@ -6365,14 +6365,40 @@ def write_debug_bundle_entry(bundle: zipfile.ZipFile, name: str, payload) -> Non
     bundle.writestr(name, text)
 
 
+def launch_detached_process(args: list[str], cwd: Path | None = None) -> None:
+    kwargs = {
+        "close_fds": True,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if sys.platform.startswith("win"):
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    else:
+        kwargs["start_new_session"] = True
+    subprocess.Popen(args, cwd=str(cwd) if cwd else None, **kwargs)
+
+
+def linux_open_command(target: Path) -> list[str] | None:
+    for command in ("xdg-open", "gio", "kde-open", "gnome-open", "exo-open"):
+        if not shutil.which(command):
+            continue
+        if command == "gio":
+            return [command, "open", str(target)]
+        return [command, str(target)]
+    return None
+
+
 def reveal_file(path: Path) -> None:
     try:
         if sys.platform.startswith("win"):
-            subprocess.Popen(["explorer.exe", f"/select,{str(path)}"], close_fds=True)
+            launch_detached_process(["explorer.exe", f"/select,{str(path)}"])
         elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-R", str(path)], close_fds=True)
+            launch_detached_process(["open", "-R", str(path)])
         else:
-            subprocess.Popen(["xdg-open", str(path.parent)], close_fds=True)
+            target = path if path.is_dir() else path.parent
+            command = linux_open_command(target)
+            if command:
+                launch_detached_process(command)
     except Exception:
         pass
 
