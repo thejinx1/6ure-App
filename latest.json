@@ -1,24 +1,24 @@
 {
   "version": "1.5.2",
-  "notes": "Requests favorites now use an icon-driven interface, request actions live in the detail modal, and Settings shows the app version.",
+  "notes": "Request cards no longer collapse in the Requests or Favorites views, product titles stay visible, and Settings shows version 1.5.2.",
   "windows": {
     "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.2/6ure-app-setup-windows-x64.exe",
-    "sha256": "89baa185598d6aebb13e7fe8ffd4618df87a883bd8d840cbf77c55808bf45ec1",
-    "sizeBytes": 15086542,
+    "sha256": "23e5307df72793ef177958cb9360aab14742e48bbb0bb07c68a5de29717f9340",
+    "sizeBytes": 15089140,
     "packageType": "installer",
     "installerArgs": "/S",
     "successExitCodes": [0, 3010]
   },
   "macos": {
     "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.2/6ure-app-macos.dmg",
-    "sha256": "b5de92dde85994addb41bc05241f955488bb9ac7333773dc621b5696172f4603",
-    "sizeBytes": 21096988,
+    "sha256": "a47237935d53a9273dd795de6262c7ff18907613813c4b6989f027e05cdd5cf8",
+    "sizeBytes": 20714393,
     "packageType": "dmg"
   },
   "linux": {
     "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.2/6ure-app-linux-x64.tar.gz",
-    "sha256": "62ae182321caf73281e5b7700d9fa954358961365726f754a902c5bae734c664",
-    "sizeBytes": 33786930,
+    "sha256": "e6fb2f74f8a2c01ea0ca335de06b52bf783e770817b81a4b19cef81416635410",
+    "sizeBytes": 33784446,
     "packageType": "tar.gz"
   }
 }
