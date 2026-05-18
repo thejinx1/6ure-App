@@ -642,7 +642,7 @@ jobs:
           cat > artifacts/latest.json << MANIFEST
           {
             "version": "${VERSION}",
-            "notes": "Requests favorites now use an icon-driven interface, request actions live in the detail modal, and Settings shows the app version.",
+            "notes": "Request cards no longer collapse in the Requests or Favorites views, product titles stay visible, and Settings shows version 1.5.2.",
             "windows": {
               "url": "${BASE_URL}/${{ env.WIN_SETUP }}",
               "sha256": "${WIN_SHA}",
@@ -680,9 +680,9 @@ jobs:
 
             ### Update Notes
 
-            - Redesigned Requests favorites with icon controls and persistent favorite chips.
-            - Moved request actions into the richer details modal so the list stays cleaner.
-            - Added the app version to the Settings modal.
+            - Fixed Requests and Favorites card layout so rows no longer collapse or hide titles.
+            - Added an explicit product-title line to request cards and the request detail modal.
+            - Kept request actions inside the detail modal and Settings version display at 1.5.2.
 
             ### Downloads
 

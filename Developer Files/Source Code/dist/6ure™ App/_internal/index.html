@@ -5027,11 +5027,7 @@
     .files-request-card {
       animation: files-request-card-in 220ms ease both;
       overflow: hidden;
-      min-height: 124px;
-      grid-template-columns: 158px minmax(0, 1fr);
       align-items: stretch;
-      content-visibility: visible;
-      contain-intrinsic-size: none;
     }
 
     .files-request-card.is-favorite {
@@ -5158,6 +5154,46 @@
       white-space: nowrap;
     }
 
+    .files-request-product-heading {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+    }
+
+    .files-request-product-heading .files-resource-title {
+      min-width: 0;
+    }
+
+    .files-request-product-label {
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: max-content;
+      max-width: 100%;
+      color: #cfc9e9;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 950;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .files-request-product-label svg {
+      color: #ffe2a3;
+    }
+
+    .files-request-detail-product-title {
+      margin: 4px 0 0;
+      color: #f7f5ff;
+      font-size: 18px;
+      line-height: 1.2;
+      font-weight: 950;
+      overflow-wrap: anywhere;
+    }
+
     .files-request-complete {
       box-shadow: 0 0 24px rgba(82, 247, 255, 0.1);
     }
@@ -5221,6 +5257,9 @@
       min-width: 0;
       display: grid;
       gap: 8px;
+      align-content: start;
+      max-height: min(138px, 22vh);
+      overflow: auto;
       padding: 10px;
       border: 1px solid rgba(255, 209, 102, 0.18);
       border-radius: 8px;
@@ -5262,6 +5301,7 @@
 
     .files-request-favorite-chip {
       min-width: 0;
+      flex: 0 0 auto;
       max-width: min(260px, 100%);
       min-height: 30px;
       display: inline-flex;
@@ -6455,6 +6495,49 @@
       transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
       content-visibility: auto;
       contain-intrinsic-size: 158px;
+    }
+
+    #filesRequestsList {
+      display: flex;
+      flex-direction: column;
+      align-content: stretch;
+      gap: 12px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 4px;
+    }
+
+    #filesRequestsList > .files-resource-card.files-request-card {
+      flex: 0 0 auto;
+      width: 100%;
+      min-height: 148px;
+      display: grid;
+      grid-template-columns: minmax(150px, 178px) minmax(0, 1fr);
+      align-items: stretch;
+      gap: 12px;
+      content-visibility: visible;
+      contain: none;
+      contain-intrinsic-size: none;
+    }
+
+    #filesRequestsList > .files-resource-card.files-request-card .files-resource-thumb {
+      min-height: 126px;
+      aspect-ratio: auto;
+    }
+
+    #filesRequestsList > .files-resource-card.files-request-card .files-resource-body {
+      min-height: 126px;
+      align-content: start;
+      gap: 8px;
+    }
+
+    #filesRequestsList > .files-resource-card.files-request-card .files-resource-topline {
+      padding-right: 38px;
+    }
+
+    #filesRequestsList > .files-resource-card.files-request-card .files-resource-title {
+      font-size: 15px;
+      line-height: 1.24;
     }
 
     .files-resource-card-main {
@@ -7929,6 +8012,28 @@
       }
 
       .files-resource-card {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      #filesRequestsList > .files-resource-card.files-request-card {
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      #filesRequestsList > .files-resource-card.files-request-card .files-resource-thumb {
+        min-height: 168px;
+      }
+
+      #filesRequestsList > .files-resource-card.files-request-card .files-resource-body {
+        min-height: 0;
+        padding-right: 0;
+      }
+
+      #filesRequestsList > .files-resource-card.files-request-card .files-resource-topline {
+        padding-right: 38px;
+      }
+
+      #filesRequestsList .files-request-product-heading {
         grid-template-columns: minmax(0, 1fr);
       }
 
@@ -13614,11 +13719,38 @@
         external: '<path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M20 13v5a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h5"></path>',
         eye: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.5"></circle>',
         message: '<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.2 9.1 9.1 0 0 1-3.7-.8L3 20l1.4-4.5a8 8 0 0 1-.9-3.8A8.4 8.4 0 0 1 12 3.5a8.4 8.4 0 0 1 9 8Z"></path>',
+        product: '<path d="m21 8-9-5-9 5 9 5 9-5Z"></path><path d="M3 8v8l9 5 9-5V8"></path><path d="M12 13v8"></path>',
         spark: '<path d="M12 2.8 14.9 8.7l6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8Z"></path>',
         star: '<path d="M12 2.8 14.9 8.7l6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8Z"></path>',
         user: '<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="8" r="4"></circle>'
       };
       return `<svg class="files-request-icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.star}</svg>`;
+    }
+
+    function getRequestProductTitle(item = {}) {
+      const product = item && typeof item.product === 'object' ? item.product : null;
+      const resource = item && typeof item.resource === 'object' ? item.resource : null;
+      const candidates = [
+        item.product_title,
+        item.productTitle,
+        item.product_name,
+        item.productName,
+        item.product_label,
+        item.productLabel,
+        item.resource_title,
+        item.resourceTitle,
+        product?.title,
+        product?.name,
+        product?.label,
+        resource?.title,
+        resource?.name,
+        item.title
+      ];
+      for (const value of candidates) {
+        const cleanValue = String(value || '').replace(/\s+/g, ' ').trim();
+        if (cleanValue) return cleanValue;
+      }
+      return '';
     }
 
     function getRequestById(requestId) {
@@ -13730,9 +13862,10 @@
 
     function getLeakerRequestFillPayload(item = {}) {
       const productUrl = makeRequestAbsoluteUrl(item.product_url || item.productUrl || '', '');
+      const productTitle = getRequestProductTitle(item);
       return {
         requestId: getRequestItemId(item),
-        title: String(item.title || 'Requested resource').trim() || 'Requested resource',
+        title: productTitle || String(item.title || 'Requested resource').trim() || 'Requested resource',
         productUrl,
         creatorName: getRequestCreatorName(item),
         creatorUrl: makeRequestAbsoluteUrl(item.creator_url || item.creatorUrl || '', ''),
@@ -13787,6 +13920,7 @@
     function renderRequestDetail(item = {}) {
       const requestId = getRequestItemId(item);
       const title = String(item.title || 'Untitled request').trim() || 'Untitled request';
+      const productTitle = getRequestProductTitle(item) || title;
       const creatorName = getRequestCreatorName(item);
       const status = getRequestNormalizedStatus(item);
       const statusLabel = getRequestStatusLabel(status);
@@ -13842,7 +13976,8 @@
                 ${heroHtml}
               </div>
               <div class="files-resource-detail-panel files-resource-detail-section">
-                <div class="files-resource-detail-label">Request</div>
+                <div class="files-resource-detail-label">Product</div>
+                <h3 class="files-request-detail-product-title">${escapeHtml(productTitle)}</h3>
                 <div class="files-resource-topline">
                   ${detailPills.map(value => `<span class="files-resource-pill">${escapeHtml(value)}</span>`).join('')}
                   ${isRequestFavorite(requestId) ? '<span class="files-resource-pill files-request-favorite-pill">Favorite</span>' : ''}
@@ -13862,7 +13997,8 @@
                   ${renderResourceDetailRow('Comments', formatResourceNumber(item.comments_count || item.commentsCount))}
                   ${createdAt ? renderResourceDetailRow('Created', formatResourceDate(createdAt)) : ''}
                   ${completedAt ? renderResourceDetailRow('Completed', formatResourceDate(completedAt)) : ''}
-                  ${productUrl ? renderResourceDetailRow('Product', getResourceDomainLabel(productUrl, 'Product'), productUrl) : ''}
+                  ${productTitle ? renderResourceDetailRow('Product title', productTitle) : ''}
+                  ${productUrl ? renderResourceDetailRow('Product link', getResourceDomainLabel(productUrl, 'Product'), productUrl) : ''}
                   ${leakUrl ? renderResourceDetailRow('Leak', getResourceDomainLabel(leakUrl, 'Leak'), leakUrl) : ''}
                   ${renderResourceDetailRow('Request', requestId ? `#${requestId}` : 'Requests', requestUrl)}
                 </div>
@@ -13911,6 +14047,7 @@
     function renderRequestCard(item = {}) {
       const requestId = getRequestItemId(item);
       const title = String(item.title || 'Untitled request').trim() || 'Untitled request';
+      const productTitle = getRequestProductTitle(item) || title;
       const creatorName = getRequestCreatorName(item);
       const status = getRequestNormalizedStatus(item);
       const statusLabel = getRequestStatusLabel(status);
@@ -13945,7 +14082,10 @@
               ${favorite ? '<span class="files-resource-pill files-request-favorite-pill">Favorite</span>' : ''}
               <span class="files-resource-pill">#${escapeHtml(requestId || 'request')}</span>
             </div>
-            <h4 class="files-resource-title">${escapeHtml(title)}</h4>
+            <div class="files-request-product-heading">
+              <div class="files-request-product-label">${renderRequestIcon('product')}<span>Product</span></div>
+              <h4 class="files-resource-title">${escapeHtml(productTitle)}</h4>
+            </div>
             <div class="files-request-creator">
               ${renderFilesAvatarImage('files-request-creator-avatar', creatorAvatar, creatorName, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
               <span>${escapeHtml(creatorName)}</span>
