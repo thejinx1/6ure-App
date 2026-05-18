@@ -256,7 +256,7 @@ jobs:
               ["files_app.py"],
               pathex=[],
               binaries=[],
-              datas=[("index.html", "."), ("assets", "assets"), ("discord-presence.json", "."), ("update-config.json", "."), ("app-version.json", ".")],
+              datas=[("index.html", "."), ("assets", "assets"), ("discord-presence.json", "."), ("update-config.json", "."), ("app-version.json", "."), ("ffx-effect-names.json", ".")],
               hiddenimports=[],
               hookspath=[],
               hooksconfig={},
@@ -449,6 +449,7 @@ jobs:
                   ("discord-presence.json", "."),
                   ("update-config.json", "."),
                   ("app-version.json", "."),
+                  ("ffx-effect-names.json", "."),
               ],
               hiddenimports=[],
               hookspath=[],
@@ -642,7 +643,7 @@ jobs:
           cat > artifacts/latest.json << MANIFEST
           {
             "version": "${VERSION}",
-            "notes": "Request cards no longer collapse in the Requests or Favorites views, product titles stay visible, and Settings shows version 1.5.2.",
+            "notes": "Cloud Manager has its own sign out, Cloud actions reject no-op moves/renames, and FFX Tools now include folder scanning, progress, and optional original overwrite.",
             "windows": {
               "url": "${BASE_URL}/${{ env.WIN_SETUP }}",
               "sha256": "${WIN_SHA}",
@@ -680,9 +681,10 @@ jobs:
 
             ### Update Notes
 
-            - Fixed Requests and Favorites card layout so rows no longer collapse or hide titles.
-            - Added an explicit product-title line to request cards and the request detail modal.
-            - Kept request actions inside the detail modal and Settings version display at 1.5.2.
+            - Added a separate Cloud Manager sign out for the files.6ureleaks.com cloud account.
+            - Hardened Cloud Manager rename, move, extract, and stale-session handling.
+            - Integrated the standalone FFX Tools flow with folder scanning, progress feedback, lazy local file reads, and optional original-file overwrite.
+            - Kept the release version at 1.5.2.
 
             ### Downloads
 

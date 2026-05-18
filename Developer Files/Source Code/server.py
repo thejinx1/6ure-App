@@ -880,6 +880,15 @@ def clear_persisted_account_data() -> dict:
     return save_persisted_state({"files": {}})
 
 
+def clear_persisted_cloud_account_data() -> dict:
+    clear_vault_credentials()
+    state = load_persisted_state()
+    files_state = state.setdefault("files", {})
+    for key in ("username", "password"):
+        files_state.pop(key, None)
+    return save_persisted_state(state)
+
+
 def clear_last_files_selection() -> dict:
     state = load_persisted_state()
     files_state = state.setdefault("files", {})
@@ -8500,6 +8509,9 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/files/logout":
             self._files_logout()
             return
+        if parsed.path == "/api/cloud/logout":
+            self._cloud_logout()
+            return
         if parsed.path == "/api/files/select-folder":
             self._files_select_folder()
             return
@@ -9152,6 +9164,14 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
 
+    def _cloud_logout(self) -> None:
+        try:
+            clear_session_credentials()
+            clear_persisted_cloud_account_data()
+            self._send_json(200, {"success": True})
+        except Exception as error:
+            self._send_json(400, {"success": False, "msg": str(error)})
+
     def _files_status(self, query: str) -> None:
         try:
             params = urllib.parse.parse_qs(query)
@@ -9293,6 +9313,7 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             )
         except PermissionError as error:
             clear_session_credentials()
+            clear_remote_client_cache()
             self._send_json(401, {"success": False, "msg": str(error)})
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
@@ -9309,6 +9330,8 @@ class FilesAppHandler(BaseHTTPRequestHandler):
 
             if action == "rename":
                 new_name = normalize_remote_name(str(payload.get("name", "") or ""), "New name")
+                if new_name == source_name:
+                    raise ValueError("Choose a different name.")
                 target_path = remote_join(source_parent, new_name)
                 client.move(source_path, target_path)
                 self._send_json(
@@ -9327,7 +9350,11 @@ class FilesAppHandler(BaseHTTPRequestHandler):
                     str(payload.get("destinationPath", "") or ""),
                     "Destination folder",
                 )
+                if destination_folder == source_parent:
+                    raise ValueError("Choose a different destination folder.")
                 target_path = remote_join(destination_folder, source_name)
+                if target_path == source_path:
+                    raise ValueError("Choose a different destination folder.")
                 client.move(source_path, target_path)
                 self._send_json(
                     200,
@@ -9370,6 +9397,7 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             raise ValueError("Unsupported cloud action.")
         except PermissionError as error:
             clear_session_credentials()
+            clear_remote_client_cache()
             self._send_json(401, {"success": False, "msg": str(error)})
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})

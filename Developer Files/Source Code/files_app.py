@@ -224,6 +224,18 @@ def unique_output_path(folder: Path, file_name: str) -> Path:
         counter += 1
 
 
+def unique_temp_ffx_path(target: Path) -> Path:
+    base = target.with_name(f".{target.name}.sixure-ffx-tmp")
+    if not base.exists():
+        return base
+    counter = 2
+    while True:
+        candidate = target.with_name(f".{target.name}.sixure-ffx-tmp-{counter}")
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+
 def first_dialog_path(selection) -> str:
     if not selection:
         return ""
@@ -892,17 +904,89 @@ class FilesWindowApi:
                 path = Path(str(item)).expanduser().resolve()
                 if path.suffix.lower() != ".ffx" or not path.is_file():
                     continue
-                data = path.read_bytes()
+                stat = path.stat()
                 files.append(
                     {
                         "name": path.name,
                         "path": str(path),
-                        "size": len(data),
-                        "modified": int(path.stat().st_mtime * 1000),
-                        "data": base64.b64encode(data).decode("ascii"),
+                        "size": stat.st_size,
+                        "modified": int(stat.st_mtime * 1000),
                     }
                 )
             return {"success": True, "files": files}
+        except Exception as error:
+            return {"success": False, "cancelled": False, "error": str(error), "files": []}
+
+    def read_ffx_file(self, payload) -> dict:
+        try:
+            if isinstance(payload, dict):
+                value = str(payload.get("path") or "").strip()
+            else:
+                value = str(payload or "").strip()
+            if not value:
+                raise ValueError("No .ffx file path was provided.")
+
+            path = Path(value).expanduser().resolve()
+            if path.suffix.lower() != ".ffx" or not path.is_file():
+                raise ValueError("Selected file is not a readable .ffx preset.")
+
+            data = path.read_bytes()
+            return {
+                "success": True,
+                "name": path.name,
+                "path": str(path),
+                "size": len(data),
+                "modified": int(path.stat().st_mtime * 1000),
+                "data": base64.b64encode(data).decode("ascii"),
+            }
+        except Exception as error:
+            return {"success": False, "error": str(error)}
+
+    def select_ffx_folder(self) -> dict:
+        if not self._window:
+            return {"success": False, "cancelled": True, "files": []}
+        try:
+            selected = self._window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
+            selected_path = first_dialog_path(selected)
+            if not selected_path:
+                return {"success": False, "cancelled": True, "files": []}
+
+            folder = Path(selected_path).expanduser().resolve()
+            if not folder.is_dir():
+                raise ValueError("Selected location is not a folder.")
+
+            files = []
+            errors = []
+
+            def remember_walk_error(error: OSError) -> None:
+                errors.append(str(error))
+
+            for root, dir_names, file_names in os.walk(folder, onerror=remember_walk_error):
+                dir_names.sort(key=str.lower)
+                for file_name in sorted(file_names, key=str.lower):
+                    path = (Path(root) / file_name).resolve()
+                    if path.suffix.lower() != ".ffx" or not path.is_file():
+                        continue
+                    try:
+                        stat = path.stat()
+                        files.append(
+                            {
+                                "name": path.name,
+                                "path": str(path),
+                                "size": stat.st_size,
+                                "modified": int(stat.st_mtime * 1000),
+                            }
+                        )
+                    except Exception as error:
+                        errors.append(f"{path}: {error}")
+
+            if not files:
+                message = "No .ffx files were found in the selected folder."
+                if errors:
+                    message = f"{message} Some paths could not be read."
+                return {"success": False, "cancelled": False, "error": message, "files": []}
+
+            return {"success": True, "folder": str(folder), "count": len(files), "files": files, "errors": errors}
         except Exception as error:
             return {"success": False, "cancelled": False, "error": str(error), "files": []}
 
@@ -941,6 +1025,45 @@ class FilesWindowApi:
             if not saved:
                 raise ValueError("No valid .ffx files were provided.")
             return {"success": True, "folder": str(target_dir), "outputDir": str(target_dir), "count": len(saved), "files": saved}
+        except Exception as error:
+            return {"success": False, "error": str(error)}
+
+    def overwrite_ffx_original_files(self, payload: dict) -> dict:
+        if not isinstance(payload, dict):
+            payload = {}
+        try:
+            items = payload.get("files")
+            if not isinstance(items, list) or not items:
+                raise ValueError("No .ffx files were provided.")
+
+            saved = []
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                path_value = str(item.get("sourcePath") or item.get("path") or "").strip()
+                if not path_value:
+                    raise ValueError("Original .ffx file path was not provided.")
+                target = Path(path_value).expanduser().resolve()
+                if target.suffix.lower() != ".ffx" or not target.is_file():
+                    raise ValueError(f"Original .ffx file could not be found: {target}")
+                data_value = str(item.get("data") or "")
+                data = base64.b64decode(data_value.encode("ascii"), validate=True)
+                temp_path = unique_temp_ffx_path(target)
+                try:
+                    temp_path.write_bytes(data)
+                    os.replace(temp_path, target)
+                finally:
+                    if temp_path.exists():
+                        try:
+                            temp_path.unlink()
+                        except OSError:
+                            pass
+                saved.append({"name": target.name, "path": str(target), "size": len(data)})
+
+            if not saved:
+                raise ValueError("No valid .ffx files were provided.")
+            folder = str(Path(saved[0]["path"]).parent) if saved else ""
+            return {"success": True, "overwritten": True, "folder": folder, "outputDir": folder, "count": len(saved), "files": saved}
         except Exception as error:
             return {"success": False, "error": str(error)}
 

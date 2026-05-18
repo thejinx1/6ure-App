@@ -2655,6 +2655,26 @@
       overflow-wrap: anywhere;
     }
 
+    .files-cloud-account {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #bdfbff;
+      font-size: 11px;
+      font-weight: 850;
+      overflow-wrap: anywhere;
+    }
+
+    .files-cloud-account::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #52f7ff;
+      box-shadow: 0 0 12px rgba(82, 247, 255, 0.55);
+      flex: 0 0 auto;
+    }
+
     .files-cloud-crumbs {
       min-width: 0;
       display: flex;
@@ -2734,6 +2754,12 @@
       min-height: 30px;
       padding: 5px 9px;
       font-size: 11px;
+    }
+
+    .files-cloud-actions .chip-action.danger {
+      border-color: rgba(255, 93, 115, 0.26);
+      background: rgba(255, 93, 115, 0.09);
+      color: #ffd5dd;
     }
 
     .files-cloud-empty {
@@ -5505,6 +5531,14 @@
       overflow-wrap: anywhere;
     }
 
+    .files-ffx-drop-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .files-ffx-drop-action {
       min-height: 34px;
       display: inline-flex;
@@ -5518,6 +5552,16 @@
       font-size: 12px;
       font-weight: 900;
       box-shadow: var(--capsule-shadow);
+    }
+
+    button.files-ffx-drop-action {
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .files-ffx-folder-action {
+      border-color: rgba(82, 247, 255, 0.18);
+      background: rgba(82, 247, 255, 0.08);
     }
 
     .files-ffx-section-head {
@@ -5661,6 +5705,56 @@
       color: #f7f5ff;
     }
 
+    .files-ffx-progress {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px;
+      border: 1px solid rgba(82, 247, 255, 0.16);
+      border-radius: var(--capsule-soft-radius);
+      background: rgba(7, 10, 18, 0.76);
+      box-shadow: var(--capsule-shadow);
+    }
+
+    .files-ffx-progress[aria-hidden="true"],
+    .files-ffx-progress.hidden {
+      display: none;
+    }
+
+    .files-ffx-progress-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: #bdfbff;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .files-ffx-progress-head span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-ffx-progress-track {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .files-ffx-progress-track span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #52f7ff, #9a7cff);
+      transition: width 160ms ease;
+    }
+
     .files-ffx-list-head {
       min-width: 0;
       display: flex;
@@ -5685,6 +5779,36 @@
       line-height: 1.35;
       text-align: right;
       overflow-wrap: anywhere;
+    }
+
+    .files-ffx-overwrite-toggle {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid var(--capsule-line);
+      border-radius: var(--capsule-radius);
+      background: var(--capsule-fill);
+      color: #d8d2ff;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+      box-shadow: var(--capsule-shadow);
+    }
+
+    .files-ffx-overwrite-toggle input {
+      width: 15px;
+      height: 15px;
+      accent-color: #8b5cf6;
+    }
+
+    .files-ffx-overwrite-toggle:has(input:checked) {
+      border-color: rgba(82, 247, 255, 0.28);
+      color: #d7fff6;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.16), transparent 44%),
+        var(--capsule-fill);
     }
 
     .files-ffx-output-mode {
@@ -10137,6 +10261,7 @@
                 <div class="files-cloud-title">
                   <h3 id="filesCloudTitle">Cloud manager</h3>
                   <span id="filesCloudPath" class="files-cloud-path">/</span>
+                  <span id="filesCloudAccount" class="files-cloud-account hidden"></span>
                 </div>
                 <button id="filesCloudCloseBtn" class="chip-action back-action" type="button" aria-label="Back" title="Back">
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -10169,6 +10294,7 @@
                 <div class="files-cloud-actions">
                   <button id="filesCloudUpBtn" class="chip-action" type="button">Up</button>
                   <button id="filesCloudRefreshBtn" class="chip-action" type="button">Refresh</button>
+                  <button id="filesCloudLogoutBtn" class="chip-action danger hidden" type="button">Sign Out</button>
                 </div>
               </div>
               <div id="filesCloudList" class="files-cloud-list"></div>
@@ -10507,7 +10633,10 @@
                     <strong>Drop .ffx files here</strong>
                     <small id="filesFfxDropSummary">Browse or drop multiple After Effects preset files.</small>
                   </div>
-                  <span class="files-ffx-drop-action">Browse multiple .ffx files</span>
+                  <div class="files-ffx-drop-actions">
+                    <span class="files-ffx-drop-action">Browse multiple .ffx files</span>
+                    <button class="files-ffx-drop-action files-ffx-folder-action" type="button" data-ffx-folder-browse>Browse folder</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -10520,14 +10649,29 @@
                 </div>
                 <div class="files-ffx-queue-actions">
                   <button id="filesFfxBrowseBtn" class="chip-action" type="button">Add Files</button>
+                  <button class="chip-action" type="button" data-ffx-folder-browse>Add Folder</button>
                   <button id="filesFfxClearBtn" class="chip-action" type="button">Clear Queue</button>
                 </div>
               </div>
 
               <div id="filesFfxFileList" class="files-ffx-file-list" aria-live="polite"></div>
 
+              <div id="filesFfxProgress" class="files-ffx-progress hidden" aria-hidden="true">
+                <div class="files-ffx-progress-head">
+                  <span id="filesFfxProgressLabel">Preparing...</span>
+                  <strong id="filesFfxProgressValue">0%</strong>
+                </div>
+                <div class="files-ffx-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <span id="filesFfxProgressBar"></span>
+                </div>
+              </div>
+
               <div class="files-ffx-list-head">
                 <h3>Effects</h3>
+                <label class="files-ffx-overwrite-toggle">
+                  <input id="filesFfxOverwriteOriginals" type="checkbox">
+                  <span>Overwrite originals</span>
+                </label>
               </div>
 
               <div id="filesFfxModeHint" class="files-ffx-mode-hint">Save Copies asks where to save the renamed .ffx files.</div>
@@ -10923,6 +11067,7 @@
     let filesFfxKnownEffectsReady = false;
     let filesFfxKnownEffectsLoading = null;
     let filesFfxPrefixRenames = [];
+    let filesFfxPrefixSkipped = [];
     let filesFfxPrefixRunning = false;
     let filesEditorGroups = [];
     let filesActiveEditorKey = '';
@@ -11045,7 +11190,8 @@
     const FFX_EFFECT_NAME_MIN_SCORE = 3;
     const FFX_EFFECT_NAMES_URL = 'ffx-effect-names.json';
     const FFX_UTF8_CHUNK_ENCODING = 'ffxUtf8Chunk';
-    const FFX_6URE_PREFIX = '6ureleaks.com · ';
+    const FFX_6URE_PREFIX = '6ureleaks.com - ';
+    const FFX_6URE_PREFIX_MARKERS = [FFX_6URE_PREFIX, '6ureleaks.com \u0387 ', '6ureleaks.com \u00b7 '];
     const ffxTextEncoder = new TextEncoder();
     const ffxTextDecoder = new TextDecoder('utf-8', { fatal: false });
     const FFX_FALLBACK_EFFECT_NAMES = [
@@ -11392,6 +11538,8 @@
       filesCloudStatus: $('#filesCloudStatus'),
       filesCloudUpBtn: $('#filesCloudUpBtn'),
       filesCloudRefreshBtn: $('#filesCloudRefreshBtn'),
+      filesCloudLogoutBtn: $('#filesCloudLogoutBtn'),
+      filesCloudAccount: $('#filesCloudAccount'),
       filesProtectedOverlay: $('#filesProtectedOverlay'),
       filesProtectedCloseBtn: $('#filesProtectedCloseBtn'),
       filesProtectedRefreshBtn: $('#filesProtectedRefreshBtn'),
@@ -11527,6 +11675,12 @@
       filesFfxRenameTotal: $('#filesFfxRenameTotal'),
       filesFfxDropZone: $('#filesFfxDropZone'),
       filesFfxDropSummary: $('#filesFfxDropSummary'),
+      filesFfxFolderBtns: document.querySelectorAll('[data-ffx-folder-browse]'),
+      filesFfxProgress: $('#filesFfxProgress'),
+      filesFfxProgressLabel: $('#filesFfxProgressLabel'),
+      filesFfxProgressValue: $('#filesFfxProgressValue'),
+      filesFfxProgressBar: $('#filesFfxProgressBar'),
+      filesFfxOverwriteOriginals: $('#filesFfxOverwriteOriginals'),
       filesFfxBrowseBtn: $('#filesFfxBrowseBtn'),
       filesFfxScanBtn: $('#filesFfxScanBtn'),
       filesFfxFileInput: $('#filesFfxFileInput'),
@@ -14365,8 +14519,20 @@
       return Boolean(window.pywebview?.api?.select_ffx_files);
     }
 
+    function supportsNativeFfxFolderPicker() {
+      return Boolean(window.pywebview?.api?.select_ffx_folder);
+    }
+
+    function supportsNativeFfxReader() {
+      return Boolean(window.pywebview?.api?.read_ffx_file);
+    }
+
     function supportsNativeFfxFolderSave() {
       return Boolean(window.pywebview?.api?.save_ffx_files_to_folder);
+    }
+
+    function supportsNativeFfxOriginalOverwrite() {
+      return Boolean(window.pywebview?.api?.overwrite_ffx_original_files);
     }
 
     function supportsNativeFfxOpenLocation() {
@@ -14406,30 +14572,61 @@
       return entry?.path ? 'Original selected' : 'Ready to copy';
     }
 
+    function isFfxOverwriteMode() {
+      return Boolean(els.filesFfxOverwriteOriginals?.checked);
+    }
+
+    function canOverwriteFfxEntry(entry) {
+      return Boolean(entry?.path || (entry?.handle && typeof entry.handle.createWritable === 'function'));
+    }
+
+    function getFfxUnwritableOriginals(outputs = []) {
+      return Array.from(outputs || []).filter(output => !canOverwriteFfxEntry(output?.entry));
+    }
+
+    function canOverwriteAllSelectedFfxFiles() {
+      return Boolean(filesFfxFiles.length && filesFfxFiles.every(canOverwriteFfxEntry));
+    }
+
     function getFfxSaveHint() {
       if (!filesFfxFiles.length) {
         return 'Browse .ffx presets to detect editable effect names.';
+      }
+      if (isFfxOverwriteMode()) {
+        return canOverwriteAllSelectedFfxFiles()
+          ? 'Overwrite Originals replaces the selected .ffx files.'
+          : 'Overwrite Originals needs original file access; use Add Files or Add Folder.';
       }
       return 'Save Copies asks where to save the renamed .ffx files.';
     }
 
     function setFfxOutputMode(mode = 'download') {
-      filesFfxOutputMode = 'download';
+      filesFfxOutputMode = mode === 'overwrite' ? 'overwrite' : 'download';
+      if (els.filesFfxOverwriteOriginals) {
+        els.filesFfxOverwriteOriginals.checked = filesFfxOutputMode === 'overwrite';
+      }
       renderFfxState();
       updateResourcesBrowsingPresence({ force: true });
     }
 
     function renderFfxOutputMode() {
-      filesFfxOutputMode = 'download';
+      filesFfxOutputMode = isFfxOverwriteMode() ? 'overwrite' : 'download';
       els.filesFfxSmartFilterBtn?.classList.toggle('is-active', filesFfxSmartFilter);
       els.filesFfxSmartFilterBtn?.setAttribute('aria-pressed', filesFfxSmartFilter ? 'true' : 'false');
+      if (els.filesFfxOverwriteOriginals) {
+        if (!filesFfxFiles.length && els.filesFfxOverwriteOriginals.checked) {
+          els.filesFfxOverwriteOriginals.checked = false;
+          filesFfxOutputMode = 'download';
+        }
+        els.filesFfxOverwriteOriginals.disabled = filesFfxBusy || !filesFfxFiles.length;
+      }
       if (els.filesFfxModeHint) {
         els.filesFfxModeHint.textContent = getFfxSaveHint();
       }
     }
 
     function toggleFfxOutputMode() {
-      setFfxOutputMode('download');
+      setFfxOutputMode(isFfxOverwriteMode() ? 'download' : 'overwrite');
     }
 
     function toggleFfxSmartFilter() {
@@ -15019,7 +15216,8 @@
     }
 
     function isFfxAlreadyPrefixedName(value) {
-      return normalizeFfxEffectNameKey(value).startsWith(normalizeFfxEffectNameKey(FFX_6URE_PREFIX));
+      const key = normalizeFfxEffectNameKey(value);
+      return FFX_6URE_PREFIX_MARKERS.some(marker => key.startsWith(normalizeFfxEffectNameKey(marker)));
     }
 
     function getFfxPrefixName(value) {
@@ -15040,6 +15238,43 @@
       return getFfxPrefixableNames()
         .map(item => ({ item, newName: sanitizeFfxNewName(getFfxPrefixName(item.text)) }))
         .filter(({ item, newName }) => newName && newName !== item.text);
+    }
+
+    function getFfxSafePrefixRenames() {
+      const safe = [];
+      const skipped = [];
+      for (const rename of getFfxPrefixRenames()) {
+        const occurrencesByFile = new Map();
+        for (const occurrence of rename.item?.occurrences || []) {
+          const fileIndex = Number(occurrence?.fileIndex);
+          if (!Number.isInteger(fileIndex)) continue;
+          if (!occurrencesByFile.has(fileIndex)) occurrencesByFile.set(fileIndex, []);
+          occurrencesByFile.get(fileIndex).push(occurrence);
+        }
+        const safeOccurrences = [];
+        const safeFiles = new Set();
+        for (const [fileIndex, occurrences] of occurrencesByFile.entries()) {
+          const scopedItem = { ...rename.item, files: [fileIndex], occurrences };
+          const message = getInvalidFfxRename(scopedItem, rename.newName);
+          if (message) {
+            skipped.push({ ...rename, item: scopedItem, message });
+          } else {
+            safeOccurrences.push(...occurrences);
+            safeFiles.add(fileIndex);
+          }
+        }
+        if (safeOccurrences.length) {
+          safe.push({
+            ...rename,
+            item: {
+              ...rename.item,
+              occurrences: safeOccurrences,
+              files: [...safeFiles]
+            }
+          });
+        }
+      }
+      return { safe, skipped };
     }
 
     function getFfxRenameFileIndexes(renames = []) {
@@ -15098,17 +15333,26 @@
       if (els.filesFfxScanBtn) els.filesFfxScanBtn.disabled = filesFfxBusy || !filesFfxFiles.length;
       if (els.filesFfxDownloadBtn) {
         const fileCount = filesFfxFiles.length;
-        els.filesFfxDownloadBtn.textContent = fileCount
-          ? `Save ${formatResourceNumber(fileCount)} ${fileCount === 1 ? 'copy' : 'copies'}`
-          : 'Save copies';
+        if (isFfxOverwriteMode()) {
+          els.filesFfxDownloadBtn.textContent = fileCount
+            ? `Overwrite ${formatResourceNumber(fileCount)} ${fileCount === 1 ? 'original' : 'originals'}`
+            : 'Overwrite originals';
+        } else {
+          els.filesFfxDownloadBtn.textContent = fileCount
+            ? `Save ${formatResourceNumber(fileCount)} ${fileCount === 1 ? 'copy' : 'copies'}`
+            : 'Save copies';
+        }
         els.filesFfxDownloadBtn.disabled = filesFfxBusy || !renameCount || invalid;
       }
       if (els.filesFfxPrefixBtn) {
-        const prefixCount = getFfxPrefixableNames().length;
+        const { safe, skipped } = getFfxSafePrefixRenames();
+        const prefixCount = safe.length;
         els.filesFfxPrefixBtn.disabled = filesFfxBusy || !prefixCount;
         els.filesFfxPrefixBtn.title = prefixCount
-          ? `Prefix ${formatResourceNumber(prefixCount)} detected effect ${prefixCount === 1 ? 'name' : 'names'}`
-          : 'No detected effect names to prefix.';
+          ? `Prefix ${formatResourceNumber(prefixCount)} detected effect ${prefixCount === 1 ? 'name' : 'names'}${skipped.length ? `; ${formatResourceNumber(skipped.length)} will be skipped` : ''}`
+          : skipped.length
+            ? 'Detected names cannot be expanded safely for prefixing.'
+            : 'No detected effect names to prefix.';
       }
       if (els.filesFfxDropSummary) {
         els.filesFfxDropSummary.textContent = filesFfxFiles.length
@@ -15116,6 +15360,7 @@
           : 'Browse or drop multiple After Effects preset files.';
       }
       if (els.filesFfxBrowseBtn) els.filesFfxBrowseBtn.disabled = filesFfxBusy;
+      els.filesFfxFolderBtns?.forEach(button => { button.disabled = filesFfxBusy; });
       if (els.filesFfxClearBtn) els.filesFfxClearBtn.disabled = filesFfxBusy || !filesFfxFiles.length;
       renderFfxOutputMode();
     }
@@ -15264,7 +15509,7 @@
       return `
         <div class="files-ffx-prefix-row" title="${escapeHtml(`${oldName} -> ${newName}`)}">
           <span>${escapeHtml(oldName)}</span>
-          <i aria-hidden="true">→</i>
+          <i aria-hidden="true">-&gt;</i>
           <strong>${escapeHtml(newName)}</strong>
         </div>
       `;
@@ -15290,22 +15535,31 @@
       if (els.filesFfxPrefixCancelBtn) els.filesFfxPrefixCancelBtn.disabled = filesFfxPrefixRunning;
       if (els.filesFfxPrefixConfirmBtn) {
         els.filesFfxPrefixConfirmBtn.disabled = filesFfxPrefixRunning;
-        els.filesFfxPrefixConfirmBtn.textContent = filesFfxPrefixRunning ? 'Saving...' : 'Save prefixed copies';
+        els.filesFfxPrefixConfirmBtn.textContent = filesFfxPrefixRunning
+          ? (isFfxOverwriteMode() ? 'Overwriting...' : 'Saving...')
+          : (isFfxOverwriteMode() ? 'Overwrite originals' : 'Save prefixed copies');
       }
       setFfxPrefixProgress(filesFfxPrefixRunning ? 4 : 0, message || 'Ready.');
     }
 
-    function showFfxPrefixModal(renames) {
+    function showFfxPrefixModal(renames, skipped = []) {
       filesFfxPrefixRenames = Array.isArray(renames) ? renames : [];
+      filesFfxPrefixSkipped = Array.isArray(skipped) ? skipped : [];
       if (!els.filesFfxPrefixOverlay) return;
       setFfxPrefixModalRunning(false);
       const fileCount = getFfxRenameFileIndexes(filesFfxPrefixRenames).size || filesFfxFiles.length;
       const effectCount = filesFfxPrefixRenames.length;
+      const overwrite = isFfxOverwriteMode();
       if (els.filesFfxPrefixSubtitle) {
-        els.filesFfxPrefixSubtitle.textContent = `${formatResourceNumber(effectCount)} effect ${effectCount === 1 ? 'name' : 'names'} will be prefixed.`;
+        els.filesFfxPrefixSubtitle.textContent = `${formatResourceNumber(effectCount)} effect ${effectCount === 1 ? 'name' : 'names'} will be prefixed${overwrite ? ' in the original files' : ''}.`;
       }
       if (els.filesFfxPrefixSummary) {
-        els.filesFfxPrefixSummary.textContent = `${formatResourceNumber(fileCount)} .ffx ${fileCount === 1 ? 'file' : 'files'} with detected effect names will be saved with the prefix "${FFX_6URE_PREFIX.trim()}".`;
+        const skippedText = filesFfxPrefixSkipped.length
+          ? ` ${formatResourceNumber(filesFfxPrefixSkipped.length)} name instance${filesFfxPrefixSkipped.length === 1 ? '' : 's'} will be skipped because the original slot cannot be expanded safely.`
+          : '';
+        els.filesFfxPrefixSummary.textContent = overwrite
+          ? `${formatResourceNumber(fileCount)} original .ffx ${fileCount === 1 ? 'file' : 'files'} will be overwritten with the prefix "${FFX_6URE_PREFIX.trim()}".${skippedText}`
+          : `${formatResourceNumber(fileCount)} .ffx ${fileCount === 1 ? 'file' : 'files'} with detected effect names will be saved with the prefix "${FFX_6URE_PREFIX.trim()}".${skippedText}`;
       }
       if (els.filesFfxPrefixList) {
         els.filesFfxPrefixList.innerHTML = filesFfxPrefixRenames.length
@@ -15323,6 +15577,7 @@
     function hideFfxPrefixModal() {
       if (filesFfxPrefixRunning) return;
       filesFfxPrefixRenames = [];
+      filesFfxPrefixSkipped = [];
       els.filesFfxPrefixOverlay?.classList.remove('show');
       els.filesFfxPrefixOverlay?.classList.add('hidden');
       els.filesFfxPrefixOverlay?.setAttribute('aria-hidden', 'true');
@@ -15362,6 +15617,7 @@
     function setFfxBusy(active, message = '') {
       filesFfxBusy = Boolean(active);
       if (els.filesFfxBrowseBtn) els.filesFfxBrowseBtn.disabled = filesFfxBusy;
+      els.filesFfxFolderBtns?.forEach(button => { button.disabled = filesFfxBusy; });
       if (els.filesFfxClearBtn) els.filesFfxClearBtn.disabled = filesFfxBusy || !filesFfxFiles.length;
       if (els.filesFfxStatus && message) els.filesFfxStatus.textContent = message;
       renderFfxState();
@@ -15490,23 +15746,110 @@
       updateResourcesBrowsingPresence({ force: true });
     }
 
+    function setFfxProgress(value, message = '') {
+      const progress = Math.max(0, Math.min(100, Number(value) || 0));
+      if (els.filesFfxProgress) {
+        els.filesFfxProgress.classList.remove('hidden');
+        els.filesFfxProgress.setAttribute('aria-hidden', 'false');
+      }
+      if (els.filesFfxProgressBar) {
+        els.filesFfxProgressBar.style.width = `${progress}%`;
+        els.filesFfxProgressBar.parentElement?.setAttribute('aria-valuenow', String(Math.round(progress)));
+      }
+      if (els.filesFfxProgressValue) {
+        els.filesFfxProgressValue.textContent = `${Math.round(progress)}%`;
+      }
+      if (els.filesFfxProgressLabel && message) {
+        els.filesFfxProgressLabel.textContent = message;
+      }
+    }
+
+    function hideFfxProgress(delay = 500) {
+      window.setTimeout(() => {
+        if (!filesFfxBusy) {
+          els.filesFfxProgress?.classList.add('hidden');
+          els.filesFfxProgress?.setAttribute('aria-hidden', 'true');
+        }
+      }, delay);
+    }
+
+    function waitForFfxPaint() {
+      return new Promise(resolve => {
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
+    }
+
+    async function updateFfxProgress(value, message = '') {
+      setFfxProgress(value, message);
+      if (els.filesFfxStatus && message) els.filesFfxStatus.textContent = message;
+      await waitForFfxPaint();
+    }
+
+    async function readFfxNativeFileBytes(entry) {
+      if (!entry?.path) return null;
+      await waitForPywebviewApi('read_ffx_file', 1200);
+      if (!supportsNativeFfxReader()) return null;
+      const result = await window.pywebview.api.read_ffx_file({ path: entry.path });
+      if (!result?.success || !result.data) {
+        throw new Error(result?.error || `${entry.name || 'Preset'} could not be loaded.`);
+      }
+      if (result.name) entry.name = result.name;
+      if (Number.isFinite(Number(result.size))) entry.size = Number(result.size);
+      if (result.modified) entry.modified = Number(result.modified) || entry.modified;
+      return decodeFfxBase64(result.data);
+    }
+
+    async function loadFfxEntryBytes(entry, index, total) {
+      if (!entry || entry.bytes) return;
+      const count = Math.max(1, Number(total) || 1);
+      const fileNumber = index + 1;
+      await updateFfxProgress(
+        10 + (fileNumber / count) * 30,
+        `Loading .ffx file ${formatResourceNumber(fileNumber)} of ${formatResourceNumber(count)}...`
+      );
+      if (entry.base64Data) {
+        entry.bytes = decodeFfxBase64(entry.base64Data);
+        entry.base64Data = '';
+      } else if (entry.file) {
+        entry.bytes = new Uint8Array(await entry.file.arrayBuffer());
+      } else if (entry.path) {
+        entry.bytes = await readFfxNativeFileBytes(entry);
+      }
+      if (!entry.bytes) {
+        entry.candidates = [];
+      }
+    }
+
     async function scanSelectedFfxFiles() {
       if (!filesFfxFiles.length || filesFfxBusy) return;
-      setFfxBusy(true, 'Loading effect name list...');
+      setFfxBusy(true, 'Preparing .ffx scan...');
+      setFfxProgress(2, 'Preparing .ffx scan...');
       try {
+        await waitForFfxPaint();
+        await updateFfxProgress(6, 'Loading effect name list...');
         await loadFfxEffectNames();
-        if (els.filesFfxStatus) els.filesFfxStatus.textContent = 'Scanning .ffx preset text...';
+        await updateFfxProgress(10, 'Loading .ffx files...');
+        for (let index = 0; index < filesFfxFiles.length; index += 1) {
+          await loadFfxEntryBytes(filesFfxFiles[index], index, filesFfxFiles.length);
+        }
+        await updateFfxProgress(42, 'Scanning effect names...');
         for (let index = 0; index < filesFfxFiles.length; index += 1) {
           const entry = filesFfxFiles[index];
-          if (!entry.bytes && entry.file) {
-            entry.bytes = new Uint8Array(await entry.file.arrayBuffer());
-          }
           if (!entry.bytes) {
             entry.candidates = [];
             continue;
           }
+          await updateFfxProgress(
+            42 + (index / Math.max(1, filesFfxFiles.length)) * 50,
+            `Scanning effect names ${formatResourceNumber(index + 1)} of ${formatResourceNumber(filesFfxFiles.length)}...`
+          );
           entry.candidates = scanFfxBytes(entry.bytes, index);
         }
+        await updateFfxProgress(96, 'Building effect list...');
         buildFfxNameCatalog();
         if (els.filesFfxBulkPrefix) els.filesFfxBulkPrefix.value = '';
         if (els.filesFfxStatus) {
@@ -15514,11 +15857,14 @@
             ? `${formatResourceNumber(filesFfxNames.length)} possible effect names found.`
             : 'No editable effect names were detected.';
         }
+        setFfxProgress(100, filesFfxNames.length ? 'Effect names loaded.' : 'Scan complete.');
+        hideFfxProgress(700);
         updateDiscordPresence('FFX Tools', `${formatResourceNumber(filesFfxNames.length)} names detected`, { force: true });
       } catch (error) {
         if (els.filesFfxStatus) {
           els.filesFfxStatus.textContent = getFriendlyFilesMessage(error.message, 'FFX files could not be scanned.');
         }
+        hideFfxProgress(700);
         showToast('FFX scan failed.', 'err');
       } finally {
         filesFfxBusy = false;
@@ -15536,6 +15882,7 @@
       if (els.filesFfxSearch) els.filesFfxSearch.value = '';
       if (els.filesFfxBulkPrefix) els.filesFfxBulkPrefix.value = '';
       if (els.filesFfxFileInput) els.filesFfxFileInput.value = '';
+      hideFfxProgress(0);
       renderFfxState();
       showToast('FFX queue cleared.', 'ok');
       updateResourcesBrowsingPresence({ force: true });
@@ -15573,6 +15920,73 @@
         }
       }
       els.filesFfxFileInput?.click();
+    }
+
+    async function collectFfxFilesFromDirectory(directoryHandle, files = [], handles = []) {
+      if (!directoryHandle || typeof directoryHandle.entries !== 'function') return { files, handles };
+      for await (const [, handle] of directoryHandle.entries()) {
+        if (handle?.kind === 'file') {
+          try {
+            const file = await handle.getFile();
+            if (isFfxFile(file)) {
+              files.push(file);
+              handles.push(handle);
+            }
+          } catch {}
+        } else if (handle?.kind === 'directory') {
+          await collectFfxFilesFromDirectory(handle, files, handles);
+        }
+      }
+      return { files, handles };
+    }
+
+    async function chooseFfxFolder() {
+      if (filesFfxBusy) return;
+      await waitForPywebviewApi('select_ffx_folder', 1200);
+      if (supportsNativeFfxFolderPicker()) {
+        setFfxBusy(true, 'Choose a folder to scan for .ffx files...');
+        try {
+          const result = await window.pywebview.api.select_ffx_folder();
+          setFfxBusy(false);
+          if (result?.cancelled) return;
+          if (result?.success && Array.isArray(result.files) && result.files.length) {
+            addFfxNativeFiles(result.files);
+            setFfxOutputMode('download');
+            return;
+          }
+          const message = result?.error || 'No .ffx files were found in that folder.';
+          setFfxStatus(message);
+          showToast(message, 'err');
+          return;
+        } catch (error) {
+          setFfxBusy(false);
+          if (error?.name === 'AbortError') return;
+          showToast(getFriendlyFilesMessage(error.message, 'Folder scan could not be opened.'), 'err');
+          return;
+        }
+      }
+      if (typeof window.showDirectoryPicker !== 'function') {
+        showToast('Folder picker is not available in this app session.', 'err');
+        return;
+      }
+      try {
+        setFfxBusy(true, 'Choose a folder to scan for .ffx files...');
+        const directoryHandle = await window.showDirectoryPicker({ mode: 'read' });
+        setFfxStatus('Searching folder and subfolders for .ffx files...');
+        const { files, handles } = await collectFfxFilesFromDirectory(directoryHandle);
+        setFfxBusy(false);
+        if (files.length) {
+          addFfxFiles(files, handles);
+          setFfxOutputMode('download');
+          return;
+        }
+        setFfxStatus('No .ffx files were found in that folder.');
+        showToast('No .ffx files were found in that folder.', 'err');
+      } catch (error) {
+        setFfxBusy(false);
+        if (error?.name === 'AbortError') return;
+        showToast(getFriendlyFilesMessage(error.message, 'Folder scan could not be opened.'), 'err');
+      }
     }
 
     function updateFfxRenameRow(input, item) {
@@ -15797,6 +16211,78 @@
         return saveFfxOutputsWithNativeFolderDialog(outputs);
       }
       throw new Error(getFfxFolderSaveUnavailableMessage());
+    }
+
+    function getFfxDirectoryFromPath(path) {
+      const value = String(path || '').trim();
+      if (!value) return '';
+      const separator = value.includes('\\') ? '\\' : '/';
+      const parts = value.split(/[\\/]/);
+      parts.pop();
+      return parts.length ? parts.join(separator) : '';
+    }
+
+    async function saveFfxOutputsWithBrowserOriginalHandles(outputs) {
+      const saved = [];
+      for (const output of outputs || []) {
+        const entry = output?.entry;
+        if (!entry?.handle || typeof entry.handle.createWritable !== 'function') continue;
+        if (!await ensureFfxWritePermission(entry.handle)) {
+          throw new Error(`Write permission was not granted for ${entry.name || output.fileName}.`);
+        }
+        const writable = await entry.handle.createWritable();
+        await writable.write(new Blob([output.bytes], { type: 'application/octet-stream' }));
+        await writable.close();
+        saved.push({ name: entry.name || output.fileName, path: entry.path || entry.name || output.fileName, size: output.bytes.byteLength });
+      }
+      return saved;
+    }
+
+    async function saveFfxOutputsWithNativeOriginalPaths(outputs) {
+      await waitForPywebviewApi('overwrite_ffx_original_files', 1200);
+      if (!supportsNativeFfxOriginalOverwrite()) return [];
+      const result = await window.pywebview.api.overwrite_ffx_original_files({
+        files: outputs.map(output => ({
+          fileName: output.fileName,
+          sourcePath: output.entry?.path || '',
+          data: encodeFfxBase64(output.bytes)
+        }))
+      });
+      if (!result?.success) {
+        throw new Error(result?.error || 'Original .ffx files could not be overwritten.');
+      }
+      return getFfxSavedFiles(result);
+    }
+
+    async function saveFfxOutputsOverOriginals(outputs) {
+      const list = Array.from(outputs || []);
+      if (!list.length) {
+        throw new Error('No .ffx outputs were prepared.');
+      }
+      const missing = getFfxUnwritableOriginals(list);
+      if (missing.length) {
+        throw new Error('Overwrite Originals needs original file access. Use Add Files or Add Folder from the app picker.');
+      }
+      const handleOutputs = list.filter(output => output.entry?.handle && typeof output.entry.handle.createWritable === 'function');
+      const pathOutputs = list.filter(output => !handleOutputs.includes(output) && output.entry?.path);
+      const saved = [];
+      saved.push(...await saveFfxOutputsWithBrowserOriginalHandles(handleOutputs));
+      if (pathOutputs.length) {
+        saved.push(...await saveFfxOutputsWithNativeOriginalPaths(pathOutputs));
+      }
+      if (saved.length !== list.length) {
+        throw new Error('Some original .ffx files could not be overwritten.');
+      }
+      const firstPath = saved.find(file => isFfxAbsolutePath(file?.path))?.path || '';
+      const folder = getFfxDirectoryFromPath(firstPath) || 'Original files';
+      return { success: true, overwritten: true, folder, outputDir: folder, count: saved.length, files: saved };
+    }
+
+    async function saveFfxOutputs(outputs) {
+      if (isFfxOverwriteMode()) {
+        return saveFfxOutputsOverOriginals(outputs);
+      }
+      return saveFfxOutputsToFolder(outputs);
     }
 
     function isFfxAbsolutePath(value) {
@@ -16048,16 +16534,6 @@
       }
     }
 
-    function waitForFfxPaint() {
-      return new Promise(resolve => {
-        if (typeof requestAnimationFrame === 'function') {
-          requestAnimationFrame(() => resolve());
-        } else {
-          setTimeout(resolve, 0);
-        }
-      });
-    }
-
     async function openFfxPrefixConfirm() {
       if (filesFfxBusy) return;
       if (!filesFfxFiles.length) {
@@ -16067,36 +16543,28 @@
       if (!filesFfxNames.length) {
         await scanSelectedFfxFiles();
       }
-      const renames = getFfxPrefixRenames();
+      const { safe: renames, skipped } = getFfxSafePrefixRenames();
       if (!renames.length) {
-        showToast('No unprefixed editable effect names were detected.', 'err');
+        showToast(skipped.length ? 'Detected names cannot be prefixed safely in these presets.' : 'No unprefixed editable effect names were detected.', 'err');
         return;
       }
-      const invalid = renames.find(({ item, newName }) => getInvalidFfxRename(item, newName));
-      if (invalid) {
-        const message = getInvalidFfxRename(invalid.item, invalid.newName) || 'One detected effect name cannot be prefixed safely.';
-        showToast(message, 'err');
-        return;
-      }
-      showFfxPrefixModal(renames);
+      showFfxPrefixModal(renames, skipped);
     }
 
     async function savePrefixedFfxFiles() {
       if (filesFfxPrefixRunning || filesFfxBusy) return;
-      const renames = filesFfxPrefixRenames.length ? filesFfxPrefixRenames : getFfxPrefixRenames();
+      const prepared = filesFfxPrefixRenames.length
+        ? { safe: filesFfxPrefixRenames, skipped: filesFfxPrefixSkipped }
+        : getFfxSafePrefixRenames();
+      const renames = prepared.safe;
       if (!renames.length) {
         showToast('No effect names are ready for prefixing.', 'err');
         return;
       }
-      const invalid = renames.find(({ item, newName }) => getInvalidFfxRename(item, newName));
-      if (invalid) {
-        const message = getInvalidFfxRename(invalid.item, invalid.newName) || 'One detected effect name cannot be prefixed safely.';
-        showToast(message, 'err');
-        return;
-      }
 
-      setFfxPrefixModalRunning(true, 'Preparing prefixed .ffx copies...');
-      setFfxBusy(true, 'Preparing prefixed .ffx copies...');
+      const overwriteOriginals = isFfxOverwriteMode();
+      setFfxPrefixModalRunning(true, overwriteOriginals ? 'Preparing original overwrite...' : 'Preparing prefixed .ffx copies...');
+      setFfxBusy(true, overwriteOriginals ? 'Preparing original overwrite...' : 'Preparing prefixed .ffx copies...');
       await waitForFfxPaint();
 
       let outputs = [];
@@ -16107,9 +16575,7 @@
         for (let listIndex = 0; listIndex < fileIndexes.length; listIndex += 1) {
           const fileIndex = fileIndexes[listIndex];
           const entry = filesFfxFiles[fileIndex];
-          if (!entry.bytes && entry.file) {
-            entry.bytes = new Uint8Array(await entry.file.arrayBuffer());
-          }
+          await loadFfxEntryBytes(entry, listIndex, totalFiles);
           const progress = 8 + ((listIndex + 1) / totalFiles) * 54;
           setFfxPrefixProgress(progress, `Prefixing ${formatResourceNumber(listIndex + 1)} of ${formatResourceNumber(totalFiles)} .ffx files...`);
           const output = buildFfxOutputForFile(fileIndex, renames, { suffix: '-prefixed' });
@@ -16134,13 +16600,13 @@
         return;
       }
 
-      setFfxPrefixProgress(68, 'Choose a folder for the prefixed .ffx copies...');
+      setFfxPrefixProgress(68, overwriteOriginals ? 'Overwriting original .ffx files...' : 'Choose a folder for the prefixed .ffx copies...');
       let saved = null;
       try {
-        saved = await saveFfxOutputsToFolder(outputs);
+        saved = overwriteOriginals ? await saveFfxOutputsOverOriginals(outputs) : await saveFfxOutputsToFolder(outputs);
       } catch (error) {
-        const message = getFriendlyFilesMessage(error.message, 'Folder save was not available.');
-        console.warn('FFX prefix folder save failed.', error);
+        const message = getFriendlyFilesMessage(error.message, overwriteOriginals ? 'Original overwrite was not available.' : 'Folder save was not available.');
+        console.warn(overwriteOriginals ? 'FFX prefix overwrite failed.' : 'FFX prefix folder save failed.', error);
         setFfxPrefixModalRunning(false, message);
         setFfxBusy(false);
         setFfxStatus(message);
@@ -16164,16 +16630,21 @@
         return;
       }
 
-      setFfxPrefixProgress(100, 'Prefixed copies saved.');
+      setFfxPrefixProgress(100, overwriteOriginals ? 'Originals overwritten.' : 'Prefixed copies saved.');
       await waitForFfxPaint();
-      const destination = saved.folder || saved.outputDir || 'selected folder';
       const savedCount = Number(saved.count) || outputs.length;
       setFfxBusy(false);
-      setFfxStatus(`${formatResourceNumber(savedCount)} prefixed copies saved to ${destination}.`);
+      const destination = saved.folder || saved.outputDir || (overwriteOriginals ? 'original files' : 'selected folder');
+      setFfxStatus(overwriteOriginals
+        ? `${formatResourceNumber(savedCount)} original .ffx ${savedCount === 1 ? 'file' : 'files'} overwritten.`
+        : `${formatResourceNumber(savedCount)} prefixed copies saved to ${destination}.`);
       setFfxPrefixModalRunning(false);
       hideFfxPrefixModal();
-      showToast('Prefixed .ffx copies saved.', 'ok');
-      showFfxResultModal(saved, getFfxResultRenamePairs(renames), {
+      showToast(overwriteOriginals ? 'Original .ffx files overwritten.' : 'Prefixed .ffx copies saved.', 'ok');
+      showFfxResultModal(saved, getFfxResultRenamePairs(renames), overwriteOriginals ? {
+        title: savedCount === 1 ? '1 original overwritten' : `${formatResourceNumber(savedCount)} originals overwritten`,
+        emptySummary: 'Prefixed effect names written to originals.'
+      } : {
         title: savedCount === 1 ? '1 prefixed copy saved' : `${formatResourceNumber(savedCount)} prefixed copies saved`,
         emptySummary: 'Prefixed effect names saved.'
       });
@@ -16181,6 +16652,7 @@
     }
 
     async function downloadRenamedFfxFiles() {
+      const overwriteOriginals = isFfxOverwriteMode();
       const renames = getFfxRenames();
       if (!renames.length) {
         showToast('Enter at least one new name.', 'err');
@@ -16214,10 +16686,10 @@
 
       let saved = null;
       try {
-        saved = await saveFfxOutputsToFolder(outputs);
+        saved = await saveFfxOutputs(outputs);
       } catch (error) {
-        const message = getFriendlyFilesMessage(error.message, 'Folder save was not available.');
-        console.warn('FFX folder save failed.', error);
+        const message = getFriendlyFilesMessage(error.message, overwriteOriginals ? 'Original overwrite was not available.' : 'Folder save was not available.');
+        console.warn(overwriteOriginals ? 'FFX overwrite failed.' : 'FFX folder save failed.', error);
         setFfxStatus(message);
         showToast(message, 'err');
         return;
@@ -16227,10 +16699,16 @@
         showToast('Save cancelled.', 'err');
         return;
       } else if (saved?.success) {
-        const destination = saved.folder || saved.outputDir || 'selected folder';
-        setFfxStatus(`${formatResourceNumber(saved.count || outputs.length)} renamed copies saved to ${destination}.`);
-        showToast('Renamed .ffx copies saved.', 'ok');
-        showFfxResultModal(saved, getFfxResultRenamePairs(renames));
+        const savedCount = Number(saved.count) || outputs.length;
+        const destination = saved.folder || saved.outputDir || (overwriteOriginals ? 'original files' : 'selected folder');
+        setFfxStatus(overwriteOriginals
+          ? `${formatResourceNumber(savedCount)} original .ffx ${savedCount === 1 ? 'file' : 'files'} overwritten.`
+          : `${formatResourceNumber(savedCount)} renamed copies saved to ${destination}.`);
+        showToast(overwriteOriginals ? 'Original .ffx files overwritten.' : 'Renamed .ffx copies saved.', 'ok');
+        showFfxResultModal(saved, getFfxResultRenamePairs(renames), overwriteOriginals ? {
+          title: savedCount === 1 ? '1 original overwritten' : `${formatResourceNumber(savedCount)} originals overwritten`,
+          emptySummary: 'Renamed effect names written to originals.'
+        } : {});
       } else {
         const message = 'Folder save did not return a saved file path.';
         setFfxStatus(message);
@@ -18497,6 +18975,9 @@
       const blocked = filesCloudBusy || filesCloudLoginBusy || Boolean(filesActiveJobId);
       els.filesCloudUpBtn.disabled = blocked || filesCloudPath === '/' || !filesCloudAuthenticated;
       els.filesCloudRefreshBtn.disabled = blocked || !filesCloudAuthenticated;
+      if (els.filesCloudLogoutBtn) {
+        els.filesCloudLogoutBtn.disabled = blocked || !filesCloudAuthenticated;
+      }
       els.filesCloudBtn.disabled = blocked;
       els.filesCloudList.querySelectorAll('button').forEach(button => {
         button.disabled = blocked;
@@ -18518,6 +18999,13 @@
         renderFilesCloudCrumbs([{ name: 'Cloud', path: '/' }]);
         els.filesCloudList.innerHTML = '';
       }
+      if (els.filesCloudAccount) {
+        els.filesCloudAccount.textContent = filesCloudAuthenticated && filesCloudSavedUsername
+          ? `Cloud: ${filesCloudSavedUsername}`
+          : '';
+        els.filesCloudAccount.classList.toggle('hidden', !filesCloudAuthenticated || !filesCloudSavedUsername);
+      }
+      els.filesCloudLogoutBtn?.classList.toggle('hidden', !filesCloudAuthenticated);
       setFilesCloudBusy(filesCloudBusy);
     }
 
@@ -18529,6 +19017,8 @@
       els.filesCloudLogin.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
       els.filesCloudToolbar.classList.toggle('hidden', shouldShow);
       els.filesCloudList.classList.toggle('hidden', shouldShow);
+      els.filesCloudAccount?.classList.toggle('hidden', shouldShow || !filesCloudAuthenticated || !filesCloudSavedUsername);
+      els.filesCloudLogoutBtn?.classList.toggle('hidden', shouldShow || !filesCloudAuthenticated);
       els.filesCloudPath.textContent = shouldShow ? 'Sign in' : filesCloudPath;
       if (shouldShow) {
         els.filesCloudStatus.textContent = filesCloudLoginBusy ? 'Checking credentials...' : 'Sign in to open Cloud Manager.';
@@ -18597,6 +19087,30 @@
         showToast(message, 'err');
       } finally {
         setFilesCloudLoginBusy(false);
+      }
+    }
+
+    async function logoutFilesCloud() {
+      if (filesCloudBusy || filesCloudLoginBusy) return;
+      setFilesCloudBusy(true, 'Signing out of Cloud Manager...');
+      try {
+        await filesApi('/api/cloud/logout', {
+          method: 'POST',
+          body: '{}'
+        });
+        filesCloudPath = '/';
+        filesCloudEntries = [];
+        setFilesCloudAuthenticated(false, '');
+        els.filesCloudPasswordInput.value = '';
+        setFilesCloudLoginVisible(true);
+        setFilesCloudBusy(false, 'Cloud Manager signed out.');
+        showToast('Cloud Manager account signed out.', 'ok');
+        updateDiscordPresence('Cloud manager', 'Signed out', { force: true });
+      } catch (error) {
+        const message = getFriendlyFilesMessage(error.message, 'Cloud Manager could not sign out.');
+        els.filesCloudStatus.textContent = message;
+        showToast(message, 'err');
+        setFilesCloudBusy(false);
       }
     }
 
@@ -19055,6 +19569,10 @@
           showToast('Name is required.', 'err');
           return;
         }
+        if (cleanName === entry.name) {
+          showToast('Choose a different name.', 'err');
+          return;
+        }
         body.name = cleanName;
         busyMessage = `Renaming ${entry.name}...`;
       } else if (action === 'move') {
@@ -19068,6 +19586,14 @@
         });
         if (destination === null) return;
         const destinationPath = normalizeCloudPath(destination);
+        if (destinationPath === cloudParentPath(entry.path)) {
+          showToast('Choose a different destination folder.', 'err');
+          return;
+        }
+        if (normalizeCloudPath(cloudJoin(destinationPath, entry.name), false) === normalizeCloudPath(entry.path, false)) {
+          showToast('Choose a different destination folder.', 'err');
+          return;
+        }
         body.destinationPath = destinationPath;
         busyMessage = `Moving ${entry.name}...`;
       } else if (action === 'delete') {
@@ -19096,6 +19622,10 @@
         const targetPath = normalizeCloudPath(target, false);
         if (!targetPath) {
           showToast('Extract target is required.', 'err');
+          return;
+        }
+        if (targetPath === normalizeCloudPath(entry.path, false)) {
+          showToast('Extract target must be different from the ZIP file path.', 'err');
           return;
         }
         body.targetPath = targetPath;
@@ -19213,7 +19743,7 @@
         filesActiveJobId = '';
         filesCloudPath = '/';
         filesCloudEntries = [];
-        setFilesCloudAuthenticated(false, filesCloudSavedUsername);
+        setFilesCloudAuthenticated(false, '');
         setFilesCloudLoginVisible(false);
         setFilesUploadControls(false);
         hideFilesResultOverlay();
@@ -22183,6 +22713,18 @@
         });
       });
       els.filesFfxDownloadBtn?.addEventListener('click', downloadRenamedFfxFiles);
+      els.filesFfxFolderBtns?.forEach(button => {
+        button.addEventListener('click', event => {
+          event.preventDefault();
+          event.stopPropagation();
+          chooseFfxFolder().catch(error => {
+            showToast(getFriendlyFilesMessage(error.message, 'Folder scan could not be opened.'), 'err');
+          });
+        });
+      });
+      els.filesFfxOverwriteOriginals?.addEventListener('change', () => {
+        setFfxOutputMode(els.filesFfxOverwriteOriginals.checked ? 'overwrite' : 'download');
+      });
       els.filesFfxFileInput?.addEventListener('change', event => addFfxFiles(event.target.files));
       els.filesFfxFileList?.addEventListener('click', event => {
         const button = event.target.closest('[data-ffx-remove-index]');
@@ -22422,6 +22964,7 @@
       });
       els.filesCloudRefreshBtn.addEventListener('click', () => loadFilesCloudPath(filesCloudPath));
       els.filesCloudUpBtn.addEventListener('click', () => loadFilesCloudPath(cloudParentPath(filesCloudPath)));
+      els.filesCloudLogoutBtn?.addEventListener('click', logoutFilesCloud);
       els.filesCloudLogin.addEventListener('submit', submitFilesCloudLogin);
       els.filesCloudList.addEventListener('click', handleFilesCloudListClick);
       els.filesCloudCrumbs.addEventListener('click', handleFilesCloudCrumbsClick);
