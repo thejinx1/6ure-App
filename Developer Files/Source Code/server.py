@@ -21,6 +21,7 @@ import sys
 import tempfile
 import threading
 import time
+import traceback
 import unicodedata
 import urllib.parse
 import uuid
@@ -43,7 +44,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.5.1"
+DEFAULT_APP_VERSION = "1.5.2"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
@@ -242,6 +243,7 @@ RESOURCE_DETAIL_LOCK = threading.RLock()
 RESOURCE_DETAIL_CACHE: dict[int, dict] = {}
 APP_AUTH_PROFILE_CACHE_SECONDS = float(os.environ.get("REYLI_APP_AUTH_PROFILE_CACHE_SECONDS", "0"))
 APP_AUTH_NEGATIVE_CACHE_SECONDS = float(os.environ.get("REYLI_APP_AUTH_NEGATIVE_CACHE_SECONDS", "4"))
+LEAKER_ACCESS_CHECK_TIMEOUT_SECONDS = float(os.environ.get("REYLI_LEAKER_ACCESS_CHECK_TIMEOUT_SECONDS", "16"))
 APP_AUTH_LOCK = threading.RLock()
 APP_AUTH_REFRESH_LOCK = threading.Lock()
 APP_AUTH_STATE = {
@@ -1525,6 +1527,126 @@ def get_app_auth_status(*, refresh: bool = False, timeout_seconds: float = 16.0)
         APP_AUTH_REFRESH_LOCK.release()
     snapshot["success"] = True
     return snapshot
+
+
+def visible_html_signal_text(text: str) -> str:
+    fragment = re.sub(
+        r"(?is)<(script|style|noscript|template)[^>]*>.*?</\1>",
+        " ",
+        str(text or ""),
+    )
+    fragment = re.sub(r"(?is)<[^>]+>", " ", fragment)
+    return re.sub(r"\s+", " ", html.unescape(fragment)).strip().casefold()
+
+
+def response_final_local_path(response: requests.Response) -> str:
+    try:
+        parsed = urllib.parse.urlsplit(str(response.url or ""))
+    except ValueError:
+        return ""
+    path = parsed.path or "/"
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+    return path
+
+
+def leaker_dashboard_denial_reason(response: requests.Response, text: str) -> str:
+    status_code = int(response.status_code or 0)
+    final_path = response_final_local_path(response)
+    final_route = final_path.split("?", 1)[0] or "/"
+    visible_text = visible_html_signal_text(text)
+
+    if status_code in {401, 419}:
+        return "auth-required"
+    if status_code in {403, 404}:
+        return "not-authorized"
+    if status_code >= 400:
+        return "upstream-error"
+
+    if not (final_route == "/dashboard" or final_route.startswith("/dashboard/")):
+        return "auth-required" if final_route in {"", "/"} else "not-authorized"
+
+    auth_phrases = (
+        "login with discord",
+        "sign in with discord",
+        "sign in to continue",
+        "log in to continue",
+        "please sign in",
+    )
+    if any(phrase in visible_text for phrase in auth_phrases):
+        return "auth-required"
+
+    denied_phrases = (
+        "access denied",
+        "not authorized",
+        "unauthorized",
+        "forbidden",
+        "you do not have access",
+        "you don't have access",
+        "membership required",
+        "requires membership",
+        "subscribe to unlock",
+        "leaker role required",
+        "only leakers",
+    )
+    if any(phrase in visible_text for phrase in denied_phrases):
+        return "not-authorized"
+
+    return ""
+
+
+def check_leaker_dashboard_access(*, timeout_seconds: float = LEAKER_ACCESS_CHECK_TIMEOUT_SECONDS) -> dict:
+    ensure_leaker_cookie_consent(save=False)
+    payload = {
+        "authorized": False,
+        "allowed": False,
+        "authenticated": False,
+        "reason": "unknown",
+        "status": 0,
+        "finalPath": "",
+        "checkedAt": int(time.time() * 1000),
+    }
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Referer": DASHBOARD_URL,
+        "User-Agent": LEAKER_PROXY_USER_AGENT,
+    }
+    request_timeout = max(1.0, float(timeout_seconds or LEAKER_ACCESS_CHECK_TIMEOUT_SECONDS))
+    try:
+        with LEAKER_PROXY_LOCK:
+            response = LEAKER_PROXY_SESSION.get(
+                DASHBOARD_URL + "/upload",
+                headers=headers,
+                allow_redirects=True,
+                timeout=request_timeout,
+            )
+            try:
+                LEAKER_PROXY_SESSION.cookies.save(ignore_discard=True, ignore_expires=True)
+            except Exception:
+                pass
+    except Exception as error:
+        payload["reason"] = "network-error"
+        payload["lastError"] = str(error)
+        return payload
+
+    text = response.text or ""
+    final_path = response_final_local_path(response)
+    reason = leaker_dashboard_denial_reason(response, text)
+    authorized = not reason
+    payload.update(
+        {
+            "authorized": authorized,
+            "allowed": authorized,
+            "authenticated": authorized or reason == "not-authorized",
+            "reason": "" if authorized else reason,
+            "status": int(response.status_code or 0),
+            "finalPath": final_path,
+            "contentLength": len(text),
+        }
+    )
+    return payload
 
 
 def resource_uploader_aliases_from_user(user: dict | None) -> tuple[str, ...]:
@@ -5601,11 +5723,45 @@ $exeName = {ps_single_quote(exe_name)}
 $exePath = {ps_single_quote(str(exe_path))}
 $pidToWait = {os.getpid()}
 $logPath = Join-Path $backupRoot "last-update.log"
+$webViewProfileRoot = if ($env:LOCALAPPDATA) {{ Join-Path $env:LOCALAPPDATA "6ure Leak Upld. User Data\\webview-profile" }} else {{ "" }}
 
 function Write-UpdateLog {{
   param([string]$Message)
   $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
   Add-Content -LiteralPath $logPath -Value "$stamp $Message"
+}}
+
+function Get-WebViewProfileProcesses {{
+  if ([string]::IsNullOrWhiteSpace($webViewProfileRoot)) {{
+    return @()
+  }}
+  $needle = $webViewProfileRoot.ToLowerInvariant()
+  return @(Get-CimInstance Win32_Process -Filter "name = 'msedgewebview2.exe'" -ErrorAction SilentlyContinue | Where-Object {{
+    ([string]$_.CommandLine).ToLowerInvariant().Contains($needle)
+  }})
+}}
+
+function Wait-WebViewProfileRelease {{
+  if ([string]::IsNullOrWhiteSpace($webViewProfileRoot)) {{
+    return
+  }}
+  for ($i = 1; $i -le 24; $i++) {{
+    $busy = @(Get-WebViewProfileProcesses)
+    if ($busy.Count -eq 0) {{
+      return
+    }}
+    Start-Sleep -Milliseconds 500
+  }}
+  $busy = @(Get-WebViewProfileProcesses)
+  if ($busy.Count -gt 0) {{
+    Write-UpdateLog "Stopping stale WebView2 profile processes before launch."
+    foreach ($proc in $busy) {{
+      try {{
+        Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+      }} catch {{}}
+    }}
+    Start-Sleep -Milliseconds 900
+  }}
 }}
 
 function Invoke-Retry {{
@@ -5625,6 +5781,7 @@ function Invoke-Retry {{
 
 function Start-UpdatedApp {{
   param([string[]]$CandidatePaths)
+  Wait-WebViewProfileRelease
   foreach ($candidate in $CandidatePaths) {{
     if ([string]::IsNullOrWhiteSpace($candidate)) {{
       continue
@@ -5761,6 +5918,7 @@ $installerArgs = {ps_array(installer_arg_items)}
 $successExitCodes = @({", ".join(str(code) for code in clean_success_codes)})
 $pidToWait = {os.getpid()}
 $logPath = Join-Path $backupRoot "last-update.log"
+$webViewProfileRoot = if ($env:LOCALAPPDATA) {{ Join-Path $env:LOCALAPPDATA "6ure Leak Upld. User Data\\webview-profile" }} else {{ "" }}
 
 function Write-UpdateLog {{
   param([string]$Message)
@@ -5768,8 +5926,42 @@ function Write-UpdateLog {{
   Add-Content -LiteralPath $logPath -Value "$stamp $Message"
 }}
 
+function Get-WebViewProfileProcesses {{
+  if ([string]::IsNullOrWhiteSpace($webViewProfileRoot)) {{
+    return @()
+  }}
+  $needle = $webViewProfileRoot.ToLowerInvariant()
+  return @(Get-CimInstance Win32_Process -Filter "name = 'msedgewebview2.exe'" -ErrorAction SilentlyContinue | Where-Object {{
+    ([string]$_.CommandLine).ToLowerInvariant().Contains($needle)
+  }})
+}}
+
+function Wait-WebViewProfileRelease {{
+  if ([string]::IsNullOrWhiteSpace($webViewProfileRoot)) {{
+    return
+  }}
+  for ($i = 1; $i -le 24; $i++) {{
+    $busy = @(Get-WebViewProfileProcesses)
+    if ($busy.Count -eq 0) {{
+      return
+    }}
+    Start-Sleep -Milliseconds 500
+  }}
+  $busy = @(Get-WebViewProfileProcesses)
+  if ($busy.Count -gt 0) {{
+    Write-UpdateLog "Stopping stale WebView2 profile processes before launch."
+    foreach ($proc in $busy) {{
+      try {{
+        Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+      }} catch {{}}
+    }}
+    Start-Sleep -Milliseconds 900
+  }}
+}}
+
 function Start-UpdatedApp {{
   param([string[]]$CandidatePaths)
+  Wait-WebViewProfileRelease
   foreach ($candidate in $CandidatePaths) {{
     if ([string]::IsNullOrWhiteSpace($candidate)) {{
       continue
@@ -6453,6 +6645,217 @@ def file_summary(path: Path) -> dict:
         return {"exists": False, "path": str(path)}
 
 
+def directory_size_bytes(path: Path, *, max_files: int = 12000) -> tuple[int, int, bool]:
+    total = 0
+    count = 0
+    truncated = False
+    try:
+        for item in path.rglob("*"):
+            if not item.is_file():
+                continue
+            count += 1
+            if count > max_files:
+                truncated = True
+                break
+            try:
+                total += item.stat().st_size
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return total, count, truncated
+
+
+def directory_summary(path: Path, *, max_children: int = 40) -> dict:
+    result = file_summary(path)
+    if not result.get("exists"):
+        return result
+    result["isDirectory"] = path.is_dir()
+    if not path.is_dir():
+        return result
+
+    children = []
+    try:
+        child_paths = sorted(path.iterdir(), key=lambda item: item.name.casefold())[:max_children]
+    except OSError:
+        child_paths = []
+    for child in child_paths:
+        child_result = file_summary(child)
+        if child.is_dir():
+            size, count, truncated = directory_size_bytes(child, max_files=5000)
+            child_result.update(
+                {
+                    "isDirectory": True,
+                    "sizeBytes": size,
+                    "fileCount": count,
+                    "truncated": truncated,
+                }
+            )
+        children.append(child_result)
+    result["children"] = children
+    return result
+
+
+def debug_log_paths() -> list[Path]:
+    log_dir = DATA_ROOT / "logs"
+    if not log_dir.is_dir():
+        return []
+    try:
+        return sorted(
+            (path for path in log_dir.glob("*.log") if path.is_file()),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )[:8]
+    except OSError:
+        return []
+
+
+def format_thread_dump() -> str:
+    current_frames = sys._current_frames()
+    thread_by_id = {thread.ident: thread for thread in threading.enumerate()}
+    lines = [
+        f"6ure thread dump",
+        f"pid={os.getpid()}",
+        f"threads={len(thread_by_id)}",
+        f"createdAt={time.strftime('%Y-%m-%d %H:%M:%S')}",
+        "",
+    ]
+    for thread_id, frame in current_frames.items():
+        thread = thread_by_id.get(thread_id)
+        name = thread.name if thread else "unknown"
+        daemon = thread.daemon if thread else ""
+        lines.append(f"--- thread {thread_id} name={name!r} daemon={daemon} ---")
+        lines.extend(traceback.format_stack(frame))
+        lines.append("")
+    return "\n".join(lines)
+
+
+def run_windows_debug_powershell(script: str, *, timeout: float = 6.0):
+    if not sys.platform.startswith("win"):
+        return {"available": False, "reason": "not-windows"}
+    executable = shutil.which("powershell.exe") or shutil.which("pwsh")
+    if not executable:
+        return {"available": False, "reason": "powershell-not-found"}
+    env = os.environ.copy()
+    env["SIXURE_DEBUG_PID"] = str(os.getpid())
+    env.setdefault("WEBVIEW2_USER_DATA_FOLDER", str(DATA_ROOT / "webview-profile"))
+    kwargs = {
+        "capture_output": True,
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+        "timeout": timeout,
+        "env": env,
+    }
+    if sys.platform.startswith("win"):
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        completed = subprocess.run(
+            [executable, "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+            **kwargs,
+        )
+    except Exception as error:
+        return {"available": False, "error": str(error)}
+    output = (completed.stdout or "").strip()
+    if not output:
+        return {
+            "available": completed.returncode == 0,
+            "returnCode": completed.returncode,
+            "stderr": (completed.stderr or "").strip()[:4000],
+            "data": [],
+        }
+    try:
+        data = json.loads(output)
+    except json.JSONDecodeError:
+        data = output[:12000]
+    return {
+        "available": completed.returncode == 0,
+        "returnCode": completed.returncode,
+        "stderr": (completed.stderr or "").strip()[:4000],
+        "data": data,
+    }
+
+
+def windows_process_snapshot() -> dict:
+    script = r"""
+$targetPid = [int]$env:SIXURE_DEBUG_PID
+$profile = [string]$env:WEBVIEW2_USER_DATA_FOLDER
+$rows = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+  $_.ProcessId -eq $targetPid -or
+  $_.ParentProcessId -eq $targetPid -or
+  ($profile -and ([string]$_.CommandLine).Contains($profile))
+} | ForEach-Object {
+  $proc = Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue
+  [PSCustomObject]@{
+    ProcessId = $_.ProcessId
+    ParentProcessId = $_.ParentProcessId
+    Name = $_.Name
+    CreationDate = [string]$_.CreationDate
+    WorkingSet64 = if ($proc) { $proc.WorkingSet64 } else { $null }
+    PrivateMemorySize64 = if ($proc) { $proc.PrivateMemorySize64 } else { $null }
+    CPU = if ($proc) { $proc.CPU } else { $null }
+    Responding = if ($proc) { $proc.Responding } else { $null }
+    MainWindowTitle = if ($proc) { $proc.MainWindowTitle } else { "" }
+    CommandLine = $_.CommandLine
+  }
+}
+@($rows) | ConvertTo-Json -Depth 5
+"""
+    return run_windows_debug_powershell(script, timeout=6.0)
+
+
+def windows_event_log_snapshot() -> dict:
+    script = r"""
+$start = (Get-Date).AddDays(-3)
+$events = Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$start} -ErrorAction SilentlyContinue |
+  Where-Object {
+    $_.ProviderName -match 'Application Error|Windows Error Reporting|\.NET Runtime|WebView' -or
+    $_.Message -match '6ure|msedgewebview2|WebView2|python|AppHang|APPCRASH|RADAR'
+  } |
+  Select-Object -First 60 TimeCreated, Id, ProviderName, LevelDisplayName, Message
+@($events) | ConvertTo-Json -Depth 4
+"""
+    return run_windows_debug_powershell(script, timeout=8.0)
+
+
+def runtime_debug_snapshot() -> dict:
+    return {
+        "pid": os.getpid(),
+        "executable": sys.executable,
+        "cwd": os.getcwd(),
+        "argv": sys.argv,
+        "platform": sys.platform,
+        "python": sys.version,
+        "frozen": bool(getattr(sys, "frozen", False)),
+        "threadCount": threading.active_count(),
+        "threads": [
+            {
+                "name": thread.name,
+                "ident": thread.ident,
+                "nativeId": getattr(thread, "native_id", None),
+                "daemon": thread.daemon,
+                "alive": thread.is_alive(),
+            }
+            for thread in threading.enumerate()
+        ],
+        "webviewUserDataFolder": os.environ.get("WEBVIEW2_USER_DATA_FOLDER", ""),
+        "webviewBrowserArgs": os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", ""),
+    }
+
+
+def webview_profile_debug_summary() -> dict:
+    configured = str(os.environ.get("WEBVIEW2_USER_DATA_FOLDER") or "").strip()
+    profile_root = Path(configured).expanduser() if configured else DATA_ROOT / "webview-profile"
+    ebwebview = profile_root / "EBWebView"
+    return {
+        "profileRoot": directory_summary(profile_root),
+        "ebWebView": directory_summary(ebwebview),
+        "defaultProfile": directory_summary(ebwebview / "Default"),
+        "crashpad": directory_summary(ebwebview / "Crashpad"),
+        "logs": [file_summary(path) for path in debug_log_paths()],
+    }
+
+
 def write_debug_bundle_entry(bundle: zipfile.ZipFile, name: str, payload) -> None:
     if isinstance(payload, (dict, list)):
         text = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -6647,6 +7050,11 @@ def create_debug_bundle(*, reveal: bool = True) -> dict:
         write_debug_bundle_entry(bundle, "paths.json", paths)
         write_debug_bundle_entry(bundle, "update-status.json", redact_debug_value("update", get_update_status()))
         write_debug_bundle_entry(bundle, "update-config.json", redact_debug_value("updateConfig", load_update_config()))
+        write_debug_bundle_entry(bundle, "runtime-snapshot.json", runtime_debug_snapshot())
+        write_debug_bundle_entry(bundle, "thread-dump.txt", format_thread_dump())
+        write_debug_bundle_entry(bundle, "windows-processes.json", windows_process_snapshot())
+        write_debug_bundle_entry(bundle, "windows-events.json", windows_event_log_snapshot())
+        write_debug_bundle_entry(bundle, "webview-profile-summary.json", webview_profile_debug_summary())
         repair_payload = read_state_file(REPAIR_LOG_PATH)
         if repair_payload:
             write_debug_bundle_entry(bundle, "last-repair.json", repair_payload)
@@ -6654,6 +7062,11 @@ def create_debug_bundle(*, reveal: bool = True) -> dict:
         if update_log.exists():
             try:
                 bundle.write(update_log, "last-update.log")
+            except OSError:
+                pass
+        for log_path in debug_log_paths():
+            try:
+                bundle.write(log_path, f"logs/{log_path.name}")
             except OSError:
                 pass
     if reveal:
@@ -8032,7 +8445,7 @@ class FilesAppHandler(BaseHTTPRequestHandler):
             self._leaker_mode_status()
             return
         if parsed.path == "/api/leaker-mode/session":
-            self._leaker_mode_session()
+            self._leaker_mode_session(parsed.query)
             return
         if parsed.path == "/api/leaker-oauth/status":
             self._leaker_oauth_status()
@@ -8334,19 +8747,31 @@ class FilesAppHandler(BaseHTTPRequestHandler):
         except Exception as error:
             self._send_json(400, {"success": False, "msg": str(error)})
 
-    def _leaker_mode_session(self) -> None:
+    def _leaker_mode_session(self, query: str = "") -> None:
         try:
-            user = fetch_app_auth_user_from_leaker_session()
+            params = urllib.parse.parse_qs(query or "", keep_blank_values=True)
+            try:
+                timeout_seconds = float(str(params.get("timeout", ["16"])[0]).strip() or "16")
+            except Exception:
+                timeout_seconds = 16.0
+            user = fetch_app_auth_user_from_leaker_session(timeout_seconds=timeout_seconds)
+            access = check_leaker_dashboard_access(timeout_seconds=timeout_seconds)
             if user:
                 set_app_auth_user(user)
-            else:
+            elif not access.get("authorized"):
                 clear_app_auth_state(clear_cookies=False)
+            authenticated = bool(user)
+            authorized = bool(access.get("authorized"))
             self._send_json(
                 200,
                 {
                     "success": True,
-                    "authenticated": bool(user),
+                    "authenticated": authenticated,
+                    "authorized": authorized,
+                    "allowed": authorized,
                     "user": user,
+                    "access": access,
+                    "reason": "" if authorized else str(access.get("reason") or "not-authorized"),
                     "checkedAt": int(time.time() * 1000),
                 },
             )

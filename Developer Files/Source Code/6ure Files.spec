@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 APP_NAME = "6ure™ App"
-APP_VERSION = (os.environ.get("REYLI_APP_VERSION") or os.environ.get("APP_VERSION") or "1.5.1").strip().lstrip("v")
+APP_VERSION = (os.environ.get("REYLI_APP_VERSION") or os.environ.get("APP_VERSION") or "1.5.2").strip().lstrip("v")
 ROOT = Path.cwd()
 IS_WINDOWS = sys.platform.startswith("win")
 IS_MACOS = sys.platform == "darwin"
@@ -88,8 +88,8 @@ if IS_MACOS:
         info_plist={
             "CFBundleDisplayName": APP_NAME,
             "CFBundleName": APP_NAME,
-            "CFBundleShortVersionString": APP_VERSION or "1.5.1",
-            "CFBundleVersion": APP_VERSION or "1.5.1",
+            "CFBundleShortVersionString": APP_VERSION or "1.5.2",
+            "CFBundleVersion": APP_VERSION or "1.5.2",
             "LSMinimumSystemVersion": "10.15",
             "NSHighResolutionCapable": True,
             "NSRequiresAquaSystemAppearance": False,

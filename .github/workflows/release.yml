@@ -642,7 +642,7 @@ jobs:
           cat > artifacts/latest.json << MANIFEST
           {
             "version": "${VERSION}",
-            "notes": "6ure App ${VERSION}",
+            "notes": "Requests favorites now use an icon-driven interface, request actions live in the detail modal, and Settings shows the app version.",
             "windows": {
               "url": "${BASE_URL}/${{ env.WIN_SETUP }}",
               "sha256": "${WIN_SHA}",
@@ -677,6 +677,12 @@ jobs:
           name: "6ure™ App ${{ steps.version.outputs.ver }}"
           body: |
             ## 6ure™ App ${{ steps.version.outputs.ver }}
+
+            ### Update Notes
+
+            - Redesigned Requests favorites with icon controls and persistent favorite chips.
+            - Moved request actions into the richer details modal so the list stays cleaner.
+            - Added the app version to the Settings modal.
 
             ### Downloads
 

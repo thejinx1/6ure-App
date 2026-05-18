@@ -54,6 +54,47 @@ def webview_profile_dir() -> Path:
     return persistent_app_data_dir() / "webview-profile"
 
 
+class TeeTextStream:
+    def __init__(self, *streams) -> None:
+        self._streams = [stream for stream in streams if stream is not None]
+        self.encoding = getattr(self._streams[0], "encoding", "utf-8") if self._streams else "utf-8"
+
+    def write(self, data) -> int:
+        text = str(data)
+        for stream in self._streams:
+            try:
+                stream.write(text)
+            except Exception:
+                pass
+        return len(text)
+
+    def flush(self) -> None:
+        for stream in self._streams:
+            try:
+                stream.flush()
+            except Exception:
+                pass
+
+    def isatty(self) -> bool:
+        return any(bool(getattr(stream, "isatty", lambda: False)()) for stream in self._streams)
+
+
+def configure_app_logging() -> None:
+    try:
+        log_dir = files_data_dir() / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / "6ure-app.log"
+        log_file = open(log_path, "a", encoding="utf-8", buffering=1)
+        log_file.write(
+            f"\n--- 6ure app start {time.strftime('%Y-%m-%d %H:%M:%S')} "
+            f"pid={os.getpid()} frozen={bool(getattr(sys, 'frozen', False))} ---\n"
+        )
+        sys.stdout = TeeTextStream(getattr(sys, "stdout", None), log_file)
+        sys.stderr = TeeTextStream(getattr(sys, "stderr", None), log_file)
+    except Exception:
+        pass
+
+
 def linux_xdg_user_dir(key: str) -> Path | None:
     if not sys.platform.startswith("linux"):
         return None
@@ -287,6 +328,7 @@ os.environ.setdefault("REYLI_CONFIG_FILE", "6ure-files-state.json")
 os.environ.setdefault("REYLI_CONFIG_BACKUP_FILE", "6ure-files-state.backup.json")
 os.environ.setdefault("REYLI_DATA_DIR", str(files_data_dir()))
 os.environ.setdefault("REYLI_LEGACY_DATA_DIR", str(app_dir()))
+configure_app_logging()
 configure_webview_runtime_environment()
 
 import webview  # noqa: E402
@@ -668,16 +710,16 @@ def is_leaker_window_authenticated(window, current_url: str) -> bool:
 
 class LeakerControlApi:
     def __init__(self, owner: "FilesWindowApi") -> None:
-        self.owner = owner
+        self._owner = owner
 
     def exit_leaker_mode(self) -> dict:
-        return self.owner.exit_leaker_mode()
+        return self._owner.exit_leaker_mode()
 
 
 class FilesWindowApi:
     def __init__(self) -> None:
-        self.window = None
-        self.maximized = False
+        self._window = None
+        self._maximized = False
         self._leaker_lock = threading.RLock()
         self._leaker_login_window = None
         self._leaker_cloud_window = None
@@ -707,23 +749,23 @@ class FilesWindowApi:
         }
 
     def bind(self, window) -> None:
-        self.window = window
+        self._window = window
 
     def window_action(self, action: str) -> None:
-        if not self.window:
+        if not self._window:
             return
 
         if action == "minimize":
-            self.window.minimize()
+            self._window.minimize()
             schedule_memory_trim(0.8, reason="window-minimized")
             return
 
         if action == "maximize":
-            if self.maximized:
-                self.window.restore()
+            if self._maximized:
+                self._window.restore()
             else:
-                self.window.maximize()
-            self.maximized = not self.maximized
+                self._window.maximize()
+            self._maximized = not self._maximized
             return
 
         if action == "close":
@@ -731,14 +773,14 @@ class FilesWindowApi:
                 self.exit_leaker_mode(restore_main=False)
             except Exception:
                 pass
-            safe_destroy_window(self.window)
+            safe_destroy_window(self._window)
             schedule_memory_trim(0.1, reason="window-closing", force=True)
 
     def select_folders(self) -> list[str]:
-        if not self.window:
+        if not self._window:
             return []
         try:
-            result = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=True)
+            result = self._window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=True)
             return dialog_paths(result)
         except Exception:
             return []
@@ -748,7 +790,7 @@ class FilesWindowApi:
         return folders[0] if folders else ""
 
     def _main_webview2_control(self):
-        native = getattr(self.window, "native", None)
+        native = getattr(self._window, "native", None)
         for candidate in (
             getattr(native, "webview", None),
             getattr(getattr(native, "browser", None), "webview", None),
@@ -804,13 +846,13 @@ class FilesWindowApi:
             return {}
 
     def _select_webview_upload_paths(self, payload: dict) -> tuple[list[str], str, int]:
-        if not self.window:
+        if not self._window:
             return [], "", 0
 
         directory = bool(payload.get("directory"))
         multiple = bool(payload.get("multiple")) or directory
         if directory:
-            selected = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
+            selected = self._window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
             selected_path = first_dialog_path(selected)
             if not selected_path:
                 return [], "", 0
@@ -826,22 +868,22 @@ class FilesWindowApi:
                         continue
             return [str(root)], root.name, file_count
 
-        selected = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=multiple)
+        selected = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=multiple)
         files = [str(Path(item).expanduser().resolve()) for item in dialog_paths(selected)]
         return files, Path(files[0]).parent.name if files else "", len(files)
 
     def select_ffx_files(self) -> dict:
-        if not self.window:
+        if not self._window:
             return {"success": False, "cancelled": True, "files": []}
         try:
             try:
-                selected = self.window.create_file_dialog(
+                selected = self._window.create_file_dialog(
                     webview.OPEN_DIALOG,
                     allow_multiple=True,
                     file_types=("After Effects presets (*.ffx)", "All files (*.*)"),
                 )
             except TypeError:
-                selected = self.window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True)
+                selected = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=True)
             if not selected:
                 return {"success": False, "cancelled": True, "files": []}
 
@@ -872,8 +914,8 @@ class FilesWindowApi:
             if not isinstance(items, list) or not items:
                 raise ValueError("No .ffx files were provided.")
 
-            if self.window:
-                selected = self.window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
+            if self._window:
+                selected = self._window.create_file_dialog(webview.FOLDER_DIALOG, allow_multiple=False)
                 selected_path = first_dialog_path(selected)
                 if not selected_path:
                     return {"success": False, "cancelled": True, "error": "Save folder was not selected."}
@@ -1325,8 +1367,8 @@ class FilesWindowApi:
             safe_destroy_window(window)
         if restore_main:
             try:
-                if self.window and not self.window.events.closed.is_set():
-                    self.window.restore()
+                if self._window and not self._window.events.closed.is_set():
+                    self._window.restore()
             except Exception:
                 pass
         schedule_memory_trim(0.6, reason="leaker-mode-exit", force=True)
@@ -1483,8 +1525,8 @@ class FilesWindowApi:
                 }
 
             try:
-                if self.window and not self.window.events.closed.is_set():
-                    self.window.minimize()
+                if self._window and not self._window.events.closed.is_set():
+                    self._window.minimize()
             except Exception:
                 pass
         except Exception as error:

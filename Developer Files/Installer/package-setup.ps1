@@ -19,6 +19,7 @@ $stageRoot = Join-Path ([System.IO.Path]::GetTempPath()) "6ure-setup-staging-$PI
 $appName = "6ure$([char]0x2122) App"
 $legacyAppName = "6ure Files"
 $exeName = "$appName.exe"
+$legacyExeName = "$legacyAppName.exe"
 $stageAppDir = Join-Path $stageRoot "app-files"
 $zipAppDir = Join-Path $stageRoot $appName
 $iconPath = Join-Path $sourceCodeDir "assets\6ure-logo.ico"
@@ -199,8 +200,20 @@ Function un.onInit
   SetShellVarContext current
 FunctionEnd
 
+Function CloseRunningApp
+  DetailPrint "Closing running $appName windows..."
+  nsExec::ExecToStack 'taskkill /IM "$exeName" /T /F'
+  Pop `$0
+  Pop `$1
+  nsExec::ExecToStack 'taskkill /IM "$legacyExeName" /T /F'
+  Pop `$0
+  Pop `$1
+  Sleep 1800
+FunctionEnd
+
 Section "$appName" SEC_APP
   SectionIn RO
+  Call CloseRunningApp
   SetOutPath "`$INSTDIR"
   File /r "$stageAppDir\*"
   WriteUninstaller "`$INSTDIR\Uninstall.exe"

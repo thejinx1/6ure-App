@@ -1,5 +1,5 @@
-('C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
- 'Code\\build\\6ure Files\\6ure™ App.pkg',
+('C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+ 'Files\\Source Code\\build\\6ure Files\\6ure™ App.pkg',
  {'BINARY': True,
   'DATA': True,
   'EXECUTABLE': True,
@@ -11,28 +11,28 @@
   'SYMLINK': False},
  [('pyi-contents-directory _internal', '', 'OPTION'),
   ('PYZ-00.pyz',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\build\\6ure Files\\PYZ-00.pyz',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\build\\6ure Files\\PYZ-00.pyz',
    'PYZ'),
   ('struct',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\build\\6ure Files\\localpycs\\struct.pyc',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\build\\6ure Files\\localpycs\\struct.pyc',
    'PYMODULE'),
   ('pyimod01_archive',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\build\\6ure Files\\localpycs\\pyimod01_archive.pyc',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\build\\6ure Files\\localpycs\\pyimod01_archive.pyc',
    'PYMODULE'),
   ('pyimod02_importers',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\build\\6ure Files\\localpycs\\pyimod02_importers.pyc',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\build\\6ure Files\\localpycs\\pyimod02_importers.pyc',
    'PYMODULE'),
   ('pyimod03_ctypes',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\build\\6ure Files\\localpycs\\pyimod03_ctypes.pyc',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\build\\6ure Files\\localpycs\\pyimod03_ctypes.pyc',
    'PYMODULE'),
   ('pyimod04_pywin32',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\build\\6ure Files\\localpycs\\pyimod04_pywin32.pyc',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\build\\6ure Files\\localpycs\\pyimod04_pywin32.pyc',
    'PYMODULE'),
   ('pyiboot01_bootstrap',
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
@@ -56,8 +56,8 @@
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks\\pyi_rth_cryptography_openssl.py',
    'PYSOURCE'),
   ('files_app',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\files_app.py',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\files_app.py',
    'PYSOURCE')],
  'python311.dll',
  True,

@@ -1,5 +1,5 @@
-('C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
- 'Code\\build\\6ure Files\\PYZ-00.pyz',
+('C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+ 'Files\\Source Code\\build\\6ure Files\\PYZ-00.pyz',
  [('__future__',
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\__future__.py',
    'PYMODULE'),
@@ -526,8 +526,8 @@
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\dis.py',
    'PYMODULE'),
   ('discord_presence',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\discord_presence.py',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\discord_presence.py',
    'PYMODULE'),
   ('distutils',
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\distutils\\__init__.py',
@@ -1445,8 +1445,8 @@
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\selectors.py',
    'PYMODULE'),
   ('server',
-   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\6ure Files\\Developer Files\\Source '
-   'Code\\server.py',
+   'C:\\Users\\alkim\\OneDrive\\Masaüstü\\ㅤㅤㅤㅤㅤ\\6ure Files\\Developer '
+   'Files\\Source Code\\server.py',
    'PYMODULE'),
   ('setuptools',
    'C:\\Users\\alkim\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\setuptools\\__init__.py',

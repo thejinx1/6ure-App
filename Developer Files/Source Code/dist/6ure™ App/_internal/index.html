@@ -2142,6 +2142,26 @@
       min-width: 0;
     }
 
+    .files-settings-action-buttons {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .files-settings-version {
+      margin-left: auto;
+      justify-self: end;
+      align-self: flex-end;
+      color: rgba(216, 210, 255, 0.62);
+      font-size: 10px;
+      font-weight: 950;
+      line-height: 1.2;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
     .files-settings-title {
       min-width: 0;
       display: grid;
@@ -4925,7 +4945,7 @@
     }
 
     .files-requests-card {
-      grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+      grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
     }
 
     .files-ffx-card {
@@ -5005,8 +5025,18 @@
     }
 
     .files-request-card {
-      cursor: default;
       animation: files-request-card-in 220ms ease both;
+      overflow: hidden;
+      min-height: 124px;
+      grid-template-columns: 158px minmax(0, 1fr);
+      align-items: stretch;
+      content-visibility: visible;
+      contain-intrinsic-size: none;
+    }
+
+    .files-request-card.is-favorite {
+      border-color: rgba(255, 209, 102, 0.28);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 0 28px rgba(255, 209, 102, 0.08);
     }
 
     .files-request-card.is-completed {
@@ -5017,7 +5047,88 @@
     }
 
     .files-request-card .files-resource-thumb {
-      align-self: start;
+      align-self: stretch;
+      min-height: 102px;
+      aspect-ratio: auto;
+    }
+
+    .files-request-card .files-resource-body {
+      min-height: 102px;
+      padding-right: 38px;
+    }
+
+    .files-request-card .files-resource-title,
+    .files-request-card .files-resource-description {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .files-request-card .files-resource-title {
+      -webkit-line-clamp: 2;
+    }
+
+    .files-request-card .files-resource-description {
+      -webkit-line-clamp: 1;
+    }
+
+    .files-request-card-tools {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .files-request-icon-button {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(167, 139, 250, 0.22);
+      border-radius: 8px;
+      background: rgba(9, 8, 17, 0.82);
+      color: #d8d2ff;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+      transition: transform 160ms ease, border-color 160ms ease, color 160ms ease, background 160ms ease;
+    }
+
+    .files-request-icon-button:hover,
+    .files-request-icon-button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(255, 209, 102, 0.38);
+      background: rgba(28, 22, 36, 0.96);
+      color: #ffe2a3;
+      outline: none;
+    }
+
+    .files-request-icon-button.is-active {
+      color: #ffd166;
+      border-color: rgba(255, 209, 102, 0.4);
+      background: rgba(255, 209, 102, 0.13);
+    }
+
+    .files-request-icon,
+    .files-request-icon-button svg,
+    .files-request-favorite-chip svg,
+    .files-request-detail-overlay .chip-action svg,
+    .files-request-detail-overlay .primary-action svg {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 16px;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    .files-request-icon-button.is-active svg,
+    .files-request-favorite-toggle.is-active svg {
+      fill: currentColor;
     }
 
     .files-request-creator {
@@ -5047,30 +5158,172 @@
       white-space: nowrap;
     }
 
-    .files-request-actions {
+    .files-request-complete {
+      box-shadow: 0 0 24px rgba(82, 247, 255, 0.1);
+    }
+
+    .files-request-footer {
       min-width: 0;
       display: flex;
       align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      padding-top: 3px;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 1px;
     }
 
-    .files-request-actions .primary-action,
-    .files-request-actions .chip-action {
-      min-height: 32px;
+    .files-request-metrics {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, max-content));
+      gap: 7px;
+      align-items: center;
+    }
+
+    .files-request-metric,
+    .files-request-card-cue {
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #a7a3c8;
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .files-request-card-cue {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 28px;
+      justify-content: center;
+      border: 1px solid rgba(82, 247, 255, 0.14);
       border-radius: 8px;
+      background: rgba(82, 247, 255, 0.055);
+      color: #d7fff6;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .files-request-card:hover .files-request-card-cue,
+    .files-request-card:focus-visible .files-request-card-cue {
+      transform: translateX(1px);
+      border-color: rgba(82, 247, 255, 0.32);
+      background: rgba(82, 247, 255, 0.11);
+    }
+
+    .files-request-favorite-toggle.is-active,
+    .files-resource-pill.files-request-favorite-pill {
+      color: #ffe2a3;
+      border-color: rgba(255, 209, 102, 0.3);
+      background: rgba(255, 209, 102, 0.11);
+    }
+
+    .files-requests-favorites {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(255, 209, 102, 0.18);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(255, 209, 102, 0.1), transparent 42%),
+        rgba(255, 255, 255, 0.04);
+    }
+
+    .files-requests-favorites-head {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: #ffe2a3;
       font-size: 11px;
-      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      font-weight: 950;
+      text-transform: uppercase;
     }
 
-    .files-request-actions .primary-action:hover,
-    .files-request-actions .chip-action:hover {
-      transform: translateY(-1px);
+    .files-requests-favorites-head span:last-child {
+      color: #aaa6c8;
+      font-size: 10px;
     }
 
-    .files-request-complete {
-      box-shadow: 0 0 24px rgba(82, 247, 255, 0.1);
+    .files-requests-favorites-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .files-requests-favorites-list {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .files-request-favorite-chip {
+      min-width: 0;
+      max-width: min(260px, 100%);
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 9px;
+      border: 1px solid rgba(255, 209, 102, 0.22);
+      border-radius: 999px;
+      background: rgba(255, 209, 102, 0.075);
+      color: #f7f5ff;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-request-favorite-chip span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-request-favorite-chip:hover,
+    .files-request-favorite-chip:focus-visible {
+      border-color: rgba(255, 209, 102, 0.4);
+      background: rgba(255, 209, 102, 0.12);
+      outline: none;
+    }
+
+    .files-request-detail-overlay {
+      z-index: 42;
+    }
+
+    .files-request-detail-dialog {
+      height: min(680px, calc(100vh - 32px));
+    }
+
+    .files-request-detail-profile-button {
+      width: 100%;
+      border-color: rgba(82, 247, 255, 0.16);
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .files-request-detail-profile-button:hover,
+    .files-request-detail-profile-button:focus-visible {
+      border-color: rgba(82, 247, 255, 0.34);
+      outline: none;
+    }
+
+    .files-request-detail-overlay .chip-action,
+    .files-request-detail-overlay .primary-action,
+    #filesRequestsFavoritesFilterBtn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
     }
 
     .files-ffx-card {
@@ -5702,7 +5955,101 @@
 
     .files-ffx-effects-actions {
       display: flex;
+      align-items: center;
       justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .files-ffx-prefix-dialog {
+      width: min(720px, 100%);
+      grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    }
+
+    .files-ffx-prefix-summary {
+      color: #beb6db;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .files-ffx-prefix-list {
+      min-height: 0;
+      display: grid;
+      gap: 8px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .files-ffx-prefix-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1.25fr);
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .files-ffx-prefix-row span,
+    .files-ffx-prefix-row strong {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .files-ffx-prefix-row span {
+      color: #a69cc4;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .files-ffx-prefix-row i {
+      color: #52f7ff;
+      font-style: normal;
+      font-weight: 950;
+      text-align: center;
+    }
+
+    .files-ffx-prefix-row strong {
+      color: #f8f5ff;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .files-ffx-prefix-progress {
+      display: grid;
+      gap: 8px;
+    }
+
+    .files-ffx-prefix-progress[aria-hidden="true"] {
+      display: none;
+    }
+
+    .files-ffx-prefix-progress-bar {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .files-ffx-prefix-progress-bar span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #52f7ff, #9a7cff);
+      transition: width 180ms ease;
+    }
+
+    .files-ffx-prefix-progress small {
+      color: #a9a4ca;
+      font-size: 11px;
+      font-weight: 850;
+      line-height: 1.35;
     }
 
     .files-ffx-convert-row {
@@ -5710,6 +6057,14 @@
       place-items: center;
       gap: 10px;
       animation: filesFfxFadeSlide 360ms cubic-bezier(0.2, 0.86, 0.2, 1) both;
+    }
+
+    .files-ffx-convert-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
     .files-ffx-convert-row .primary-action {
@@ -5720,6 +6075,21 @@
         radial-gradient(circle at 24% 0%, rgba(82, 247, 255, 0.22), transparent 46%),
         var(--capsule-fill);
       box-shadow: var(--capsule-shadow);
+    }
+
+    .files-ffx-prefix-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .files-ffx-prefix-btn img {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 auto;
     }
 
     .files-dialog,
@@ -5924,6 +6294,10 @@
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
+    }
+
+    .files-resources-insights.is-empty-state {
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .files-resources-insight {
@@ -7558,11 +7932,6 @@
         grid-template-columns: minmax(0, 1fr);
       }
 
-      .files-request-actions .primary-action,
-      .files-request-actions .chip-action {
-        flex: 1 1 136px;
-      }
-
       .files-resource-detail-overlay {
         padding: 10px;
       }
@@ -8051,12 +8420,25 @@
       border-radius: 999px;
     }
 
-    .files-ffx-convert-row .files-resources-status {
-      min-width: 0;
-      text-align: right;
+    .files-ffx-convert-actions {
+      justify-content: flex-start;
     }
 
-    @media (max-width: 760px) {
+      .files-ffx-convert-row .files-resources-status {
+        min-width: 0;
+        text-align: right;
+      }
+
+      @media (max-width: 760px) {
+      .files-ffx-prefix-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 5px;
+      }
+
+      .files-ffx-prefix-row i {
+        display: none;
+      }
+
       .files-ffx-work {
         grid-template-rows: auto minmax(0, 120px) auto auto minmax(0, 1fr) auto;
       }
@@ -8190,6 +8572,769 @@
         opacity: 1;
         visibility: visible;
         transform: translate3d(0, 0, 0);
+      }
+    }
+
+    .empty-guide-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 94;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(82, 247, 255, 0.12), transparent 30%),
+        radial-gradient(circle at 82% 18%, rgba(216, 180, 254, 0.14), transparent 32%),
+        linear-gradient(135deg, rgba(4, 3, 9, 0.9), rgba(12, 7, 22, 0.96));
+      backdrop-filter: blur(18px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 220ms ease;
+      overflow: hidden;
+    }
+
+    .empty-guide-overlay::before {
+      content: "";
+      position: absolute;
+      inset: -16%;
+      background:
+        linear-gradient(90deg, rgba(196, 181, 253, 0.055) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(196, 181, 253, 0.045) 1px, transparent 1px);
+      background-size: 46px 46px;
+      transform: rotate(-7deg);
+      opacity: 0.56;
+      animation: emptyGuideGrid 10s linear infinite;
+    }
+
+    .empty-guide-overlay.is-open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .empty-guide-dialog {
+      position: relative;
+      z-index: 1;
+      width: min(1100px, calc(100vw - 36px));
+      max-height: calc(100vh - 36px);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(196, 181, 253, 0.2);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(18, 13, 31, 0.96), rgba(7, 5, 14, 0.98)),
+        var(--panel);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58), 0 0 44px rgba(82, 247, 255, 0.08);
+      overflow: hidden;
+      transform: translateY(12px) scale(0.985);
+      transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .empty-guide-overlay.is-open .empty-guide-dialog {
+      transform: translateY(0) scale(1);
+    }
+
+    .empty-guide-head,
+    .empty-guide-foot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .empty-guide-brand {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+    }
+
+    .empty-guide-brand img {
+      width: 44px;
+      height: 44px;
+      object-fit: contain;
+      border: 1px solid rgba(196, 181, 253, 0.24);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      filter: drop-shadow(0 0 18px rgba(196, 181, 253, 0.18));
+    }
+
+    .empty-guide-brand strong {
+      display: block;
+      color: #f7f5ff;
+      font-size: 18px;
+      line-height: 1.08;
+      font-weight: 950;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-guide-brand span,
+    .empty-guide-count {
+      color: #a9a2c9;
+      font-size: 11px;
+      line-height: 1.3;
+      font-weight: 850;
+    }
+
+    .empty-guide-count {
+      justify-self: end;
+      padding: 7px 10px;
+      border: 1px solid rgba(196, 181, 253, 0.14);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      white-space: nowrap;
+    }
+
+    .empty-guide-pages {
+      position: relative;
+      min-height: min(560px, calc(100vh - 206px));
+      overflow: hidden;
+    }
+
+    .empty-guide-page {
+      position: absolute;
+      inset: 0;
+      min-height: 100%;
+      display: grid;
+      grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+      gap: 18px;
+      align-items: stretch;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(22px) scale(0.992);
+      filter: blur(4px);
+      transition:
+        opacity 240ms ease,
+        transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+        filter 240ms ease;
+    }
+
+    .empty-guide-page.is-active {
+      position: relative;
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0) scale(1);
+      filter: blur(0);
+    }
+
+    .empty-guide-copy {
+      min-width: 0;
+      align-self: center;
+      display: grid;
+      gap: 14px;
+      padding: 12px 4px 12px 2px;
+    }
+
+    .empty-guide-kicker {
+      width: max-content;
+      max-width: 100%;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #52f7ff;
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .empty-guide-kicker::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #7cf7c2;
+      box-shadow: 0 0 16px rgba(124, 247, 194, 0.42);
+    }
+
+    .empty-guide-copy h3 {
+      margin: 0;
+      color: #f7f5ff;
+      font-size: clamp(25px, 3.4vw, 42px);
+      line-height: 0.98;
+      font-weight: 950;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .empty-guide-copy p {
+      max-width: 450px;
+      margin: 0;
+      color: #bab3d6;
+      font-size: 13px;
+      line-height: 1.55;
+      font-weight: 800;
+    }
+
+    .empty-guide-points {
+      display: grid;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .empty-guide-point {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 26px minmax(0, 1fr);
+      align-items: center;
+      gap: 9px;
+      color: #d8d2f4;
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 850;
+    }
+
+    .empty-guide-point span:first-child {
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(82, 247, 255, 0.22);
+      border-radius: 8px;
+      background: rgba(82, 247, 255, 0.08);
+      color: #bffff6;
+      font-size: 11px;
+      font-weight: 950;
+    }
+
+    .empty-guide-visual {
+      min-width: 0;
+      display: grid;
+      align-items: center;
+    }
+
+    .empty-guide-shot {
+      position: relative;
+      min-height: 430px;
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid rgba(196, 181, 253, 0.18);
+      border-radius: 14px;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(82, 247, 255, 0.1), transparent 34%),
+        linear-gradient(180deg, rgba(16, 11, 28, 0.98), rgba(6, 5, 12, 0.99));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 22px 68px rgba(0, 0, 0, 0.34);
+      overflow: hidden;
+      animation: emptyGuideFloat 5s ease-in-out infinite;
+    }
+
+    .empty-guide-shot::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.07) 42%, transparent 56%);
+      transform: translateX(-120%);
+      animation: emptyGuideSheen 5.6s ease-in-out infinite;
+    }
+
+    .empty-guide-shot-head,
+    .empty-guide-toolbar,
+    .empty-guide-request-row,
+    .empty-guide-upload-field,
+    .empty-guide-empty-head {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .empty-guide-shot-logo {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      border: 1px solid rgba(196, 181, 253, 0.18);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .empty-guide-shot-title {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .empty-guide-shot-title strong {
+      color: #f7f5ff;
+      font-size: 17px;
+      line-height: 1.05;
+      font-weight: 950;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-guide-shot-title span {
+      color: #a9a2c9;
+      font-size: 10px;
+      font-weight: 850;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-guide-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .empty-guide-stat,
+    .empty-guide-chip,
+    .empty-guide-insight,
+    .empty-guide-card,
+    .empty-guide-request-row,
+    .empty-guide-upload-field,
+    .empty-guide-upload-preview {
+      border: 1px solid rgba(196, 181, 253, 0.14);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .empty-guide-stat {
+      display: grid;
+      gap: 2px;
+      padding: 9px 10px;
+    }
+
+    .empty-guide-stat strong {
+      color: #f7f5ff;
+      font-size: 17px;
+      line-height: 1;
+      font-weight: 950;
+    }
+
+    .empty-guide-stat span,
+    .empty-guide-insight span,
+    .empty-guide-chip {
+      color: #a7a3c8;
+      font-size: 9px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+
+    .empty-guide-insight {
+      display: grid;
+      gap: 6px;
+      padding: 10px 12px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.11), transparent 42%),
+        rgba(19, 13, 32, 0.66);
+    }
+
+    .empty-guide-insight strong {
+      color: #f7f5ff;
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    .empty-guide-insight small {
+      color: #aaa4cb;
+      font-size: 10px;
+      line-height: 1.25;
+      font-weight: 800;
+    }
+
+    .empty-guide-empty-wall {
+      min-height: 126px;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      border: 1px dashed rgba(167, 139, 250, 0.3);
+      border-radius: 8px;
+      background: rgba(17, 12, 28, 0.54);
+      text-align: center;
+    }
+
+    .empty-guide-empty-wall strong {
+      display: block;
+      color: #f7f5ff;
+      font-size: 14px;
+      font-weight: 950;
+    }
+
+    .empty-guide-empty-wall span {
+      display: block;
+      margin-top: 6px;
+      color: #a9a2c9;
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .empty-guide-toolbar {
+      justify-content: space-between;
+    }
+
+    .empty-guide-search {
+      flex: 1 1 auto;
+      height: 32px;
+      border: 1px solid rgba(196, 181, 253, 0.14);
+      border-radius: 8px;
+      background: rgba(4, 4, 10, 0.72);
+    }
+
+    .empty-guide-chip {
+      min-height: 30px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0 11px;
+      color: #eee9ff;
+      text-transform: none;
+      white-space: nowrap;
+    }
+
+    .empty-guide-resource-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .empty-guide-card {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+      padding: 8px;
+      background: rgba(18, 13, 31, 0.74);
+    }
+
+    .empty-guide-thumb {
+      height: 92px;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 38%),
+        linear-gradient(135deg, #422256, #0f1528);
+      overflow: hidden;
+    }
+
+    .empty-guide-card:nth-child(2) .empty-guide-thumb {
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.24), transparent 42%),
+        linear-gradient(135deg, #5a1f31, #271044);
+    }
+
+    .empty-guide-card:nth-child(3) .empty-guide-thumb {
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 40%),
+        linear-gradient(135deg, #063d3f, #301649);
+    }
+
+    .empty-guide-card:nth-child(4) .empty-guide-thumb {
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 44%),
+        linear-gradient(135deg, #341217, #5d111d 48%, #0e0610);
+    }
+
+    .empty-guide-card strong {
+      color: #f7f5ff;
+      font-size: 11px;
+      line-height: 1.2;
+      font-weight: 950;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-guide-pills {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .empty-guide-pill {
+      min-height: 20px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 7px;
+      border: 1px solid rgba(196, 181, 253, 0.16);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #d8d2f4;
+      font-size: 8px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .empty-guide-request-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .empty-guide-request-row {
+      align-items: start;
+      padding: 10px;
+      background: rgba(18, 13, 31, 0.62);
+    }
+
+    .empty-guide-request-thumb {
+      width: 106px;
+      height: 66px;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 42%),
+        linear-gradient(135deg, #0d111a, #342747);
+    }
+
+    .empty-guide-request-row:nth-child(2) .empty-guide-request-thumb {
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 40%),
+        linear-gradient(135deg, #253327, #432133);
+    }
+
+    .empty-guide-request-body {
+      min-width: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .empty-guide-request-body strong {
+      color: #f7f5ff;
+      font-size: 13px;
+      line-height: 1.2;
+      font-weight: 950;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-guide-request-body p {
+      margin: 0;
+      color: #aaa4cb;
+      font-size: 10px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    .empty-guide-request-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .empty-guide-upload-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid rgba(82, 247, 255, 0.14);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.12), transparent 40%),
+        rgba(12, 10, 22, 0.72);
+    }
+
+    .empty-guide-upload-field {
+      min-height: 42px;
+      justify-content: space-between;
+      padding: 0 12px;
+      color: #d8d2f4;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .empty-guide-upload-preview {
+      min-height: 116px;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      border-style: dashed;
+      color: #f7f5ff;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 950;
+      background: rgba(9, 8, 17, 0.72);
+    }
+
+    .empty-guide-progress {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(196, 181, 253, 0.1);
+      overflow: hidden;
+    }
+
+    .empty-guide-progress span {
+      display: block;
+      width: 76%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #52f7ff, #8b5cf6, #7cf7c2);
+      animation: emptyGuideProgress 2.8s ease-in-out infinite;
+    }
+
+    .empty-guide-foot {
+      padding-top: 2px;
+    }
+
+    .empty-guide-dots {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .empty-guide-dot {
+      width: 8px;
+      height: 8px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(196, 181, 253, 0.28);
+      padding: 0;
+      cursor: pointer;
+      transition: width 180ms ease, background 180ms ease, box-shadow 180ms ease;
+    }
+
+    .empty-guide-dot.is-active {
+      width: 26px;
+      border-radius: 999px;
+      background: #52f7ff;
+      box-shadow: 0 0 18px rgba(82, 247, 255, 0.34);
+    }
+
+    .empty-guide-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .empty-guide-actions .primary-action,
+    .empty-guide-actions .chip-action {
+      min-height: 36px;
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 860px) {
+      .empty-guide-dialog {
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+        padding: 14px;
+      }
+
+      .empty-guide-head,
+      .empty-guide-foot {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .empty-guide-count {
+        justify-self: start;
+      }
+
+      .empty-guide-pages {
+        min-height: 0;
+        overflow: auto;
+        padding-right: 2px;
+      }
+
+      .empty-guide-page,
+      .empty-guide-page.is-active {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .empty-guide-page {
+        position: absolute;
+      }
+
+      .empty-guide-page.is-active {
+        position: relative;
+      }
+
+      .empty-guide-copy {
+        padding: 2px 0;
+      }
+
+      .empty-guide-shot {
+        min-height: 360px;
+        animation: none;
+      }
+
+      .empty-guide-resource-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .empty-guide-overlay {
+        padding: 10px;
+      }
+
+      .empty-guide-brand {
+        grid-template-columns: 38px minmax(0, 1fr);
+      }
+
+      .empty-guide-brand img {
+        width: 38px;
+        height: 38px;
+      }
+
+      .empty-guide-copy h3 {
+        font-size: 26px;
+      }
+
+      .empty-guide-stat-grid,
+      .empty-guide-resource-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .empty-guide-request-row {
+        flex-direction: column;
+      }
+
+      .empty-guide-request-thumb {
+        width: 100%;
+      }
+
+      .empty-guide-actions {
+        justify-content: stretch;
+      }
+
+      .empty-guide-actions .primary-action,
+      .empty-guide-actions .chip-action {
+        flex: 1 1 118px;
+      }
+    }
+
+    @keyframes emptyGuideGrid {
+      to {
+        transform: rotate(-7deg) translate3d(46px, 46px, 0);
+      }
+    }
+
+    @keyframes emptyGuideFloat {
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-6px);
+      }
+    }
+
+    @keyframes emptyGuideSheen {
+      0%,
+      48% {
+        transform: translateX(-120%);
+      }
+      72%,
+      100% {
+        transform: translateX(120%);
+      }
+    }
+
+    @keyframes emptyGuideProgress {
+      0%,
+      100% {
+        transform: translateX(-12%) scaleX(0.72);
+      }
+      50% {
+        transform: translateX(18%) scaleX(1);
       }
     }
 
@@ -8501,6 +9646,231 @@
             </div>
           </div>
 
+          <div id="emptyResourcesGuideOverlay" class="empty-guide-overlay hidden" aria-hidden="true">
+            <div class="empty-guide-dialog" role="dialog" aria-modal="true" aria-labelledby="emptyResourcesGuideTitle">
+              <div class="empty-guide-head">
+                <div class="empty-guide-brand">
+                  <img src="/assets/6ure-logo.png" alt="" aria-hidden="true">
+                  <span>
+                    <strong id="emptyResourcesGuideTitle">First Drop Guide</strong>
+                    <span id="emptyResourcesGuideSubtitle">A quick map before your first upload.</span>
+                  </span>
+                </div>
+                <div id="emptyResourcesGuideCount" class="empty-guide-count">1 of 4</div>
+              </div>
+
+              <div id="emptyResourcesGuidePages" class="empty-guide-pages">
+                <section class="empty-guide-page is-active" data-empty-guide-page="0" aria-hidden="false">
+                  <div class="empty-guide-copy">
+                    <span class="empty-guide-kicker">Clean start</span>
+                    <h3>Your Leaker Zone starts clean.</h3>
+                    <p>Top Drop and Favorite Editor stay out of the way until your first leak exists. The empty view focuses on the next useful move.</p>
+                    <div class="empty-guide-points">
+                      <div class="empty-guide-point"><span>01</span><strong>Upload creates the first resource card.</strong></div>
+                      <div class="empty-guide-point"><span>02</span><strong>Latest Leak becomes your first activity signal.</strong></div>
+                      <div class="empty-guide-point"><span>03</span><strong>Editor stats appear after real editor data lands.</strong></div>
+                    </div>
+                  </div>
+                  <div class="empty-guide-visual" aria-hidden="true">
+                    <div class="empty-guide-shot is-empty-zone">
+                      <div class="empty-guide-empty-head">
+                        <img class="empty-guide-shot-logo" src="/assets/leaker-mode-icon.png" alt="">
+                        <div class="empty-guide-shot-title">
+                          <strong>Good afternoon, lemon</strong>
+                          <span>Leaker Zone</span>
+                        </div>
+                      </div>
+                      <div class="empty-guide-stat-grid">
+                        <div class="empty-guide-stat"><strong>0</strong><span>Resources</span></div>
+                        <div class="empty-guide-stat"><strong>0</strong><span>Downloads</span></div>
+                        <div class="empty-guide-stat"><strong>0</strong><span>Views</span></div>
+                        <div class="empty-guide-stat"><strong>0</strong><span>Premium</span></div>
+                      </div>
+                      <div class="empty-guide-insight">
+                        <span>Latest leak</span>
+                        <strong>Nothing leaked yet</strong>
+                        <small>The next upload starts your feed.</small>
+                      </div>
+                      <div class="empty-guide-empty-wall">
+                        <span>
+                          <strong>No uploads yet.</strong>
+                          <span>Your profile is ready for the first drop.</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="empty-guide-page" data-empty-guide-page="1" aria-hidden="true">
+                  <div class="empty-guide-copy">
+                    <span class="empty-guide-kicker">Resources</span>
+                    <h3>Browse the public library from inside the app.</h3>
+                    <p>The Resources view keeps search, categories, stats, and resource cards in one dense panel so you can scan quickly.</p>
+                    <div class="empty-guide-points">
+                      <div class="empty-guide-point"><span>01</span><strong>Search resource names, editors, and categories.</strong></div>
+                      <div class="empty-guide-point"><span>02</span><strong>Use category filtering for faster browsing.</strong></div>
+                      <div class="empty-guide-point"><span>03</span><strong>Open resource details without leaving the app.</strong></div>
+                    </div>
+                  </div>
+                  <div class="empty-guide-visual" aria-hidden="true">
+                    <div class="empty-guide-shot is-resources">
+                      <div class="empty-guide-shot-head">
+                        <img class="empty-guide-shot-logo" src="/assets/6ure-logo.png" alt="">
+                        <div class="empty-guide-shot-title">
+                          <strong>Resources</strong>
+                          <span>Browse public 6ure resources</span>
+                        </div>
+                      </div>
+                      <div class="empty-guide-stat-grid">
+                        <div class="empty-guide-stat"><strong>2.115</strong><span>Resources</span></div>
+                        <div class="empty-guide-stat"><strong>618K</strong><span>Downloads</span></div>
+                        <div class="empty-guide-stat"><strong>53K</strong><span>Views</span></div>
+                        <div class="empty-guide-stat"><strong>800</strong><span>Editors</span></div>
+                      </div>
+                      <div class="empty-guide-toolbar">
+                        <div class="empty-guide-search"></div>
+                        <div class="empty-guide-chip">All categories</div>
+                      </div>
+                      <div class="empty-guide-resource-grid">
+                        <article class="empty-guide-card">
+                          <div class="empty-guide-thumb"></div>
+                          <div class="empty-guide-pills"><span class="empty-guide-pill">Free</span><span class="empty-guide-pill">After Effects</span></div>
+                          <strong>BEBE CC</strong>
+                        </article>
+                        <article class="empty-guide-card">
+                          <div class="empty-guide-thumb"></div>
+                          <div class="empty-guide-pills"><span class="empty-guide-pill">Free</span><span class="empty-guide-pill">Video Star</span></div>
+                          <strong>VSP PACK 2</strong>
+                        </article>
+                        <article class="empty-guide-card">
+                          <div class="empty-guide-thumb"></div>
+                          <div class="empty-guide-pills"><span class="empty-guide-pill">Free</span><span class="empty-guide-pill">After Effects</span></div>
+                          <strong>SHARPEN SETTINGS</strong>
+                        </article>
+                        <article class="empty-guide-card">
+                          <div class="empty-guide-thumb"></div>
+                          <div class="empty-guide-pills"><span class="empty-guide-pill">Free</span><span class="empty-guide-pill">After Effects</span></div>
+                          <strong>WARP BOUNCE SHAKE</strong>
+                        </article>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="empty-guide-page" data-empty-guide-page="2" aria-hidden="true">
+                  <div class="empty-guide-copy">
+                    <span class="empty-guide-kicker">Requests</span>
+                    <h3>Pick targets from pending requests.</h3>
+                    <p>The Requests board gives you live demand, price hints, and shortcuts for product, creator, and completion actions.</p>
+                    <div class="empty-guide-points">
+                      <div class="empty-guide-point"><span>01</span><strong>Filter pending and completed requests.</strong></div>
+                      <div class="empty-guide-point"><span>02</span><strong>Jump to Product or Creator before uploading.</strong></div>
+                      <div class="empty-guide-point"><span>03</span><strong>Complete a request after you prepare the leak.</strong></div>
+                    </div>
+                  </div>
+                  <div class="empty-guide-visual" aria-hidden="true">
+                    <div class="empty-guide-shot is-requests">
+                      <div class="empty-guide-shot-head">
+                        <img class="empty-guide-shot-logo" src="/assets/6ure-logo.png" alt="">
+                        <div class="empty-guide-shot-title">
+                          <strong>Requests</strong>
+                          <span>Track open requests</span>
+                        </div>
+                      </div>
+                      <div class="empty-guide-stat-grid">
+                        <div class="empty-guide-stat"><strong>1.178</strong><span>Requests</span></div>
+                        <div class="empty-guide-stat"><strong>24</strong><span>Loaded</span></div>
+                        <div class="empty-guide-stat"><strong>1.039</strong><span>Pending</span></div>
+                        <div class="empty-guide-stat"><strong>137</strong><span>Completed</span></div>
+                      </div>
+                      <div class="empty-guide-toolbar">
+                        <div class="empty-guide-search"></div>
+                        <div class="empty-guide-chip">Pending</div>
+                      </div>
+                      <div class="empty-guide-request-list">
+                        <article class="empty-guide-request-row">
+                          <div class="empty-guide-request-thumb"></div>
+                          <div class="empty-guide-request-body">
+                            <div class="empty-guide-pills"><span class="empty-guide-pill">Pending</span><span class="empty-guide-pill">$10</span><span class="empty-guide-pill">#1471</span></div>
+                            <strong>2026 XDNASSA EDITING PACK</strong>
+                            <p>500+ SFX, fonts, render settings, flow shakes, overlays, and clips.</p>
+                            <div class="empty-guide-request-actions">
+                              <span class="empty-guide-chip">Complete</span>
+                              <span class="empty-guide-chip">Product</span>
+                              <span class="empty-guide-chip">Creator</span>
+                            </div>
+                          </div>
+                        </article>
+                        <article class="empty-guide-request-row">
+                          <div class="empty-guide-request-thumb"></div>
+                          <div class="empty-guide-request-body">
+                            <div class="empty-guide-pills"><span class="empty-guide-pill">Pending</span><span class="empty-guide-pill">4.00 $</span><span class="empty-guide-pill">#1470</span></div>
+                            <strong>leviticus - dust bowl</strong>
+                            <p>After Effects 18 and newer versions with plugin notes.</p>
+                            <div class="empty-guide-request-actions">
+                              <span class="empty-guide-chip">Complete</span>
+                              <span class="empty-guide-chip">Request</span>
+                            </div>
+                          </div>
+                        </article>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="empty-guide-page" data-empty-guide-page="3" aria-hidden="true">
+                  <div class="empty-guide-copy">
+                    <span class="empty-guide-kicker">First upload</span>
+                    <h3>Open Upload when you are ready to post.</h3>
+                    <p>Leaker Mode opens the dashboard, keeps helper tools close, and brings your first completed upload back into this profile.</p>
+                    <div class="empty-guide-points">
+                      <div class="empty-guide-point"><span>01</span><strong>Upload opens the signed-in dashboard.</strong></div>
+                      <div class="empty-guide-point"><span>02</span><strong>TikTok and YouTube link tools stay nearby.</strong></div>
+                      <div class="empty-guide-point"><span>03</span><strong>Your stats unlock after the first leak syncs.</strong></div>
+                    </div>
+                  </div>
+                  <div class="empty-guide-visual" aria-hidden="true">
+                    <div class="empty-guide-shot is-upload">
+                      <div class="empty-guide-shot-head">
+                        <img class="empty-guide-shot-logo" src="/assets/leaker-mode-icon.png" alt="">
+                        <div class="empty-guide-shot-title">
+                          <strong>Leaker Dashboard</strong>
+                          <span>dashboard/upload</span>
+                        </div>
+                      </div>
+                      <div class="empty-guide-upload-card">
+                        <div class="empty-guide-upload-field"><span>Creator</span><strong>@newdrop</strong></div>
+                        <div class="empty-guide-upload-field"><span>Category</span><strong>After Effects</strong></div>
+                        <div class="empty-guide-upload-preview">Leak folder preview</div>
+                        <div class="empty-guide-progress"><span></span></div>
+                        <div class="empty-guide-request-actions">
+                          <span class="empty-guide-chip">TikTok Links</span>
+                          <span class="empty-guide-chip">YouTube Links</span>
+                          <span class="empty-guide-chip">Refresh</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <div class="empty-guide-foot">
+                <div class="empty-guide-dots" aria-label="Guide pages">
+                  <button class="empty-guide-dot is-active" type="button" data-empty-guide-dot="0" aria-label="Show page 1"></button>
+                  <button class="empty-guide-dot" type="button" data-empty-guide-dot="1" aria-label="Show page 2"></button>
+                  <button class="empty-guide-dot" type="button" data-empty-guide-dot="2" aria-label="Show page 3"></button>
+                  <button class="empty-guide-dot" type="button" data-empty-guide-dot="3" aria-label="Show page 4"></button>
+                </div>
+                <div class="empty-guide-actions">
+                  <button id="emptyResourcesGuideSkipBtn" class="chip-action" type="button">Skip</button>
+                  <button id="emptyResourcesGuideBackBtn" class="chip-action" type="button">Back</button>
+                  <button id="emptyResourcesGuideNextBtn" class="primary-action" type="button">Continue</button>
+                  <button id="emptyResourcesGuideStartBtn" class="primary-action hidden" type="button">Start Upload</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div id="filesAuthGate" class="files-auth-gate" aria-live="polite">
             <form id="filesAuthForm" class="files-auth-card">
               <div class="files-auth-mark">
@@ -8628,9 +9998,12 @@
               </div>
 
               <div class="files-settings-actions">
-                <button id="filesDebugBundleBtn" class="chip-action" type="button">Debug Bundle</button>
-                <button id="filesRepairNowBtn" class="chip-action" type="button">Repair Now</button>
-                <button id="filesSettingsResetBtn" class="chip-action" type="button">Reset</button>
+                <div class="files-settings-action-buttons">
+                  <button id="filesDebugBundleBtn" class="chip-action" type="button">Debug Bundle</button>
+                  <button id="filesRepairNowBtn" class="chip-action" type="button">Repair Now</button>
+                  <button id="filesSettingsResetBtn" class="chip-action" type="button">Reset</button>
+                </div>
+                <span id="filesSettingsVersion" class="files-settings-version">v1.5.2</span>
               </div>
             </div>
           </div>
@@ -8742,6 +10115,30 @@
               </div>
               <div id="filesResourceDetailBody" class="files-resource-detail-body"></div>
               <div id="filesResourceDetailStatus" class="files-resources-status">Loading resource details.</div>
+            </div>
+          </div>
+
+          <div id="filesRequestDetailOverlay" class="files-resource-detail-overlay files-request-detail-overlay hidden" aria-hidden="true">
+            <div class="files-resource-detail-dialog files-request-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="filesRequestDetailTitle">
+              <div class="files-resource-detail-head">
+                <div class="files-resource-detail-title-wrap">
+                  <h3 id="filesRequestDetailTitle">Request details</h3>
+                  <span id="filesRequestDetailSubtitle">Ready.</span>
+                </div>
+                <div class="files-resource-detail-actions">
+                  <button id="filesRequestDetailFavoriteBtn" class="chip-action files-request-favorite-toggle" type="button" aria-pressed="false">Favorite</button>
+                  <button id="filesRequestDetailCompleteBtn" class="primary-action files-request-complete" type="button">Complete</button>
+                  <button id="filesRequestDetailOpenBtn" class="chip-action" type="button">Open</button>
+                  <button id="filesRequestDetailCloseBtn" class="chip-action back-action" type="button" aria-label="Back" title="Back">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M15 6 9 12l6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                    <span class="sr-only">Back</span>
+                  </button>
+                </div>
+              </div>
+              <div id="filesRequestDetailBody" class="files-resource-detail-body"></div>
+              <div id="filesRequestDetailStatus" class="files-resources-status">Ready.</div>
             </div>
           </div>
 
@@ -8948,6 +10345,7 @@
               <div class="files-resources-actions">
                 <button id="filesRequestsMineBtn" class="chip-action" type="button">Leaker Zone</button>
                 <button id="filesRequestsOpenBtn" class="chip-action" type="button">Open Site</button>
+                <button id="filesRequestsFavoritesFilterBtn" class="chip-action" type="button" aria-pressed="false">Favorites</button>
                 <button id="filesRequestsRefreshBtn" class="primary-action" type="button">Refresh</button>
               </div>
             </div>
@@ -8979,6 +10377,8 @@
                 <option value="completed">Completed</option>
               </select>
             </div>
+
+            <div id="filesRequestsFavorites" class="files-requests-favorites hidden" aria-live="polite"></div>
 
             <div id="filesRequestsList" class="files-resources-list" aria-live="polite">
               <div class="files-resource-empty">Loading requests...</div>
@@ -9052,8 +10452,43 @@
                 </div>
               </div>
 
+              <div id="filesFfxPrefixOverlay" class="files-ffx-effects-overlay files-ffx-prefix-overlay hidden" aria-hidden="true">
+                <div class="files-ffx-effects-dialog files-ffx-prefix-dialog" role="dialog" aria-modal="true" aria-labelledby="filesFfxPrefixTitle">
+                  <div class="files-ffx-effects-head">
+                    <div class="files-ffx-effects-title">
+                      <h3 id="filesFfxPrefixTitle">6ure Prefix</h3>
+                      <span id="filesFfxPrefixSubtitle">Confirm the effect names before saving copies.</span>
+                    </div>
+                    <button id="filesFfxPrefixCloseBtn" class="files-ffx-result-close" type="button" aria-label="Close">
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M7 7l10 10"></path>
+                        <path d="M17 7 7 17"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <div id="filesFfxPrefixSummary" class="files-ffx-prefix-summary"></div>
+                  <div id="filesFfxPrefixList" class="files-ffx-prefix-list"></div>
+                  <div id="filesFfxPrefixProgress" class="files-ffx-prefix-progress" aria-hidden="true">
+                    <div class="files-ffx-prefix-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                      <span id="filesFfxPrefixProgressBar"></span>
+                    </div>
+                    <small id="filesFfxPrefixProgressText">Ready.</small>
+                  </div>
+                  <div class="files-ffx-effects-actions">
+                    <button id="filesFfxPrefixCancelBtn" class="chip-action" type="button">Cancel</button>
+                    <button id="filesFfxPrefixConfirmBtn" class="primary-action" type="button">Save prefixed copies</button>
+                  </div>
+                </div>
+              </div>
+
               <div class="files-ffx-convert-row">
-                <button id="filesFfxDownloadBtn" class="primary-action" type="button" disabled>Convert files</button>
+                <div class="files-ffx-convert-actions">
+                  <button id="filesFfxPrefixBtn" class="primary-action files-ffx-prefix-btn" type="button" disabled>
+                    <img src="/assets/6ure-logo.png" alt="" aria-hidden="true">
+                    <span>Prefix</span>
+                  </button>
+                  <button id="filesFfxDownloadBtn" class="primary-action" type="button" disabled>Convert files</button>
+                </div>
                 <div id="filesFfxStatus" class="files-resources-status">Ready.</div>
               </div>
             </div>
@@ -9113,7 +10548,7 @@
               </div>
             </div>
 
-            <div class="files-resources-insights" aria-label="Personal upload insights">
+            <div id="filesResourcesInsights" class="files-resources-insights" aria-label="Personal upload insights">
               <div id="filesResourcesTopResourceInsight" class="files-resources-insight">
                 <span class="files-resources-insight-kicker">Top drop</span>
                 <div class="files-resources-insight-main">
@@ -9370,6 +10805,9 @@
     let filesRequestsStatusFilter = 'pending';
     let filesRequestsSearchTimer = null;
     let filesRequestsCounts = { total: null, pending: null, completed: null };
+    let filesRequestsFavoriteIds = new Set();
+    let filesRequestsFavoriteOnly = false;
+    let filesRequestDetailId = '';
     let filesFfxFiles = [];
     let filesFfxNames = [];
     let filesFfxSearchQuery = '';
@@ -9379,6 +10817,8 @@
     let filesFfxKnownEffects = null;
     let filesFfxKnownEffectsReady = false;
     let filesFfxKnownEffectsLoading = null;
+    let filesFfxPrefixRenames = [];
+    let filesFfxPrefixRunning = false;
     let filesEditorGroups = [];
     let filesActiveEditorKey = '';
     let filesEditorsModalSearchQuery = '';
@@ -9388,6 +10828,9 @@
     let filesResourcesSummaryCollapsed = false;
     let filesResourcesSplitterDrag = null;
     let filesResourcesSummaryAnimations = [];
+    let filesEmptyGuidePage = 0;
+    let filesEmptyGuideStartupPending = true;
+    let filesEmptyGuideDeferredTimer = null;
     let webviewUploadConsentRequest = null;
     let webviewUploadConsentTimer = null;
     let webviewUploadConsentResolving = false;
@@ -9401,6 +10844,8 @@
     let leakerAutoLoginLastAt = 0;
     let leakerModeTransitioning = false;
     let leakerModeAuthToastShown = false;
+    let leakerAccessCheckActive = false;
+    let leakerAccessCheckPromise = null;
     let leakerUploadPresenceTimer = null;
     let leakerUploadPresenceObserver = null;
     let leakerUploadPresenceCleanup = [];
@@ -9464,6 +10909,7 @@
 
     const FILES_URL = 'https://6ureleaks.com/resources';
     const REQUESTS_URL = 'https://6ureleaks.com/requests';
+    const FILES_REQUEST_FAVORITES_STORAGE_KEY = '6ure.files.requestFavorites.v1';
     const OPENING_DURATION_MS = 3600;
     const OPENING_EXIT_MS = 950;
     const STARTUP_AUTH_CACHE_TIMEOUT_MS = 1200;
@@ -9473,6 +10919,7 @@
     const LEAKER_AUTO_LOGIN_RETRY_MS = 12000;
     const LEAKER_AUTO_LOGIN_MAX_ATTEMPTS = 2;
     const LEAKER_LOGIN_URL = '/dashboard/upload';
+    const LEAKER_ACCOUNT_URL = '/requests/account';
     const LEAKER_CLOUD_URL = '/dashboard/resources';
     const LEAKER_UPLOAD_URL = '/dashboard/upload';
     const RESOURCE_EDIT_CATEGORIES = [
@@ -9493,6 +10940,7 @@
     const FFX_EFFECT_NAME_MIN_SCORE = 3;
     const FFX_EFFECT_NAMES_URL = 'ffx-effect-names.json';
     const FFX_UTF8_CHUNK_ENCODING = 'ffxUtf8Chunk';
+    const FFX_6URE_PREFIX = '6ureleaks.com · ';
     const ffxTextEncoder = new TextEncoder();
     const ffxTextDecoder = new TextDecoder('utf-8', { fatal: false });
     const FFX_FALLBACK_EFFECT_NAMES = [
@@ -9730,6 +11178,7 @@
     const FILES_SETTINGS_STORAGE_KEY = '6ure.files.settings.v1';
     const FILES_RESOURCES_SUMMARY_HEIGHT_KEY = '6ure.files.resources.summaryHeight';
     const FILES_RESOURCES_SUMMARY_COLLAPSED_KEY = '6ure.files.resources.summaryCollapsed';
+    const EMPTY_RESOURCES_GUIDE_STORAGE_PREFIX = '6ure.files.emptyResourcesGuide.v1';
     const UPDATE_SKIP_STORAGE_KEY = '6ure.files.update.skipVersion';
     const DEFAULT_FILES_SETTINGS = {
       discordPresenceEnabled: true,
@@ -9854,6 +11303,15 @@
       filesResourceDetailSubtitle: $('#filesResourceDetailSubtitle'),
       filesResourceDetailBody: $('#filesResourceDetailBody'),
       filesResourceDetailStatus: $('#filesResourceDetailStatus'),
+      filesRequestDetailOverlay: $('#filesRequestDetailOverlay'),
+      filesRequestDetailCloseBtn: $('#filesRequestDetailCloseBtn'),
+      filesRequestDetailFavoriteBtn: $('#filesRequestDetailFavoriteBtn'),
+      filesRequestDetailCompleteBtn: $('#filesRequestDetailCompleteBtn'),
+      filesRequestDetailOpenBtn: $('#filesRequestDetailOpenBtn'),
+      filesRequestDetailTitle: $('#filesRequestDetailTitle'),
+      filesRequestDetailSubtitle: $('#filesRequestDetailSubtitle'),
+      filesRequestDetailBody: $('#filesRequestDetailBody'),
+      filesRequestDetailStatus: $('#filesRequestDetailStatus'),
       filesResourceEditOverlay: $('#filesResourceEditOverlay'),
       filesResourceEditForm: $('#filesResourceEditForm'),
       filesResourceEditCloseBtn: $('#filesResourceEditCloseBtn'),
@@ -9912,6 +11370,7 @@
       filesResourcesSubtitle: $('#filesResourcesSubtitle'),
       filesResourcesKicker: $('#filesResourcesKicker'),
       filesResourcesAvatar: $('#filesResourcesAvatar'),
+      filesResourcesInsights: $('#filesResourcesInsights'),
       filesResourcesTopResourceInsight: $('#filesResourcesTopResourceInsight'),
       filesResourcesTopResource: $('#filesResourcesTopResource'),
       filesResourcesTopResourceMeta: $('#filesResourcesTopResourceMeta'),
@@ -9938,6 +11397,7 @@
       filesRequestsCard: $('#filesRequestsCard'),
       filesRequestsMineBtn: $('#filesRequestsMineBtn'),
       filesRequestsOpenBtn: $('#filesRequestsOpenBtn'),
+      filesRequestsFavoritesFilterBtn: $('#filesRequestsFavoritesFilterBtn'),
       filesRequestsRefreshBtn: $('#filesRequestsRefreshBtn'),
       filesRequestsTotal: $('#filesRequestsTotal'),
       filesRequestsLoaded: $('#filesRequestsLoaded'),
@@ -9945,6 +11405,7 @@
       filesRequestsCompleted: $('#filesRequestsCompleted'),
       filesRequestsSearch: $('#filesRequestsSearch'),
       filesRequestsStatusFilter: $('#filesRequestsStatusFilter'),
+      filesRequestsFavorites: $('#filesRequestsFavorites'),
       filesRequestsList: $('#filesRequestsList'),
       filesRequestsStatus: $('#filesRequestsStatus'),
       filesFfxCard: $('#filesFfxCard'),
@@ -9952,6 +11413,7 @@
       filesFfxWorkView: $('#filesFfxWorkView'),
       filesFfxMineBtn: $('#filesFfxMineBtn'),
       filesFfxClearBtn: $('#filesFfxClearBtn'),
+      filesFfxPrefixBtn: $('#filesFfxPrefixBtn'),
       filesFfxDownloadBtn: $('#filesFfxDownloadBtn'),
       filesFfxFileTotal: $('#filesFfxFileTotal'),
       filesFfxNameTotal: $('#filesFfxNameTotal'),
@@ -9977,6 +11439,17 @@
       filesFfxEffectsTitle: $('#filesFfxEffectsTitle'),
       filesFfxEffectsSubtitle: $('#filesFfxEffectsSubtitle'),
       filesFfxEffectsList: $('#filesFfxEffectsList'),
+      filesFfxPrefixOverlay: $('#filesFfxPrefixOverlay'),
+      filesFfxPrefixCloseBtn: $('#filesFfxPrefixCloseBtn'),
+      filesFfxPrefixCancelBtn: $('#filesFfxPrefixCancelBtn'),
+      filesFfxPrefixConfirmBtn: $('#filesFfxPrefixConfirmBtn'),
+      filesFfxPrefixTitle: $('#filesFfxPrefixTitle'),
+      filesFfxPrefixSubtitle: $('#filesFfxPrefixSubtitle'),
+      filesFfxPrefixSummary: $('#filesFfxPrefixSummary'),
+      filesFfxPrefixList: $('#filesFfxPrefixList'),
+      filesFfxPrefixProgress: $('#filesFfxPrefixProgress'),
+      filesFfxPrefixProgressBar: $('#filesFfxPrefixProgressBar'),
+      filesFfxPrefixProgressText: $('#filesFfxPrefixProgressText'),
       filesFfxStatus: $('#filesFfxStatus'),
       filesAuthGate: $('#filesAuthGate'),
       filesAuthForm: $('#filesAuthForm'),
@@ -10001,6 +11474,13 @@
       connectionTitle: $('#connectionTitle'),
       connectionMessage: $('#connectionMessage'),
       connectionRetryBtn: $('#connectionRetryBtn'),
+      emptyResourcesGuideOverlay: $('#emptyResourcesGuideOverlay'),
+      emptyResourcesGuidePages: $('#emptyResourcesGuidePages'),
+      emptyResourcesGuideCount: $('#emptyResourcesGuideCount'),
+      emptyResourcesGuideSkipBtn: $('#emptyResourcesGuideSkipBtn'),
+      emptyResourcesGuideBackBtn: $('#emptyResourcesGuideBackBtn'),
+      emptyResourcesGuideNextBtn: $('#emptyResourcesGuideNextBtn'),
+      emptyResourcesGuideStartBtn: $('#emptyResourcesGuideStartBtn'),
       updateMonitor: $('#updateMonitor'),
       updateMonitorTitle: $('#updateMonitorTitle'),
       updateMonitorMessage: $('#updateMonitorMessage'),
@@ -11881,6 +13361,7 @@
       if (els.filesRequestsCompleted) {
         els.filesRequestsCompleted.textContent = formatResourceNumber(Number.isFinite(completedCount) ? completedCount : completedLoaded);
       }
+      updateRequestsFavoritesUi();
     }
 
     function setRequestsBusy(active, message = '') {
@@ -11906,6 +13387,9 @@
       els.filesGeneralResourcesCard?.setAttribute('aria-hidden', publicActive ? 'false' : 'true');
       els.filesRequestsCard?.classList.toggle('hidden', !requestsActive);
       els.filesRequestsCard?.setAttribute('aria-hidden', requestsActive ? 'false' : 'true');
+      if (!requestsActive && isOverlayVisible(els.filesRequestDetailOverlay)) {
+        hideRequestDetail({ silentPresence: true });
+      }
       els.filesFfxCard?.classList.toggle('hidden', !ffxActive);
       els.filesFfxCard?.setAttribute('aria-hidden', ffxActive ? 'false' : 'true');
       els.filesMyResourcesCard?.classList.toggle('hidden', !mineActive);
@@ -12123,9 +13607,125 @@
       return 'Pending';
     }
 
+    function renderRequestIcon(name) {
+      const icons = {
+        arrow: '<path d="M7 17 17 7"></path><path d="M9 7h8v8"></path>',
+        check: '<path d="M20 6 9 17l-5-5"></path>',
+        external: '<path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M20 13v5a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h5"></path>',
+        eye: '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.5"></circle>',
+        message: '<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.2 9.1 9.1 0 0 1-3.7-.8L3 20l1.4-4.5a8 8 0 0 1-.9-3.8A8.4 8.4 0 0 1 12 3.5a8.4 8.4 0 0 1 9 8Z"></path>',
+        spark: '<path d="M12 2.8 14.9 8.7l6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8Z"></path>',
+        star: '<path d="M12 2.8 14.9 8.7l6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.8Z"></path>',
+        user: '<path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="8" r="4"></circle>'
+      };
+      return `<svg class="files-request-icon" viewBox="0 0 24 24" aria-hidden="true">${icons[name] || icons.star}</svg>`;
+    }
+
     function getRequestById(requestId) {
       const cleanId = getRequestItemId(requestId);
       return filesRequestsItems.find(item => getRequestItemId(item) === cleanId) || null;
+    }
+
+    function getRequestFavoriteIds() {
+      return Array.from(filesRequestsFavoriteIds || [])
+        .map(id => getRequestItemId(id))
+        .filter(Boolean);
+    }
+
+    function loadRequestFavorites() {
+      try {
+        const raw = window.localStorage?.getItem(FILES_REQUEST_FAVORITES_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        const values = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.ids) ? parsed.ids : []);
+        filesRequestsFavoriteIds = new Set(values.map(id => getRequestItemId(id)).filter(Boolean));
+      } catch {
+        filesRequestsFavoriteIds = new Set();
+      }
+      updateRequestsFavoritesUi();
+    }
+
+    function saveRequestFavorites() {
+      const ids = getRequestFavoriteIds();
+      try {
+        if (ids.length) {
+          window.localStorage?.setItem(FILES_REQUEST_FAVORITES_STORAGE_KEY, JSON.stringify(ids));
+        } else {
+          window.localStorage?.removeItem(FILES_REQUEST_FAVORITES_STORAGE_KEY);
+        }
+      } catch {}
+    }
+
+    function isRequestFavorite(requestId) {
+      const cleanId = getRequestItemId(requestId);
+      return Boolean(cleanId && filesRequestsFavoriteIds.has(cleanId));
+    }
+
+    function setRequestFavorite(requestId, active) {
+      const cleanId = getRequestItemId(requestId);
+      if (!cleanId) return false;
+      const shouldFavorite = Boolean(active);
+      const wasFavorite = isRequestFavorite(cleanId);
+      if (shouldFavorite) {
+        filesRequestsFavoriteIds.add(cleanId);
+      } else {
+        filesRequestsFavoriteIds.delete(cleanId);
+      }
+      saveRequestFavorites();
+      updateRequestsFavoritesUi();
+      if (filesRequestDetailId === cleanId) updateRequestDetailControls(getRequestById(cleanId));
+      return wasFavorite !== shouldFavorite;
+    }
+
+    function toggleRequestFavorite(requestId) {
+      const cleanId = getRequestItemId(requestId);
+      if (!cleanId) return;
+      const nextFavorite = !isRequestFavorite(cleanId);
+      setRequestFavorite(cleanId, nextFavorite);
+      if (filesRequestDetailId === cleanId) {
+        const request = getRequestById(cleanId);
+        if (request) renderRequestDetail(request);
+      }
+      renderRequestsList({ preserveScrollTop: els.filesRequestsList?.scrollTop || 0 });
+      showToast(nextFavorite ? 'Request added to favorites.' : 'Request removed from favorites.', 'ok');
+    }
+
+    function getVisibleRequestItems() {
+      if (!filesRequestsFavoriteOnly) return filesRequestsItems;
+      return filesRequestsItems.filter(item => isRequestFavorite(getRequestItemId(item)));
+    }
+
+    function updateRequestsFavoritesUi() {
+      const ids = getRequestFavoriteIds();
+      if (els.filesRequestsFavoritesFilterBtn) {
+        const label = ids.length ? `Favorites (${formatResourceNumber(ids.length)})` : 'Favorites';
+        els.filesRequestsFavoritesFilterBtn.innerHTML = `${renderRequestIcon('star')}<span>${escapeHtml(label)}</span>`;
+        els.filesRequestsFavoritesFilterBtn.classList.toggle('is-active', filesRequestsFavoriteOnly);
+        els.filesRequestsFavoritesFilterBtn.setAttribute('aria-pressed', filesRequestsFavoriteOnly ? 'true' : 'false');
+      }
+      if (!els.filesRequestsFavorites) return;
+      if (!ids.length) {
+        els.filesRequestsFavorites.classList.add('hidden');
+        els.filesRequestsFavorites.innerHTML = '';
+        return;
+      }
+      const loadedCount = ids.filter(id => Boolean(getRequestById(id))).length;
+      const chips = ids.map(id => {
+        const item = getRequestById(id);
+        const title = String(item?.title || `Request #${id}`).trim() || `Request #${id}`;
+        const label = `#${id} ${title}`;
+        const attrs = item
+          ? `data-request-detail-id="${escapeHtml(id)}"`
+          : `data-external-url="${escapeHtml(getRequestUrl(id))}"`;
+        return `<button class="files-request-favorite-chip" type="button" ${attrs} title="${escapeHtml(label)}">${renderRequestIcon(item ? 'star' : 'external')}<span>${escapeHtml(label)}</span></button>`;
+      }).join('');
+      els.filesRequestsFavorites.classList.remove('hidden');
+      els.filesRequestsFavorites.innerHTML = `
+        <div class="files-requests-favorites-head">
+          <span class="files-requests-favorites-label">${renderRequestIcon('star')}Favorites</span>
+          <span>${escapeHtml(formatResourceNumber(loadedCount))}/${escapeHtml(formatResourceNumber(ids.length))} loaded</span>
+        </div>
+        <div class="files-requests-favorites-list">${chips}</div>
+      `;
     }
 
     function getLeakerRequestFillPayload(item = {}) {
@@ -12140,7 +13740,51 @@
       };
     }
 
-    function renderRequestCard(item = {}) {
+    function updateRequestDetailControls(item = null) {
+      const requestId = getRequestItemId(item || filesRequestDetailId);
+      const request = item || getRequestById(requestId) || {};
+      const productUrl = makeRequestAbsoluteUrl(request.product_url || request.productUrl || '', '');
+      const requestUrl = requestId ? getRequestUrl(requestId) : REQUESTS_URL;
+      const status = getRequestNormalizedStatus(request);
+      const completeDisabled = !requestId || status === 'completed' || !productUrl;
+      if (els.filesRequestDetailFavoriteBtn) {
+        const favorite = isRequestFavorite(requestId);
+        els.filesRequestDetailFavoriteBtn.disabled = !requestId;
+        els.filesRequestDetailFavoriteBtn.innerHTML = `${renderRequestIcon('star')}<span>${favorite ? 'Favorited' : 'Favorite'}</span>`;
+        els.filesRequestDetailFavoriteBtn.classList.toggle('is-active', favorite);
+        els.filesRequestDetailFavoriteBtn.setAttribute('aria-pressed', favorite ? 'true' : 'false');
+        if (requestId) {
+          els.filesRequestDetailFavoriteBtn.dataset.requestFavoriteId = requestId;
+        } else {
+          delete els.filesRequestDetailFavoriteBtn.dataset.requestFavoriteId;
+        }
+      }
+      if (els.filesRequestDetailCompleteBtn) {
+        els.filesRequestDetailCompleteBtn.disabled = completeDisabled;
+        els.filesRequestDetailCompleteBtn.innerHTML = `${renderRequestIcon('check')}<span>Complete</span>`;
+        els.filesRequestDetailCompleteBtn.title = !productUrl
+          ? 'This request has no product link'
+          : status === 'completed'
+            ? 'This request is already completed'
+            : 'Open Leaker Mode and fill Product Link';
+        if (requestId) {
+          els.filesRequestDetailCompleteBtn.dataset.requestCompleteId = requestId;
+        } else {
+          delete els.filesRequestDetailCompleteBtn.dataset.requestCompleteId;
+        }
+      }
+      if (els.filesRequestDetailOpenBtn) {
+        els.filesRequestDetailOpenBtn.disabled = !requestUrl;
+        els.filesRequestDetailOpenBtn.innerHTML = `${renderRequestIcon('external')}<span>Open</span>`;
+        if (requestUrl) {
+          els.filesRequestDetailOpenBtn.dataset.externalUrl = requestUrl;
+        } else {
+          delete els.filesRequestDetailOpenBtn.dataset.externalUrl;
+        }
+      }
+    }
+
+    function renderRequestDetail(item = {}) {
       const requestId = getRequestItemId(item);
       const title = String(item.title || 'Untitled request').trim() || 'Untitled request';
       const creatorName = getRequestCreatorName(item);
@@ -12149,29 +13793,147 @@
       const productUrl = makeRequestAbsoluteUrl(item.product_url || item.productUrl || '', '');
       const creatorUrl = makeRequestAbsoluteUrl(item.creator_url || item.creatorUrl || '', '');
       const requestUrl = getRequestUrl(item);
-      const leakUrl = makeRequestAbsoluteUrl(item.leak_message_url || item.leakMessageUrl || '', '');
+      const leakUrl = makeRequestAbsoluteUrl(item.leak_message_url || item.leakMessageUrl || item.resource_url || item.resourceUrl || '', '');
       const imageUrl = makeRequestAbsoluteUrl(item.image_url || item.imageUrl || '', '');
       const creatorAvatar = makeRequestAbsoluteUrl(item.creator_avatar || item.creatorAvatar || item.avatar || '', '');
       const description = String(item.description || '').replace(/\s+/g, ' ').trim();
       const price = String(item.price || '').trim();
-      const meta = [
+      const createdAt = item.created_at || item.createdAt;
+      const completedAt = item.completed_at || item.completedAt || item.fulfilled_at || item.fulfilledAt;
+      const detailPills = [
+        statusLabel,
         price,
         `${formatResourceNumber(item.upvotes)} upvotes`,
         `${formatResourceNumber(item.views)} views`,
         `${formatResourceNumber(item.comments_count || item.commentsCount)} comments`,
-        formatResourceDate(item.created_at || item.createdAt)
+        formatResourceDate(createdAt)
       ].filter(Boolean);
+      const heroHtml = imageUrl
+        ? `<img data-resource-thumb-src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" onerror="this.remove()">`
+        : '';
+      const creatorProfileHtml = creatorUrl
+        ? `<button class="files-resource-detail-profile files-request-detail-profile-button" type="button" data-external-url="${escapeHtml(creatorUrl)}">
+            ${renderFilesAvatarImage('files-resource-detail-avatar', creatorAvatar, creatorName, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
+            <div class="files-resource-detail-profile-copy">
+              <div class="files-resource-detail-profile-name">${escapeHtml(creatorName)}</div>
+              <div class="files-resource-detail-profile-meta">Request creator</div>
+            </div>
+          </button>`
+        : `<div class="files-resource-detail-profile">
+            ${renderFilesAvatarImage('files-resource-detail-avatar', creatorAvatar, creatorName, 'loading="lazy" decoding="async" referrerpolicy="no-referrer"')}
+            <div class="files-resource-detail-profile-copy">
+              <div class="files-resource-detail-profile-name">${escapeHtml(creatorName)}</div>
+              <div class="files-resource-detail-profile-meta">Request creator</div>
+            </div>
+          </div>`;
+
+      if (els.filesRequestDetailTitle) els.filesRequestDetailTitle.textContent = title;
+      if (els.filesRequestDetailSubtitle) {
+        els.filesRequestDetailSubtitle.textContent = requestId
+          ? `#${requestId} - ${statusLabel}`
+          : statusLabel;
+      }
+      if (els.filesRequestDetailBody) {
+        els.filesRequestDetailBody.innerHTML = `
+          <div class="files-resource-detail-grid files-request-detail-grid">
+            <div class="files-resource-detail-main">
+              <div class="files-resource-detail-hero">
+                <div>${escapeHtml(getResourceInitials(title))}</div>
+                ${heroHtml}
+              </div>
+              <div class="files-resource-detail-panel files-resource-detail-section">
+                <div class="files-resource-detail-label">Request</div>
+                <div class="files-resource-topline">
+                  ${detailPills.map(value => `<span class="files-resource-pill">${escapeHtml(value)}</span>`).join('')}
+                  ${isRequestFavorite(requestId) ? '<span class="files-resource-pill files-request-favorite-pill">Favorite</span>' : ''}
+                </div>
+                <p class="files-resource-detail-description">${escapeHtml(description || 'No description is available.')}</p>
+              </div>
+            </div>
+            <aside class="files-resource-detail-side">
+              ${creatorProfileHtml}
+              <div class="files-resource-detail-panel files-resource-detail-section">
+                <div class="files-resource-detail-label">Details</div>
+                <div class="files-resource-detail-info">
+                  ${renderResourceDetailRow('Status', statusLabel)}
+                  ${price ? renderResourceDetailRow('Price', price) : ''}
+                  ${renderResourceDetailRow('Upvotes', formatResourceNumber(item.upvotes))}
+                  ${renderResourceDetailRow('Views', formatResourceNumber(item.views))}
+                  ${renderResourceDetailRow('Comments', formatResourceNumber(item.comments_count || item.commentsCount))}
+                  ${createdAt ? renderResourceDetailRow('Created', formatResourceDate(createdAt)) : ''}
+                  ${completedAt ? renderResourceDetailRow('Completed', formatResourceDate(completedAt)) : ''}
+                  ${productUrl ? renderResourceDetailRow('Product', getResourceDomainLabel(productUrl, 'Product'), productUrl) : ''}
+                  ${leakUrl ? renderResourceDetailRow('Leak', getResourceDomainLabel(leakUrl, 'Leak'), leakUrl) : ''}
+                  ${renderResourceDetailRow('Request', requestId ? `#${requestId}` : 'Requests', requestUrl)}
+                </div>
+              </div>
+            </aside>
+          </div>
+        `;
+        scheduleResourceImageHydration(els.filesRequestDetailBody);
+      }
+      if (els.filesRequestDetailStatus) {
+        els.filesRequestDetailStatus.textContent = requestId
+          ? `Request #${requestId} loaded.`
+          : 'Request details loaded.';
+      }
+      updateRequestDetailControls(item);
+    }
+
+    function showRequestDetail(requestId) {
+      const request = getRequestById(requestId);
+      if (!request) {
+        showToast('Request could not be found. Refresh Requests and try again.', 'err');
+        return;
+      }
+      filesRequestDetailId = getRequestItemId(request);
+      renderRequestDetail(request);
+      els.filesRequestDetailOverlay?.classList.remove('hidden');
+      els.filesRequestDetailOverlay?.setAttribute('aria-hidden', 'false');
+      setTimeout(() => els.filesRequestDetailCloseBtn?.focus?.(), 80);
+      updateDiscordPresence(
+        'Viewing Request',
+        `${normalizeLeakerUploadNameText(String(request.title || 'Request'), 72)} - ${getRequestStatusLabel(getRequestNormalizedStatus(request))}`,
+        { force: true }
+      );
+    }
+
+    function hideRequestDetail(options = {}) {
+      if (!els.filesRequestDetailOverlay) return;
+      els.filesRequestDetailOverlay.classList.add('hidden');
+      els.filesRequestDetailOverlay.setAttribute('aria-hidden', 'true');
+      filesRequestDetailId = '';
+      if (!options.silentPresence && filesAuthenticated && !filesActiveJobId) {
+        updateResourcesBrowsingPresence();
+      }
+    }
+
+    function renderRequestCard(item = {}) {
+      const requestId = getRequestItemId(item);
+      const title = String(item.title || 'Untitled request').trim() || 'Untitled request';
+      const creatorName = getRequestCreatorName(item);
+      const status = getRequestNormalizedStatus(item);
+      const statusLabel = getRequestStatusLabel(status);
+      const imageUrl = makeRequestAbsoluteUrl(item.image_url || item.imageUrl || '', '');
+      const creatorAvatar = makeRequestAbsoluteUrl(item.creator_avatar || item.creatorAvatar || item.avatar || '', '');
+      const description = String(item.description || '').replace(/\s+/g, ' ').trim();
+      const price = String(item.price || '').trim();
+      const favorite = isRequestFavorite(requestId);
+      const createdAt = item.created_at || item.createdAt;
+      const createdLabel = createdAt ? formatResourceDate(createdAt) : '';
+      const upvotes = formatResourceNumber(item.upvotes);
+      const views = formatResourceNumber(item.views);
+      const comments = formatResourceNumber(item.comments_count || item.commentsCount);
       const thumbnailHtml = imageUrl
         ? `<img data-resource-thumb-src="${escapeHtml(imageUrl)}" alt="" loading="lazy" decoding="async" fetchpriority="low" referrerpolicy="no-referrer" onerror="this.remove()">`
         : '';
-      const completeDisabled = status === 'completed' || !productUrl;
-      const completeTitle = !productUrl
-        ? 'This request has no product link'
-        : status === 'completed'
-          ? 'This request is already completed'
-          : 'Open Leaker Mode and fill Product Link';
       return `
-        <article class="files-resource-card files-request-card ${status === 'completed' ? 'is-completed' : ''}" data-request-id="${escapeHtml(requestId)}">
+        <article class="files-resource-card files-request-card ${status === 'completed' ? 'is-completed' : ''} ${favorite ? 'is-favorite' : ''}" data-request-id="${escapeHtml(requestId)}" role="button" tabindex="0" aria-label="Open details for ${escapeHtml(title)}">
+          <div class="files-request-card-tools">
+            <button class="files-request-icon-button ${favorite ? 'is-active' : ''}" type="button" data-request-favorite-id="${escapeHtml(requestId)}" aria-label="${favorite ? 'Remove from favorites' : 'Add to favorites'}" aria-pressed="${favorite ? 'true' : 'false'}" title="${favorite ? 'Remove from favorites' : 'Add to favorites'}">
+              ${renderRequestIcon('star')}
+            </button>
+          </div>
           <div class="files-resource-thumb" aria-hidden="true">
             <div class="files-resource-thumb-fallback">${escapeHtml(getResourceInitials(title))}</div>
             ${thumbnailHtml}
@@ -12180,6 +13942,7 @@
             <div class="files-resource-topline">
               <span class="files-resource-pill ${status === 'completed' ? 'free' : 'premium'}">${escapeHtml(statusLabel)}</span>
               ${price ? `<span class="files-resource-pill">${escapeHtml(price)}</span>` : ''}
+              ${favorite ? '<span class="files-resource-pill files-request-favorite-pill">Favorite</span>' : ''}
               <span class="files-resource-pill">#${escapeHtml(requestId || 'request')}</span>
             </div>
             <h4 class="files-resource-title">${escapeHtml(title)}</h4>
@@ -12189,13 +13952,15 @@
             </div>
             ${description ? `<p class="files-resource-description">${escapeHtml(description)}</p>` : ''}
             <div class="files-resource-tags">
-              ${meta.map(value => `<span class="files-resource-pill">${escapeHtml(value)}</span>`).join('')}
+              ${createdLabel ? `<span class="files-resource-pill">${escapeHtml(createdLabel)}</span>` : ''}
             </div>
-            <div class="files-request-actions">
-              <button class="primary-action files-request-complete" type="button" data-request-complete-id="${escapeHtml(requestId)}" title="${escapeHtml(completeTitle)}" ${completeDisabled ? 'disabled' : ''}>Complete</button>
-              ${productUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(productUrl)}">Product</button>` : ''}
-              ${creatorUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(creatorUrl)}">Creator</button>` : ''}
-              ${leakUrl ? `<button class="chip-action" type="button" data-external-url="${escapeHtml(leakUrl)}">Leak</button>` : `<button class="chip-action" type="button" data-external-url="${escapeHtml(requestUrl)}">Request</button>`}
+            <div class="files-request-footer" aria-hidden="true">
+              <div class="files-request-metrics">
+                <span class="files-request-metric">${renderRequestIcon('spark')}${escapeHtml(upvotes)}</span>
+                <span class="files-request-metric">${renderRequestIcon('eye')}${escapeHtml(views)}</span>
+                <span class="files-request-metric">${renderRequestIcon('message')}${escapeHtml(comments)}</span>
+              </div>
+              <span class="files-request-card-cue">${renderRequestIcon('arrow')}</span>
             </div>
           </div>
         </article>
@@ -12204,7 +13969,7 @@
 
     function renderRequestsList(options = {}) {
       if (!els.filesRequestsList) return;
-      const items = filesRequestsItems;
+      const items = getVisibleRequestItems();
       const preserveScrollTop = Number(options.preserveScrollTop);
       const shouldRestoreScroll = Number.isFinite(preserveScrollTop);
       const canLoadMore = filesRequestsPage < filesRequestsTotalPages;
@@ -12213,7 +13978,9 @@
         : '';
       if (!items.length) {
         els.filesRequestsList.classList.remove('files-resource-storefront');
-        els.filesRequestsList.innerHTML = `<div class="files-resource-empty"><strong>No requests found.</strong>Try another search or status filter.</div>${loadMoreHtml}`;
+        els.filesRequestsList.innerHTML = filesRequestsFavoriteOnly
+          ? `<div class="files-resource-empty"><strong>No favorite requests found.</strong>Favorite requests from the loaded list or load more pages.</div>${loadMoreHtml}`
+          : `<div class="files-resource-empty"><strong>No requests found.</strong>Try another search or status filter.</div>${loadMoreHtml}`;
       } else {
         els.filesRequestsList.classList.remove('files-resource-storefront');
         els.filesRequestsList.innerHTML = `${items.map(item => renderRequestCard(item)).join('')}${loadMoreHtml}`;
@@ -12228,12 +13995,16 @@
       }
       if (els.filesRequestsStatus) {
         els.filesRequestsStatus.textContent = [
-          `${formatResourceNumber(items.length)} requests loaded.`,
+          filesRequestsFavoriteOnly
+            ? `${formatResourceNumber(items.length)} favorite requests shown.`
+            : `${formatResourceNumber(items.length)} requests loaded.`,
+          filesRequestsFavoriteOnly ? `${formatResourceNumber(filesRequestsItems.length)} loaded total.` : '',
           filesRequestsSearchQuery ? `Search: ${filesRequestsSearchQuery.trim()}.` : '',
           filesRequestsStatusFilter ? `Status: ${filesRequestsStatusFilter}.` : '',
           filesRequestsTotalPages > 1 ? `Page ${formatResourceNumber(filesRequestsPage)} of ${formatResourceNumber(filesRequestsTotalPages)}.` : ''
         ].filter(Boolean).join(' ');
       }
+      updateRequestsFavoritesUi();
     }
 
     function renderRequestsSkeleton() {
@@ -12651,12 +14422,15 @@
       const role = occurrence && entry?.bytes ? getFfxOccurrenceRole(entry.bytes, occurrence) : 'unknown';
       if (role === 'property') return -1;
       const known = isKnownFfxEffectName(clean);
-      if (!known) return -1;
-      if (isFfxMetadataString(clean) && !known) return -1;
-      if (isFfxTechnicalEffectString(clean) && !known) return -1;
+      const structuralEffect = role === 'effect';
+      const relatedEffectText = Boolean(occurrence?.relatedEffectText);
+      if (!known && !structuralEffect && !relatedEffectText) return -1;
+      if (!structuralEffect && !relatedEffectText && isFfxMetadataString(clean) && !known) return -1;
+      if (!structuralEffect && !relatedEffectText && isFfxTechnicalEffectString(clean) && !known) return -1;
       if (isFfxEffectPropertyLabel(clean) && role !== 'effect') return -1;
-      if (/^(?:red giant|maxon|magic bullet)\b/i.test(clean) && !known) return -1;
-      if (role === 'effect') score += 5;
+      if (!structuralEffect && !relatedEffectText && /^(?:red giant|maxon|magic bullet)\b/i.test(clean) && !known) return -1;
+      if (structuralEffect) score += 7;
+      if (relatedEffectText) score += 4;
       if (role === 'unknown' && words.length > 4) score -= 3;
       if (known) score += 8;
       if (isFfxControlEffectName(clean)) score += 6;
@@ -12668,33 +14442,37 @@
       return score;
     }
 
-    function getFfxCandidateScore(text) {
+    function getFfxCandidateScore(text, role = 'unknown', relatedEffectText = false) {
       const clean = normalizeFfxText(text);
       if (clean.length < FFX_TEXT_MIN_CHARS || clean.length > FFX_TEXT_MAX_CHARS) return -1;
       const lower = clean.toLowerCase();
       if (!/[a-zA-Z]/.test(clean)) return -1;
       const known = isKnownFfxEffectName(clean);
-      if (!known) return -1;
-      if (isFfxMetadataString(clean) && !known) return -1;
+      const structuralEffect = role === 'effect';
+      const followsEffectName = Boolean(relatedEffectText);
+      if (!known && !structuralEffect && !followsEffectName) return -1;
+      if (!structuralEffect && !followsEffectName && isFfxMetadataString(clean) && !known) return -1;
       if (/[<>{}\[\]\\]/.test(clean)) return -1;
-      if (lower.includes('http://') || lower.includes('https://') || lower.includes('www.')) return -1;
-      if (
+      if (!structuralEffect && !followsEffectName && (lower.includes('http://') || lower.includes('https://') || lower.includes('www.'))) return -1;
+      if (!structuralEffect && !followsEffectName && (
         lower.includes('adobe after effects') ||
         lower.includes('animation preset') ||
         lower.includes('com.adobe') ||
         lower.includes('xmlns') ||
         lower.includes('software') ||
         lower.includes('copyright')
-      ) {
+      )) {
         return -1;
       }
 
       let score = 0;
+      if (structuralEffect) score += 7;
+      if (followsEffectName) score += 4;
       if (known) score += 5;
       if (isFfxControlEffectName(clean)) score += 5;
       if (/^(?:CC|BCC|S_|RG|MBL)\s+[A-Za-z0-9]/.test(clean)) score += 3;
-      if (isFfxTechnicalEffectString(clean) && !known) score -= 4;
-      if (isFfxEffectPropertyLabel(clean) && !known) score -= 3;
+      if (!structuralEffect && !followsEffectName && isFfxTechnicalEffectString(clean) && !known) score -= 4;
+      if (!structuralEffect && !followsEffectName && isFfxEffectPropertyLabel(clean) && !known) score -= 3;
       let keywordHits = 0;
       for (const keyword of FFX_EFFECT_KEYWORDS) {
         if (lower.includes(keyword)) keywordHits += 1;
@@ -12773,8 +14551,56 @@
       }
     }
 
+    function getFfxTdmnPathBefore(bytes, offset, limit = 420) {
+      const source = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+      const end = Math.max(0, Math.min(source.length, Number(offset) || 0));
+      const start = Math.max(0, end - limit);
+      const names = [];
+      let cursor = start;
+      while (cursor + 8 <= end) {
+        if (getFfxFourCc(source, cursor) !== 'tdmn') {
+          cursor += 1;
+          continue;
+        }
+        const chunkSize = readFfxUint32(source, cursor + 4);
+        const payloadStart = cursor + 8;
+        const chunkEnd = payloadStart + chunkSize;
+        if (chunkSize > 0 && chunkSize <= 180 && chunkEnd <= end && chunkEnd <= source.length) {
+          const text = normalizeFfxText(decodeFfxBinaryContext(source, payloadStart, chunkEnd));
+          if (text) names.push(text);
+          cursor = chunkEnd;
+          continue;
+        }
+        cursor += 1;
+      }
+      return names;
+    }
+
+    function isFfxPropertyPathName(value) {
+      const clean = normalizeFfxText(value);
+      const match = clean.match(/-(\d{4,})$/);
+      return Boolean(match && !/^0+$/.test(match[1]));
+    }
+
+    function isFfxNonEffectPathName(value) {
+      const clean = normalizeFfxText(value);
+      return (
+        /^ADBE (?:Effect Built In Params|Effect Mask|Force CPU GPU|Group End|Transform Group|Text )/i.test(clean) ||
+        /^ADBE End of path sentinel$/i.test(clean)
+      );
+    }
+
     function getFfxStructuredTextRole(bytes, chunkId, parentListType, chunkStart, chunkSize) {
       if (chunkId === 'fnam' && parentListType === 'sspc') return 'effect';
+      if (chunkId === 'tdsn' && parentListType === 'tdbs') return 'property';
+      if (chunkId === 'tdsn' && parentListType === 'besc') {
+        const pathNames = getFfxTdmnPathBefore(bytes, chunkStart);
+        const lastPathName = pathNames[pathNames.length - 1] || '';
+        if (isFfxPropertyPathName(lastPathName)) return 'property';
+        if (isFfxNonEffectPathName(lastPathName)) return 'property';
+        if (!pathNames.some(name => /ADBE Effect Parade/i.test(name))) return 'property';
+        return 'effect';
+      }
       if (parentListType === 'tdsi') return 'effect';
       const context = decodeFfxBinaryContext(bytes, chunkStart, chunkStart + Math.min(chunkSize + 120, 280));
       if (/tdmn.{0,160}-0000(?!\d)/i.test(context)) return 'effect';
@@ -12814,6 +14640,7 @@
     function scanFfxStructuredTextChunks(bytes, fileIndex) {
       const matches = [];
       const ranges = [];
+      const structuredEntries = [];
       const source = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
 
       function parseChildren(start, end, ancestors = [], parentListType = '') {
@@ -12836,21 +14663,18 @@
           } else if (chunkId === 'tdsn' || chunkId === 'fnam') {
             const textInfo = getFfxUtf8ChunkText(source, payloadStart, chunkSize);
             if (textInfo?.text && textInfo.text.length >= FFX_TEXT_MIN_CHARS) {
-              const score = getFfxCandidateScore(textInfo.text);
-              if (score >= 2) {
-                const occurrence = makeFfxStructuredTextOccurrence({
-                  fileIndex,
-                  chunkStart: offset,
-                  chunkId,
-                  parentListType,
-                  chunkSize,
-                  ancestors,
-                  textInfo,
-                  bytes: source
-                });
-                matches.push({ text: textInfo.text, score: score + 4, occurrence });
-                ranges.push({ start: offset, end: chunkEnd });
-              }
+              const occurrence = makeFfxStructuredTextOccurrence({
+                fileIndex,
+                chunkStart: offset,
+                chunkId,
+                parentListType,
+                chunkSize,
+                ancestors,
+                textInfo,
+                bytes: source
+              });
+              structuredEntries.push({ text: textInfo.text, occurrence });
+              ranges.push({ start: offset, end: chunkEnd });
             }
           }
 
@@ -12863,7 +14687,22 @@
         parseChildren(12, Math.min(source.length, 8 + readFfxUint32(source, 4)), [{ sizeOffset: 4 }], 'FaFX');
         parsedRoot = true;
       }
-      if (!parsedRoot || !matches.length) parseChildren(0, source.length, []);
+      if (!parsedRoot || !structuredEntries.length) parseChildren(0, source.length, []);
+
+      const trustedEffectTexts = new Set(
+        structuredEntries
+          .filter(entry => entry.occurrence?.role === 'effect')
+          .map(entry => normalizeFfxEffectNameKey(entry.text))
+          .filter(Boolean)
+      );
+      for (const entry of structuredEntries) {
+        const relatedEffectText = trustedEffectTexts.has(normalizeFfxEffectNameKey(entry.text));
+        entry.occurrence.relatedEffectText = relatedEffectText;
+        const score = getFfxCandidateScore(entry.text, entry.occurrence.role, relatedEffectText);
+        if (score >= 2) {
+          matches.push({ text: entry.text, score: score + 4, occurrence: entry.occurrence });
+        }
+      }
       return { matches, ranges };
     }
 
@@ -13039,6 +14878,40 @@
         .filter(({ item, newName }) => newName && newName !== item.text);
     }
 
+    function isFfxAlreadyPrefixedName(value) {
+      return normalizeFfxEffectNameKey(value).startsWith(normalizeFfxEffectNameKey(FFX_6URE_PREFIX));
+    }
+
+    function getFfxPrefixName(value) {
+      const clean = normalizeFfxText(value);
+      return clean ? `${FFX_6URE_PREFIX}${clean}` : '';
+    }
+
+    function getFfxPrefixableNames() {
+      return filesFfxNames.filter(item => (
+        item?.text &&
+        !isFfxAlreadyPrefixedName(item.text) &&
+        Array.isArray(item.occurrences) &&
+        item.occurrences.length
+      ));
+    }
+
+    function getFfxPrefixRenames() {
+      return getFfxPrefixableNames()
+        .map(item => ({ item, newName: sanitizeFfxNewName(getFfxPrefixName(item.text)) }))
+        .filter(({ item, newName }) => newName && newName !== item.text);
+    }
+
+    function getFfxRenameFileIndexes(renames = []) {
+      const indexes = new Set();
+      for (const rename of renames || []) {
+        for (const fileIndex of rename?.item?.files || []) {
+          if (Number.isInteger(fileIndex) && fileIndex >= 0) indexes.add(fileIndex);
+        }
+      }
+      return indexes;
+    }
+
     function getFfxRenameCount() {
       return getFfxRenames().length;
     }
@@ -13089,6 +14962,13 @@
           ? `Save ${formatResourceNumber(fileCount)} ${fileCount === 1 ? 'copy' : 'copies'}`
           : 'Save copies';
         els.filesFfxDownloadBtn.disabled = filesFfxBusy || !renameCount || invalid;
+      }
+      if (els.filesFfxPrefixBtn) {
+        const prefixCount = getFfxPrefixableNames().length;
+        els.filesFfxPrefixBtn.disabled = filesFfxBusy || !prefixCount;
+        els.filesFfxPrefixBtn.title = prefixCount
+          ? `Prefix ${formatResourceNumber(prefixCount)} detected effect ${prefixCount === 1 ? 'name' : 'names'}`
+          : 'No detected effect names to prefix.';
       }
       if (els.filesFfxDropSummary) {
         els.filesFfxDropSummary.textContent = filesFfxFiles.length
@@ -13238,6 +15118,77 @@
       els.filesFfxEffectsOverlay?.setAttribute('aria-hidden', 'true');
     }
 
+    function renderFfxPrefixRow(rename) {
+      const oldName = normalizeFfxText(rename?.item?.text || '');
+      const newName = normalizeFfxText(rename?.newName || '');
+      return `
+        <div class="files-ffx-prefix-row" title="${escapeHtml(`${oldName} -> ${newName}`)}">
+          <span>${escapeHtml(oldName)}</span>
+          <i aria-hidden="true">→</i>
+          <strong>${escapeHtml(newName)}</strong>
+        </div>
+      `;
+    }
+
+    function setFfxPrefixProgress(value, message = '') {
+      const progress = Math.max(0, Math.min(100, Number(value) || 0));
+      if (els.filesFfxPrefixProgress) {
+        els.filesFfxPrefixProgress.setAttribute('aria-hidden', filesFfxPrefixRunning ? 'false' : 'true');
+      }
+      if (els.filesFfxPrefixProgressBar) {
+        els.filesFfxPrefixProgressBar.style.width = `${progress}%`;
+        els.filesFfxPrefixProgressBar.parentElement?.setAttribute('aria-valuenow', String(Math.round(progress)));
+      }
+      if (els.filesFfxPrefixProgressText && message) {
+        els.filesFfxPrefixProgressText.textContent = message;
+      }
+    }
+
+    function setFfxPrefixModalRunning(active, message = '') {
+      filesFfxPrefixRunning = Boolean(active);
+      els.filesFfxPrefixCloseBtn?.classList.toggle('hidden', filesFfxPrefixRunning);
+      if (els.filesFfxPrefixCancelBtn) els.filesFfxPrefixCancelBtn.disabled = filesFfxPrefixRunning;
+      if (els.filesFfxPrefixConfirmBtn) {
+        els.filesFfxPrefixConfirmBtn.disabled = filesFfxPrefixRunning;
+        els.filesFfxPrefixConfirmBtn.textContent = filesFfxPrefixRunning ? 'Saving...' : 'Save prefixed copies';
+      }
+      setFfxPrefixProgress(filesFfxPrefixRunning ? 4 : 0, message || 'Ready.');
+    }
+
+    function showFfxPrefixModal(renames) {
+      filesFfxPrefixRenames = Array.isArray(renames) ? renames : [];
+      if (!els.filesFfxPrefixOverlay) return;
+      setFfxPrefixModalRunning(false);
+      const fileCount = getFfxRenameFileIndexes(filesFfxPrefixRenames).size || filesFfxFiles.length;
+      const effectCount = filesFfxPrefixRenames.length;
+      if (els.filesFfxPrefixSubtitle) {
+        els.filesFfxPrefixSubtitle.textContent = `${formatResourceNumber(effectCount)} effect ${effectCount === 1 ? 'name' : 'names'} will be prefixed.`;
+      }
+      if (els.filesFfxPrefixSummary) {
+        els.filesFfxPrefixSummary.textContent = `${formatResourceNumber(fileCount)} .ffx ${fileCount === 1 ? 'file' : 'files'} with detected effect names will be saved with the prefix "${FFX_6URE_PREFIX.trim()}".`;
+      }
+      if (els.filesFfxPrefixList) {
+        els.filesFfxPrefixList.innerHTML = filesFfxPrefixRenames.length
+          ? filesFfxPrefixRenames.map(renderFfxPrefixRow).join('')
+          : '<div class="files-resource-empty">No effect names will be changed.</div>';
+      }
+      els.filesFfxPrefixOverlay.classList.remove('hidden');
+      els.filesFfxPrefixOverlay.setAttribute('aria-hidden', 'false');
+      els.filesFfxPrefixOverlay.classList.remove('show');
+      void els.filesFfxPrefixOverlay.offsetWidth;
+      els.filesFfxPrefixOverlay.classList.add('show');
+      setTimeout(() => els.filesFfxPrefixConfirmBtn?.focus(), 80);
+    }
+
+    function hideFfxPrefixModal() {
+      if (filesFfxPrefixRunning) return;
+      filesFfxPrefixRenames = [];
+      els.filesFfxPrefixOverlay?.classList.remove('show');
+      els.filesFfxPrefixOverlay?.classList.add('hidden');
+      els.filesFfxPrefixOverlay?.setAttribute('aria-hidden', 'true');
+      setFfxPrefixModalRunning(false);
+    }
+
     function renderFfxState() {
       const hasFiles = filesFfxFiles.length > 0;
       els.filesFfxEmptyView?.classList.toggle('hidden', hasFiles);
@@ -13251,6 +15202,9 @@
         hideFfxEffectsModal();
       } else if (filesFfxEffectsModalFileIndex >= 0 && !els.filesFfxEffectsOverlay?.classList.contains('hidden')) {
         renderFfxEffectsModal();
+      }
+      if (!hasFiles && !filesFfxPrefixRunning) {
+        hideFfxPrefixModal();
       }
       if (els.filesFfxStatus && !filesFfxBusy) {
         const renameCount = getFfxRenameCount();
@@ -13435,6 +15389,7 @@
     function clearFfxFiles() {
       if (filesFfxBusy || !filesFfxFiles.length) return;
       hideFfxEffectsModal();
+      hideFfxPrefixModal();
       filesFfxFiles = [];
       filesFfxNames = [];
       filesFfxSearchQuery = '';
@@ -13449,6 +15404,7 @@
     function removeFfxFileAt(index) {
       if (!Number.isInteger(index) || index < 0 || index >= filesFfxFiles.length || filesFfxBusy) return;
       hideFfxEffectsModal();
+      hideFfxPrefixModal();
       filesFfxFiles = filesFfxFiles.filter((_, fileIndex) => fileIndex !== index);
       filesFfxNames = [];
       filesFfxOutputMode = 'download';
@@ -13582,9 +15538,10 @@
       return /\.ffx$/i.test(base) ? base : `${base}.ffx`;
     }
 
-    function getFfxOutputName(name) {
+    function getFfxOutputName(name, suffix = '-renamed') {
       const clean = sanitizeFfxOutputFileName(name);
-      return /\.ffx$/i.test(clean) ? clean.replace(/\.ffx$/i, '-renamed.ffx') : `${clean}-renamed.ffx`;
+      const cleanSuffix = String(suffix || '-renamed').replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim() || '-renamed';
+      return /\.ffx$/i.test(clean) ? clean.replace(/\.ffx$/i, `${cleanSuffix}.ffx`) : `${clean}${cleanSuffix}.ffx`;
     }
 
     function downloadFfxBlob(bytes, fileName, delay = 0) {
@@ -13746,9 +15703,9 @@
       return pairs;
     }
 
-    function renderFfxResultRenamePairs(pairs = []) {
+    function renderFfxResultRenamePairs(pairs = [], emptyText = 'Renamed effect names saved.') {
       const list = Array.isArray(pairs) ? pairs : [];
-      if (!list.length) return 'Renamed effect names saved.';
+      if (!list.length) return emptyText;
       const preview = list.slice(0, 4);
       const more = list.length - preview.length;
       const rows = preview.map(pair => (
@@ -13782,17 +15739,17 @@
       `;
     }
 
-    function showFfxResultModal(saved, renamePairs = []) {
+    function showFfxResultModal(saved, renamePairs = [], options = {}) {
       if (!els.filesFfxResultOverlay) return;
       filesFfxLastSaveResult = saved || null;
       const files = getFfxSavedFiles(saved);
       const folder = getFfxSavedFolder(saved);
       const count = Number(saved?.count) || files.length || 0;
       if (els.filesFfxResultTitle) {
-        els.filesFfxResultTitle.textContent = count === 1 ? '1 renamed copy saved' : `${formatResourceNumber(count)} renamed copies saved`;
+        els.filesFfxResultTitle.textContent = options.title || (count === 1 ? '1 renamed copy saved' : `${formatResourceNumber(count)} renamed copies saved`);
       }
       if (els.filesFfxResultSummary) {
-        els.filesFfxResultSummary.innerHTML = renderFfxResultRenamePairs(renamePairs);
+        els.filesFfxResultSummary.innerHTML = renderFfxResultRenamePairs(renamePairs, options.emptySummary || 'Renamed effect names saved.');
       }
       if (els.filesFfxResultFolder) {
         els.filesFfxResultFolder.textContent = folder || 'Selected folder';
@@ -13838,7 +15795,7 @@
       showToast('Save folder opened.', 'ok');
     }
 
-    function buildFfxOutputForFile(fileIndex, renames) {
+    function buildFfxOutputForFile(fileIndex, renames, options = {}) {
       const entry = filesFfxFiles[fileIndex];
       if (!entry?.bytes) return null;
       const source = entry.bytes instanceof Uint8Array ? entry.bytes : new Uint8Array(entry.bytes);
@@ -13927,7 +15884,7 @@
           }
         };
       });
-      const result = { bytes: output, fileName: getFfxOutputName(entry.name), applied: verifiedReplacements.length, fileIndex, entry, replacements: verifiedReplacements };
+      const result = { bytes: output, fileName: getFfxOutputName(entry.name, options.suffix), applied: verifiedReplacements.length, fileIndex, entry, replacements: verifiedReplacements };
       if (!verifyFfxOutputBytes(result)) {
         throw new Error(`Could not verify changed effect name inside ${entry.name}.`);
       }
@@ -13949,6 +15906,138 @@
       } catch {
         return false;
       }
+    }
+
+    function waitForFfxPaint() {
+      return new Promise(resolve => {
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => resolve());
+        } else {
+          setTimeout(resolve, 0);
+        }
+      });
+    }
+
+    async function openFfxPrefixConfirm() {
+      if (filesFfxBusy) return;
+      if (!filesFfxFiles.length) {
+        showToast('Select one or more .ffx files first.', 'err');
+        return;
+      }
+      if (!filesFfxNames.length) {
+        await scanSelectedFfxFiles();
+      }
+      const renames = getFfxPrefixRenames();
+      if (!renames.length) {
+        showToast('No unprefixed editable effect names were detected.', 'err');
+        return;
+      }
+      const invalid = renames.find(({ item, newName }) => getInvalidFfxRename(item, newName));
+      if (invalid) {
+        const message = getInvalidFfxRename(invalid.item, invalid.newName) || 'One detected effect name cannot be prefixed safely.';
+        showToast(message, 'err');
+        return;
+      }
+      showFfxPrefixModal(renames);
+    }
+
+    async function savePrefixedFfxFiles() {
+      if (filesFfxPrefixRunning || filesFfxBusy) return;
+      const renames = filesFfxPrefixRenames.length ? filesFfxPrefixRenames : getFfxPrefixRenames();
+      if (!renames.length) {
+        showToast('No effect names are ready for prefixing.', 'err');
+        return;
+      }
+      const invalid = renames.find(({ item, newName }) => getInvalidFfxRename(item, newName));
+      if (invalid) {
+        const message = getInvalidFfxRename(invalid.item, invalid.newName) || 'One detected effect name cannot be prefixed safely.';
+        showToast(message, 'err');
+        return;
+      }
+
+      setFfxPrefixModalRunning(true, 'Preparing prefixed .ffx copies...');
+      setFfxBusy(true, 'Preparing prefixed .ffx copies...');
+      await waitForFfxPaint();
+
+      let outputs = [];
+      try {
+        const fileIndexes = [...getFfxRenameFileIndexes(renames)]
+          .filter(fileIndex => fileIndex >= 0 && fileIndex < filesFfxFiles.length);
+        const totalFiles = Math.max(1, fileIndexes.length);
+        for (let listIndex = 0; listIndex < fileIndexes.length; listIndex += 1) {
+          const fileIndex = fileIndexes[listIndex];
+          const entry = filesFfxFiles[fileIndex];
+          if (!entry.bytes && entry.file) {
+            entry.bytes = new Uint8Array(await entry.file.arrayBuffer());
+          }
+          const progress = 8 + ((listIndex + 1) / totalFiles) * 54;
+          setFfxPrefixProgress(progress, `Prefixing ${formatResourceNumber(listIndex + 1)} of ${formatResourceNumber(totalFiles)} .ffx files...`);
+          const output = buildFfxOutputForFile(fileIndex, renames, { suffix: '-prefixed' });
+          if (output) outputs.push(output);
+          await waitForFfxPaint();
+        }
+      } catch (error) {
+        const message = getFriendlyFilesMessage(error.message, 'Prefixed .ffx output could not be verified.');
+        setFfxPrefixModalRunning(false, message);
+        setFfxBusy(false);
+        setFfxStatus(message);
+        showToast(message, 'err');
+        return;
+      }
+
+      if (!outputs.length) {
+        const message = 'No matching preset text was changed.';
+        setFfxPrefixModalRunning(false, message);
+        setFfxBusy(false);
+        setFfxStatus(message);
+        showToast(message, 'err');
+        return;
+      }
+
+      setFfxPrefixProgress(68, 'Choose a folder for the prefixed .ffx copies...');
+      let saved = null;
+      try {
+        saved = await saveFfxOutputsToFolder(outputs);
+      } catch (error) {
+        const message = getFriendlyFilesMessage(error.message, 'Folder save was not available.');
+        console.warn('FFX prefix folder save failed.', error);
+        setFfxPrefixModalRunning(false, message);
+        setFfxBusy(false);
+        setFfxStatus(message);
+        showToast(message, 'err');
+        return;
+      }
+
+      if (saved?.cancelled) {
+        setFfxPrefixModalRunning(false, 'Save cancelled.');
+        setFfxBusy(false);
+        setFfxStatus('Save cancelled.');
+        showToast('Save cancelled.', 'err');
+        return;
+      }
+      if (!saved?.success) {
+        const message = 'Folder save did not return a saved file path.';
+        setFfxPrefixModalRunning(false, message);
+        setFfxBusy(false);
+        setFfxStatus(message);
+        showToast(message, 'err');
+        return;
+      }
+
+      setFfxPrefixProgress(100, 'Prefixed copies saved.');
+      await waitForFfxPaint();
+      const destination = saved.folder || saved.outputDir || 'selected folder';
+      const savedCount = Number(saved.count) || outputs.length;
+      setFfxBusy(false);
+      setFfxStatus(`${formatResourceNumber(savedCount)} prefixed copies saved to ${destination}.`);
+      setFfxPrefixModalRunning(false);
+      hideFfxPrefixModal();
+      showToast('Prefixed .ffx copies saved.', 'ok');
+      showFfxResultModal(saved, getFfxResultRenamePairs(renames), {
+        title: savedCount === 1 ? '1 prefixed copy saved' : `${formatResourceNumber(savedCount)} prefixed copies saved`,
+        emptySummary: 'Prefixed effect names saved.'
+      });
+      updateDiscordPresence('FFX Tools', `${formatResourceNumber(outputs.length)} prefixed presets`, { force: true });
     }
 
     async function downloadRenamedFfxFiles() {
@@ -14066,6 +16155,9 @@
       if (!payload.productUrl) {
         showToast('This request does not have a product link.', 'err');
         return;
+      }
+      if (filesRequestDetailId === getRequestItemId(request)) {
+        hideRequestDetail({ silentPresence: true });
       }
       showToast(`Opening Leaker Mode for ${normalizeLeakerUploadNameText(payload.title, 42)}.`, 'ok');
       await startLeakerMode({ request: payload });
@@ -14272,8 +16364,12 @@
             Your profile is ready. Open Upload and start building your resource wall.
             <br>
             <button class="primary-action" type="button" data-start-leaker-mode>Upload first leak</button>
+            <button class="chip-action" type="button" data-open-empty-guide>View guide</button>
           </div>
         `;
+        if (loadedPayload.loaded === true && !payload.searched) {
+          maybeShowEmptyResourcesGuide(owner);
+        }
       } else if (!visibleItems.length) {
         els.filesResourcesList.classList.remove('files-resource-storefront');
         els.filesResourcesList.innerHTML = `
@@ -15042,6 +17138,119 @@
       setResourcesInsightAction(card, options.action || {});
     }
 
+    function setResourcesInsightsEmptyState(empty = false) {
+      const isEmpty = Boolean(empty);
+      els.filesResourcesInsights?.classList.toggle('is-empty-state', isEmpty);
+      els.filesResourcesTopResourceInsight?.classList.toggle('hidden', isEmpty);
+      els.filesResourcesTopEditorInsight?.classList.toggle('hidden', isEmpty);
+      if (isEmpty) {
+        clearResourcesInsightAction(els.filesResourcesTopResourceInsight);
+        clearResourcesInsightAction(els.filesResourcesTopEditorInsight);
+      }
+    }
+
+    function getEmptyResourcesGuideStorageKey(owner = filesUsername) {
+      const cleanOwner = normalizeDiscordDisplayName(owner || filesUsername || 'username')
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'user';
+      return `${EMPTY_RESOURCES_GUIDE_STORAGE_PREFIX}.${cleanOwner}`;
+    }
+
+    function hasSeenEmptyResourcesGuide(owner = filesUsername) {
+      try {
+        return window.localStorage?.getItem(getEmptyResourcesGuideStorageKey(owner)) === '1';
+      } catch {
+        return false;
+      }
+    }
+
+    function markEmptyResourcesGuideSeen(owner = filesUsername) {
+      try {
+        window.localStorage?.setItem(getEmptyResourcesGuideStorageKey(owner), '1');
+      } catch {}
+    }
+
+    function renderEmptyResourcesGuidePage(page = filesEmptyGuidePage) {
+      if (!els.emptyResourcesGuideOverlay) return;
+      const pages = Array.from(els.emptyResourcesGuideOverlay.querySelectorAll('[data-empty-guide-page]'));
+      const dots = Array.from(els.emptyResourcesGuideOverlay.querySelectorAll('[data-empty-guide-dot]'));
+      const total = pages.length || 1;
+      filesEmptyGuidePage = Math.max(0, Math.min(total - 1, Number(page) || 0));
+      pages.forEach((section, index) => {
+        const active = index === filesEmptyGuidePage;
+        section.classList.toggle('is-active', active);
+        section.setAttribute('aria-hidden', active ? 'false' : 'true');
+      });
+      dots.forEach((dot, index) => {
+        const active = index === filesEmptyGuidePage;
+        dot.classList.toggle('is-active', active);
+        dot.setAttribute('aria-current', active ? 'step' : 'false');
+      });
+      if (els.emptyResourcesGuideCount) {
+        els.emptyResourcesGuideCount.textContent = `${filesEmptyGuidePage + 1} of ${total}`;
+      }
+      if (els.emptyResourcesGuideBackBtn) {
+        els.emptyResourcesGuideBackBtn.disabled = filesEmptyGuidePage <= 0;
+      }
+      const isLast = filesEmptyGuidePage >= total - 1;
+      els.emptyResourcesGuideNextBtn?.classList.toggle('hidden', isLast);
+      els.emptyResourcesGuideStartBtn?.classList.toggle('hidden', !isLast);
+    }
+
+    function showEmptyResourcesGuide(options = {}) {
+      if (!els.emptyResourcesGuideOverlay) return;
+      if (filesEmptyGuideDeferredTimer) {
+        clearTimeout(filesEmptyGuideDeferredTimer);
+        filesEmptyGuideDeferredTimer = null;
+      }
+      filesEmptyGuidePage = Math.max(0, Number(options.page) || 0);
+      els.emptyResourcesGuideOverlay.classList.remove('hidden');
+      els.emptyResourcesGuideOverlay.classList.remove('is-open');
+      els.emptyResourcesGuideOverlay.setAttribute('aria-hidden', 'false');
+      renderEmptyResourcesGuidePage(filesEmptyGuidePage);
+      requestAnimationFrame(() => {
+        els.emptyResourcesGuideOverlay?.classList.add('is-open');
+      });
+      setTimeout(() => {
+        const target = els.emptyResourcesGuideStartBtn && !els.emptyResourcesGuideStartBtn.classList.contains('hidden')
+          ? els.emptyResourcesGuideStartBtn
+          : els.emptyResourcesGuideNextBtn;
+        target?.focus?.();
+      }, 160);
+    }
+
+    async function hideEmptyResourcesGuide(options = {}) {
+      if (!els.emptyResourcesGuideOverlay || els.emptyResourcesGuideOverlay.classList.contains('hidden')) return;
+      if (options.dismiss !== false) {
+        markEmptyResourcesGuideSeen(options.owner || filesUsername);
+      }
+      els.emptyResourcesGuideOverlay.classList.remove('is-open');
+      els.emptyResourcesGuideOverlay.setAttribute('aria-hidden', 'true');
+      await wait(240);
+      if (!els.emptyResourcesGuideOverlay.classList.contains('is-open')) {
+        els.emptyResourcesGuideOverlay.classList.add('hidden');
+      }
+    }
+
+    function maybeShowEmptyResourcesGuide(owner = filesUsername) {
+      if (!filesEmptyGuideStartupPending || !filesAuthenticated) return;
+      if (hasSeenEmptyResourcesGuide(owner)) {
+        filesEmptyGuideStartupPending = false;
+        return;
+      }
+      if (document.body.classList.contains('files-opening-active')) {
+        if (filesEmptyGuideDeferredTimer) clearTimeout(filesEmptyGuideDeferredTimer);
+        filesEmptyGuideDeferredTimer = setTimeout(() => {
+          filesEmptyGuideDeferredTimer = null;
+          maybeShowEmptyResourcesGuide(owner);
+        }, 260);
+        return;
+      }
+      filesEmptyGuideStartupPending = false;
+      showEmptyResourcesGuide({ owner });
+    }
+
     function setResourcesPersonalInsights(items = [], groups = [], payload = {}) {
       const stats = payload.stats || {};
       const topResource = [...items].sort((a, b) => (Number(b?.downloadCount) || 0) - (Number(a?.downloadCount) || 0))[0];
@@ -15058,6 +17267,7 @@
 
       if (!items.length) {
         if (payload.loaded !== true) {
+          setResourcesInsightsEmptyState(false);
           renderResourcesInsightCard(els.filesResourcesTopResourceInsight, {
             kicker: 'Top drop',
             title: payload.error ? 'Area unavailable' : 'Loading uploads',
@@ -15075,16 +17285,7 @@
           });
           return;
         }
-        renderResourcesInsightCard(els.filesResourcesTopResourceInsight, {
-          kicker: 'Top drop',
-          title: 'No drops yet',
-          meta: 'Upload your first leak to start the board.'
-        });
-        renderResourcesInsightCard(els.filesResourcesTopEditorInsight, {
-          kicker: 'Favorite editor',
-          title: 'No editor yet',
-          meta: 'Editor categories appear after upload.'
-        });
+        setResourcesInsightsEmptyState(true);
         renderResourcesInsightCard(els.filesResourcesLatestLeakInsight, {
           kicker: 'Latest leak',
           title: 'Nothing leaked yet',
@@ -15093,6 +17294,7 @@
         return;
       }
 
+      setResourcesInsightsEmptyState(false);
       renderResourcesInsightCard(els.filesResourcesTopResourceInsight, {
         kicker: 'Top drop',
         title: topResource?.name || 'Top resource',
@@ -16790,8 +18992,15 @@
     }
 
     function setFilesAuthState(authenticated, username = filesUsername) {
+      const wasAuthenticated = filesAuthenticated;
       filesAuthenticated = Boolean(authenticated);
       filesUsername = username ? formatDiscordDisplayName(username) : 'username';
+      if (filesAuthenticated && !wasAuthenticated) {
+        filesEmptyGuideStartupPending = true;
+      } else if (!filesAuthenticated) {
+        filesEmptyGuideStartupPending = true;
+        hideEmptyResourcesGuide({ dismiss: false }).catch(() => {});
+      }
       els.filesView.classList.toggle('files-locked', !filesAuthenticated);
       els.filesAuthGate.setAttribute('aria-hidden', filesAuthenticated ? 'true' : 'false');
       els.filesLogoutBtn.classList.toggle('hidden', !filesAuthenticated);
@@ -19311,6 +21520,12 @@
       return (path.startsWith('/dashboard') || path.startsWith('/leaker-proxy/dashboard')) && !leakerFrameHasLoginSignals(frame);
     }
 
+    function isLeakerFrameOutsideDashboard(frame) {
+      const path = getLeakerFramePath(frame);
+      if (!path || path === 'about:blank') return false;
+      return !(path.startsWith('/dashboard') || path.startsWith('/leaker-proxy/dashboard'));
+    }
+
     function showLeakerLoginView(forceReload = false) {
       cleanupLeakerUploadPresenceTracking({ resetCreator: true });
       if (forceReload) resetLeakerAutoLogin();
@@ -19346,6 +21561,16 @@
         els.leakerModeTransitionStatus.textContent = 'Preparing a signed-in upload workspace.';
       } else {
         showLeakerModeTransition('Preparing a signed-in upload workspace.');
+      }
+      if (options?.skipAccessCheck !== true) {
+        els.leakerModeTransitionStatus.textContent = 'Verifying Leaker Dashboard access.';
+        const accessOk = await verifyLeakerDashboardAccess({ timeout: 8, reloadFrame: false });
+        if (!accessOk) {
+          await hideLeakerModeTransition();
+          leakerModeTransitioning = false;
+          setLeakerModeButtonState({ phase: leakerModePhase });
+          return;
+        }
       }
       playLeakerModeSoundUntilDone();
 
@@ -19401,30 +21626,93 @@
       return status;
     }
 
-    async function hasStoredLeakerSession() {
+    function leakerAccessMessage(status = {}) {
+      const reason = String(status.reason || status.access?.reason || '').toLowerCase();
+      if (reason === 'auth-required') {
+        return 'Sign in with a Leaker-enabled 6ureleaks.com account to use Leaker Mode.';
+      }
+      if (reason === 'network-error' || reason === 'upstream-error') {
+        return 'Leaker Dashboard access could not be verified. Try again in a moment.';
+      }
+      return 'This Discord account is signed in, but it does not have Leaker Dashboard upload access.';
+    }
+
+    function showLeakerAccessDenied(status = {}, options = {}) {
+      const message = leakerAccessMessage(status);
+      leakerModePhase = 'authenticating';
+      leakerModeTransitioning = false;
+      stopLeakerModePolling();
+      stopLeakerOauthPolling();
+      setLeakerModeViewVisible(true);
+      els.leakerLoginPanel.classList.remove('hidden');
+      els.leakerDashboardPanel.classList.add('hidden');
+      setLeakerModeStatus(message);
+      setLeakerModeButtonState({ phase: leakerModePhase });
+      if (options.reloadFrame !== false) {
+        const reason = String(status.reason || status.access?.reason || '').toLowerCase();
+        setLeakerFrame(els.leakerLoginFrame, reason === 'auth-required' ? LEAKER_LOGIN_URL : LEAKER_ACCOUNT_URL, true);
+      }
+      if (!options.quiet) showToast(message, 'err');
+      updateDiscordPresence('Leaker Dashboard', 'Access not available', { force: true });
+    }
+
+    async function loadLeakerSessionStatus(options = {}) {
+      const timeout = Math.max(1, Number(options.timeout || 8));
+      const session = await filesApi(`/api/leaker-mode/session?timeout=${encodeURIComponent(timeout)}`, { method: 'GET' });
+      if (session.authenticated && session.user) {
+        appDiscordUser = session.user;
+      }
+      session.authorized = Boolean(session.authorized || session.allowed || session.access?.authorized);
+      return session;
+    }
+
+    async function verifyLeakerDashboardAccess(options = {}) {
+      if (leakerAccessCheckPromise) return leakerAccessCheckPromise;
+      leakerAccessCheckActive = true;
+      leakerAccessCheckPromise = (async () => {
+        const session = await loadLeakerSessionStatus({ timeout: options.timeout || 8 });
+        if (session.authorized) return true;
+        if (options.showDenied !== false) {
+          showLeakerAccessDenied(session, { reloadFrame: options.reloadFrame, quiet: options.quiet });
+        }
+        return false;
+      })();
       try {
-        const session = await filesApi('/api/leaker-mode/session', { method: 'GET' });
+        return await leakerAccessCheckPromise;
+      } catch (error) {
+        const status = { reason: 'network-error', msg: error?.message || '' };
+        if (options.showDenied !== false) {
+          showLeakerAccessDenied(status, { reloadFrame: options.reloadFrame, quiet: options.quiet });
+        }
+        return false;
+      } finally {
+        leakerAccessCheckActive = false;
+        leakerAccessCheckPromise = null;
+      }
+    }
+
+    async function getStoredLeakerSessionState() {
+      try {
+        const session = await loadLeakerSessionStatus({ timeout: 8 });
+        if (session.authorized) {
+          return { ready: true, denied: false, session };
+        }
         if (session.authenticated && session.user) {
-          appDiscordUser = session.user;
-          return true;
+          return { ready: false, denied: true, session };
         }
       } catch {}
 
       try {
         const status = await filesApi('/api/app-auth/status?refresh=1', { method: 'GET' });
         const phase = getAppOauthPhase(status);
-        const userSource = String(status.user?.source || '').toLowerCase();
-        const verifiedSession = status.authenticated && status.user && !userSource.includes('fallback');
-        if (verifiedSession) {
-          appDiscordUser = status.user;
-          return true;
-        }
         if (status.authenticated && status.user) {
           appDiscordUser = status.user;
         }
-        if (status.oauth?.completed || phase === 'completed') return false;
+        if (status.oauth?.completed || phase === 'completed') {
+          return { ready: false, denied: false, session: null };
+        }
       } catch {}
-      return false;
+      return { ready: false, denied: false, session: null };
     }
 
     async function startLeakerMode(options = {}) {
@@ -19448,9 +21736,15 @@
       setLeakerModeStatus('Checking saved 6ureleaks.com session...');
       setLeakerModeButtonState({ phase: 'authenticating' });
       showLeakerModeTransition('Checking saved session.');
-      if (await hasStoredLeakerSession()) {
+      const storedSession = await getStoredLeakerSessionState();
+      if (storedSession.ready) {
         showToast('Opening Leaker Dashboard with your saved 6ureleaks.com session.', 'ok');
-        await launchLeakerModeFromReady({ transitionVisible: true });
+        await launchLeakerModeFromReady({ transitionVisible: true, skipAccessCheck: true });
+        return;
+      }
+      if (storedSession.denied) {
+        await hideLeakerModeTransition();
+        showLeakerAccessDenied(storedSession.session, { reloadFrame: true });
         return;
       }
       await hideLeakerModeTransition();
@@ -19485,7 +21779,7 @@
       }
     }
 
-    function handleLeakerLoginFrameLoad(options = {}) {
+    async function handleLeakerLoginFrameLoad(options = {}) {
       if (leakerModePhase !== 'authenticating') return;
       const quiet = Boolean(options?.quiet);
       setLeakerFrameLoading(els.leakerLoginFrame, false);
@@ -19499,7 +21793,11 @@
         stopLeakerModePolling();
         leakerModeAuthToastShown = false;
         syncAppAuthFromSite({ silent: true, refreshResources: !filesAuthenticated });
-        launchLeakerModeFromReady();
+        setLeakerModeStatus('Verifying Leaker Dashboard access...');
+        const accessOk = await verifyLeakerDashboardAccess({ timeout: 8, reloadFrame: false });
+        if (accessOk) {
+          launchLeakerModeFromReady({ skipAccessCheck: true });
+        }
         return;
       }
       if (maybeAutoStartLeakerLogin(els.leakerLoginFrame)) {
@@ -19592,6 +21890,12 @@
           startLeakerMode();
           return;
         }
+        const emptyGuideShortcut = event.target.closest('[data-open-empty-guide]');
+        if (emptyGuideShortcut) {
+          event.preventDefault();
+          showEmptyResourcesGuide({ page: 0, force: true });
+          return;
+        }
         const requestCompleteButton = event.target.closest('[data-request-complete-id]');
         if (requestCompleteButton) {
           event.preventDefault();
@@ -19601,6 +21905,31 @@
               showToast(getFriendlyFilesMessage(error.message, 'Request could not be completed.'), 'err');
             });
           }
+          return;
+        }
+        const requestFavoriteButton = event.target.closest('[data-request-favorite-id]');
+        if (requestFavoriteButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!requestFavoriteButton.disabled) {
+            toggleRequestFavorite(requestFavoriteButton.dataset.requestFavoriteId || '');
+          }
+          return;
+        }
+        const requestDetailButton = event.target.closest('[data-request-detail-id]');
+        if (requestDetailButton) {
+          event.preventDefault();
+          event.stopPropagation();
+          showRequestDetail(requestDetailButton.dataset.requestDetailId || '');
+          return;
+        }
+        const requestCard = event.target.closest('.files-request-card[data-request-id]');
+        if (
+          requestCard &&
+          !event.target.closest('button,a,input,select,textarea,[data-external-url],[data-request-complete-id],[data-request-favorite-id],[data-request-detail-id]')
+        ) {
+          event.preventDefault();
+          showRequestDetail(requestCard.dataset.requestId || '');
           return;
         }
         const editorButton = event.target.closest('[data-editor-key]');
@@ -19644,6 +21973,12 @@
       });
       document.addEventListener('keydown', event => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
+        const requestCard = event.target.closest?.('.files-request-card[data-request-id]');
+        if (requestCard && event.target === requestCard) {
+          event.preventDefault();
+          showRequestDetail(requestCard.dataset.requestId || '');
+          return;
+        }
         if (event.target.closest?.('.files-resources-insight-editor,[data-editor-key]')) return;
         const insight = event.target.closest?.('.files-resources-insight.is-clickable');
         if (!insight) return;
@@ -19679,6 +22014,10 @@
       });
       els.filesRequestsMineBtn?.addEventListener('click', showMyResourcesPage);
       els.filesRequestsOpenBtn?.addEventListener('click', () => openExternalUrl(REQUESTS_URL));
+      els.filesRequestsFavoritesFilterBtn?.addEventListener('click', () => {
+        filesRequestsFavoriteOnly = !filesRequestsFavoriteOnly;
+        renderRequestsList();
+      });
       els.filesRequestsRefreshBtn?.addEventListener('click', () => loadRequests({ refresh: true }));
       els.filesRequestsList?.addEventListener('click', event => {
         const moreButton = event.target.closest('[data-requests-more]');
@@ -19698,6 +22037,11 @@
       els.filesFfxBrowseBtn?.addEventListener('click', () => chooseFfxFiles());
       els.filesFfxScanBtn?.addEventListener('click', scanSelectedFfxFiles);
       els.filesFfxClearBtn?.addEventListener('click', clearFfxFiles);
+      els.filesFfxPrefixBtn?.addEventListener('click', () => {
+        openFfxPrefixConfirm().catch(error => {
+          showToast(getFriendlyFilesMessage(error.message, 'Prefix action could not be started.'), 'err');
+        });
+      });
       els.filesFfxDownloadBtn?.addEventListener('click', downloadRenamedFfxFiles);
       els.filesFfxFileInput?.addEventListener('change', event => addFfxFiles(event.target.files));
       els.filesFfxFileList?.addEventListener('click', event => {
@@ -19727,6 +22071,20 @@
       els.filesFfxEffectsDoneBtn?.addEventListener('click', hideFfxEffectsModal);
       els.filesFfxEffectsOverlay?.addEventListener('click', event => {
         if (event.target === els.filesFfxEffectsOverlay) hideFfxEffectsModal();
+      });
+      els.filesFfxPrefixCloseBtn?.addEventListener('click', hideFfxPrefixModal);
+      els.filesFfxPrefixCancelBtn?.addEventListener('click', hideFfxPrefixModal);
+      els.filesFfxPrefixConfirmBtn?.addEventListener('click', () => {
+        savePrefixedFfxFiles().catch(error => {
+          const message = getFriendlyFilesMessage(error.message, 'Prefix action failed.');
+          setFfxPrefixModalRunning(false, message);
+          setFfxBusy(false);
+          setFfxStatus(message);
+          showToast(message, 'err');
+        });
+      });
+      els.filesFfxPrefixOverlay?.addEventListener('click', event => {
+        if (event.target === els.filesFfxPrefixOverlay) hideFfxPrefixModal();
       });
       for (const eventName of ['dragenter', 'dragover', 'dragleave']) {
         els.filesFfxDropZone?.addEventListener(eventName, handleFfxDrag);
@@ -19776,6 +22134,20 @@
       els.filesResourcesSplitter?.addEventListener('keydown', handleResourcesSummaryKeydown);
       els.filesResourcesRefreshBtn.addEventListener('click', () => loadMyResources(true));
       els.filesResourcesUploadBtn.addEventListener('click', startLeakerMode);
+      els.emptyResourcesGuideSkipBtn?.addEventListener('click', () => hideEmptyResourcesGuide({ dismiss: true }));
+      els.emptyResourcesGuideBackBtn?.addEventListener('click', () => renderEmptyResourcesGuidePage(filesEmptyGuidePage - 1));
+      els.emptyResourcesGuideNextBtn?.addEventListener('click', () => renderEmptyResourcesGuidePage(filesEmptyGuidePage + 1));
+      els.emptyResourcesGuideStartBtn?.addEventListener('click', async () => {
+        await hideEmptyResourcesGuide({ dismiss: true }).catch(() => {});
+        startLeakerMode();
+      });
+      els.emptyResourcesGuideOverlay?.addEventListener('click', event => {
+        const dot = event.target.closest?.('[data-empty-guide-dot]');
+        if (dot) {
+          event.preventDefault();
+          renderEmptyResourcesGuidePage(Number(dot.dataset.emptyGuideDot));
+        }
+      });
       els.filesCloudBtn.addEventListener('click', showFilesCloudOverlay);
       els.filesProtectedBtn.addEventListener('click', showFilesProtectedOverlay);
       els.filesLeakerModeBtn.addEventListener('click', startLeakerMode);
@@ -19840,7 +22212,7 @@
       els.leakerModeExitBtn.addEventListener('click', exitLeakerMode);
       els.leakerModeReloadBtn.addEventListener('click', reloadLeakerMode);
       els.leakerLoginFrame.addEventListener('load', handleLeakerLoginFrameLoad);
-      els.leakerCloudFrame.addEventListener('load', () => {
+      els.leakerCloudFrame.addEventListener('load', async () => {
         setLeakerFrameLoading(els.leakerCloudFrame, false);
         installLeakerLoginOAuthBridge(els.leakerCloudFrame);
         if (leakerModePhase === 'active' && leakerFrameHasLoginSignals(els.leakerCloudFrame)) {
@@ -19848,12 +22220,17 @@
           showLeakerLoginView(true);
           return;
         }
+        if (leakerModePhase === 'active' && isLeakerFrameOutsideDashboard(els.leakerCloudFrame)) {
+          const accessOk = await verifyLeakerDashboardAccess({ timeout: 8, reloadFrame: true });
+          if (accessOk) setLeakerFrame(els.leakerCloudFrame, LEAKER_CLOUD_URL, true);
+          return;
+        }
         if (leakerModePhase === 'active' && isLeakerFrameDashboard(els.leakerCloudFrame)) {
           syncAppAuthFromSite({ silent: true, refreshResources: !filesAuthenticated });
           setLeakerModeStatus('Leaker Dashboard is open.');
         }
       });
-      els.leakerUploadFrame.addEventListener('load', () => {
+      els.leakerUploadFrame.addEventListener('load', async () => {
         setLeakerFrameLoading(els.leakerUploadFrame, false);
         acceptLeakerCookiesInFrame(els.leakerUploadFrame);
         installLeakerLoginOAuthBridge(els.leakerUploadFrame);
@@ -19864,6 +22241,11 @@
         if (leakerModePhase === 'active' && leakerFrameHasLoginSignals(els.leakerUploadFrame)) {
           syncAppAuthFromSite({ silent: true, refreshResources: false });
           showLeakerLoginView(true);
+          return;
+        }
+        if (leakerModePhase === 'active' && isLeakerFrameOutsideDashboard(els.leakerUploadFrame)) {
+          const accessOk = await verifyLeakerDashboardAccess({ timeout: 8, reloadFrame: true });
+          if (accessOk) setLeakerFrame(els.leakerUploadFrame, LEAKER_UPLOAD_URL, true);
           return;
         }
         if (leakerModePhase === 'active' && isLeakerFrameDashboard(els.leakerUploadFrame)) {
@@ -19968,6 +22350,10 @@
           handleFilesResourceDetailBack();
         }
       });
+      els.filesRequestDetailCloseBtn?.addEventListener('click', () => hideRequestDetail());
+      els.filesRequestDetailOverlay?.addEventListener('click', event => {
+        if (event.target === els.filesRequestDetailOverlay) hideRequestDetail();
+      });
       document.addEventListener('click', event => {
         if (!leakerLinkMenuOpen) return;
         if (event.target.closest('#leakerLinkMenu')) return;
@@ -19990,6 +22376,10 @@
       });
       window.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
+        if (els.emptyResourcesGuideOverlay && !els.emptyResourcesGuideOverlay.classList.contains('hidden')) {
+          hideEmptyResourcesGuide({ dismiss: true }).catch(() => {});
+          return;
+        }
         if (leakerLinkMenuOpen) {
           setLeakerLinkMenuOpen(false);
           return;
@@ -20013,6 +22403,10 @@
         }
         if (els.filesFfxEffectsOverlay && !els.filesFfxEffectsOverlay.classList.contains('hidden')) {
           hideFfxEffectsModal();
+          return;
+        }
+        if (els.filesFfxPrefixOverlay && !els.filesFfxPrefixOverlay.classList.contains('hidden')) {
+          hideFfxPrefixModal();
           return;
         }
         if (!els.filesSettingsOverlay.classList.contains('hidden')) {
@@ -20041,6 +22435,10 @@
         }
         if (!els.filesDialogOverlay.classList.contains('hidden')) {
           cancelFilesDialog();
+          return;
+        }
+        if (els.filesRequestDetailOverlay && !els.filesRequestDetailOverlay.classList.contains('hidden')) {
+          hideRequestDetail();
           return;
         }
         if (!els.filesResourceDetailOverlay.classList.contains('hidden') && !filesResourceDetailBusy) {
@@ -20074,11 +22472,13 @@
         abortLeakerLinksRequests();
         clearLeakerFrames();
         if (connectionPollTimer) clearInterval(connectionPollTimer);
+        if (filesEmptyGuideDeferredTimer) clearTimeout(filesEmptyGuideDeferredTimer);
       });
     }
 
     async function init() {
       bindEvents();
+      loadRequestFavorites();
       loadFfxEffectNames().then(() => {
         if (filesResourcesView === 'ffx') renderFfxState();
       }).catch(() => {});
