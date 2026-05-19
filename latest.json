@@ -1,24 +1,24 @@
 {
-  "version": "1.5.2",
-  "notes": "Cloud Manager has its own sign out, Cloud actions reject no-op moves/renames, and FFX Tools now include folder scanning, progress, and optional original overwrite.",
+  "version": "1.5.3",
+  "notes": "App data now lives in 6ure™ App, the HLX API key is read from an encrypted .db file, and Windows runtime JSON/internal files are embedded inside the PyInstaller package.",
   "windows": {
-    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.2/6ure-app-setup-windows-x64.exe",
-    "sha256": "f7255c8f8e221c2dcc88292d620f4dc363b7ecf6872586afd4cac189f51c9941",
-    "sizeBytes": 15091863,
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.3/6ure-app-setup-windows-x64.exe",
+    "sha256": "83c3848296af784cb660e4007718b02059d259d2fd63f3339958d68cbf4ef46d",
+    "sizeBytes": 18215510,
     "packageType": "installer",
     "installerArgs": "/S",
     "successExitCodes": [0, 3010]
   },
   "macos": {
-    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.2/6ure-app-macos.dmg",
-    "sha256": "a1922d4198f092273adaa4ff1e2a167a6a017d344a35dbd0c6ef901a826a0e1b",
-    "sizeBytes": 21903169,
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.3/6ure-app-macos.dmg",
+    "sha256": "4daef9a68e4862e51d12895b6a0ae1fcd36b67eef3cd283495aae7168ec42666",
+    "sizeBytes": 21902307,
     "packageType": "dmg"
   },
   "linux": {
-    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.2/6ure-app-linux-x64.tar.gz",
-    "sha256": "6209c1fc9e024960e5b8b57bd382047577446a2cb5c35401ae4c94040ddcb3f3",
-    "sizeBytes": 33800192,
+    "url": "https://github.com/thejinx1/6ure-App/releases/download/v1.5.3/6ure-app-linux-x64.tar.gz",
+    "sha256": "2ab1e453a13c8ea10379c7713e671ac8add6ed9d7f82b1ef53125aa83d04d266",
+    "sizeBytes": 33799300,
     "packageType": "tar.gz"
   }
 }
