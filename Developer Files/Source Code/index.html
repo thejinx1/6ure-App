@@ -5544,6 +5544,7 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 8px;
       padding: 7px 14px;
       border: 1px solid var(--capsule-line);
       border-radius: var(--capsule-radius);
@@ -5551,7 +5552,9 @@
       color: #d7fff6;
       font-size: 12px;
       font-weight: 900;
+      white-space: nowrap;
       box-shadow: var(--capsule-shadow);
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease;
     }
 
     button.files-ffx-drop-action {
@@ -5559,9 +5562,18 @@
       cursor: pointer;
     }
 
-    .files-ffx-folder-action {
-      border-color: rgba(82, 247, 255, 0.18);
-      background: rgba(82, 247, 255, 0.08);
+    .files-ffx-drop-action:hover {
+      transform: translateY(-1px);
+      border-color: rgba(82, 247, 255, 0.24);
+      background: var(--capsule-fill-hover);
+      color: #f4fffd;
+    }
+
+    .files-ffx-drop-action svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      flex: 0 0 auto;
     }
 
     .files-ffx-section-head {
@@ -10232,7 +10244,7 @@
                   <button id="filesRepairNowBtn" class="chip-action" type="button">Repair Now</button>
                   <button id="filesSettingsResetBtn" class="chip-action" type="button">Reset</button>
                 </div>
-                <span id="filesSettingsVersion" class="files-settings-version">v1.5.2</span>
+                <span id="filesSettingsVersion" class="files-settings-version">v1.5.3</span>
               </div>
             </div>
           </div>
@@ -10634,8 +10646,21 @@
                     <small id="filesFfxDropSummary">Browse or drop multiple After Effects preset files.</small>
                   </div>
                   <div class="files-ffx-drop-actions">
-                    <span class="files-ffx-drop-action">Browse multiple .ffx files</span>
-                    <button class="files-ffx-drop-action files-ffx-folder-action" type="button" data-ffx-folder-browse>Browse folder</button>
+                    <button class="files-ffx-drop-action" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M7 3.8h6.1L18 8.7V19a2.2 2.2 0 0 1-2.2 2.2H7A2.2 2.2 0 0 1 4.8 19V6A2.2 2.2 0 0 1 7 3.8Z" stroke-width="1.7" stroke-linejoin="round"></path>
+                        <path d="M13 4v5h5" stroke-width="1.7" stroke-linejoin="round"></path>
+                        <path d="M8.5 15.2h6.8" stroke-width="1.7" stroke-linecap="round"></path>
+                      </svg>
+                      <span>Browse multiple .ffx files</span>
+                    </button>
+                    <button class="files-ffx-drop-action" type="button" data-ffx-folder-browse>
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M3.8 7.2A2.2 2.2 0 0 1 6 5h4.2l1.8 2h6A2.2 2.2 0 0 1 20.2 9.2V18A2.2 2.2 0 0 1 18 20.2H6A2.2 2.2 0 0 1 3.8 18Z" stroke-width="1.7" stroke-linejoin="round"></path>
+                        <path d="M8.2 14.2h7.6" stroke-width="1.7" stroke-linecap="round"></path>
+                      </svg>
+                      <span>Browse folder</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -22733,6 +22758,7 @@
       });
       els.filesFfxDropZone?.addEventListener('click', () => chooseFfxFiles());
       els.filesFfxDropZone?.addEventListener('keydown', event => {
+        if (event.target.closest?.('.files-ffx-drop-action')) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         chooseFfxFiles();

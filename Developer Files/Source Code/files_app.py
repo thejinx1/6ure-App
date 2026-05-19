@@ -21,37 +21,77 @@ def app_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
-APPDATA_FOLDER_NAME = "6ure Leak Upld. User Data"
+APPDATA_FOLDER_NAME = "6ure\u2122 App"
+LEGACY_APPDATA_FOLDER_NAMES = ("6ure Leak Upld. User Data",)
 
 
-def persistent_app_data_dir() -> Path:
+def platform_app_data_dir(folder_name: str) -> Path:
     if sys.platform == "darwin":
-        return Path.home() / "Library" / "Application Support" / APPDATA_FOLDER_NAME
+        return Path.home() / "Library" / "Application Support" / folder_name
 
     if not sys.platform.startswith("win"):
         root = os.environ.get("XDG_DATA_HOME")
         if root:
-            return Path(root) / APPDATA_FOLDER_NAME
-        return Path.home() / ".local" / "share" / APPDATA_FOLDER_NAME
+            return Path(root) / folder_name
+        return Path.home() / ".local" / "share" / folder_name
 
     root = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
     if root:
-        return Path(root) / APPDATA_FOLDER_NAME
-    return app_dir() / "data" / APPDATA_FOLDER_NAME
+        return Path(root) / folder_name
+    return app_dir() / "data" / folder_name
+
+
+def persistent_app_data_dir() -> Path:
+    return platform_app_data_dir(APPDATA_FOLDER_NAME)
+
+
+def legacy_persistent_app_data_dirs() -> list[Path]:
+    return [platform_app_data_dir(name) for name in LEGACY_APPDATA_FOLDER_NAMES]
+
+
+def migrate_legacy_app_data_dir(target: Path) -> None:
+    try:
+        target = target.expanduser().resolve()
+    except Exception:
+        target = target.expanduser()
+    for legacy in legacy_persistent_app_data_dirs():
+        try:
+            legacy = legacy.expanduser().resolve()
+        except Exception:
+            legacy = legacy.expanduser()
+        if legacy == target or not legacy.exists() or not legacy.is_dir():
+            continue
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            for item in legacy.iterdir():
+                destination = target / item.name
+                if destination.exists():
+                    continue
+                shutil.move(str(item), str(destination))
+            try:
+                legacy.rmdir()
+            except OSError:
+                pass
+        except Exception:
+            pass
 
 
 def files_data_dir() -> Path:
     configured = os.environ.get("REYLI_DATA_DIR")
     if configured:
         return Path(configured).expanduser().resolve()
-    return persistent_app_data_dir()
+    target = persistent_app_data_dir()
+    migrate_legacy_app_data_dir(target)
+    return target
 
 
 def webview_profile_dir() -> Path:
     configured = os.environ.get("REYLI_FILES_WEBVIEW_PROFILE")
     if configured:
         return Path(configured).expanduser().resolve()
-    return persistent_app_data_dir() / "webview-profile"
+    target = persistent_app_data_dir()
+    migrate_legacy_app_data_dir(target)
+    return target / "webview-profile"
 
 
 class TeeTextStream:

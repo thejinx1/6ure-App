@@ -82,8 +82,6 @@ if (-not (Test-Path -LiteralPath $resolvedSourceAppDir)) {
 
 if (-not $Version) {
   $versionCandidates = @(
-    (Join-Path $resolvedSourceAppDir "_internal\app-version.json"),
-    (Join-Path $resolvedSourceAppDir "app-version.json"),
     (Join-Path $sourceCodeDir "app-version.json")
   )
   foreach ($candidate in $versionCandidates) {
@@ -138,13 +136,23 @@ Get-ChildItem -LiteralPath $stageAppDir -Recurse -Force | Where-Object {
     "leaker-proxy-cookies.lwp",
     "6ure-secure-vault.json",
     "6ure-secure-vault.key",
-    "hlx-api-key.txt"
+    "hlx-api-key.txt",
+    "hlx-api-key.db",
+    "app-version.json",
+    "discord-presence.json",
+    "update-config.json"
   )
 } | Remove-Item -Force
 
-foreach ($required in @($exeName, "_internal", "update-config.json")) {
+foreach ($required in @($exeName, "$appName.pkg")) {
   if (-not (Test-Path -LiteralPath (Join-Path $stageAppDir $required))) {
     throw "Required application file is missing: $required"
+  }
+}
+
+foreach ($hiddenRuntimeItem in @("_internal", "app-version.json", "discord-presence.json", "update-config.json")) {
+  if (Test-Path -LiteralPath (Join-Path $stageAppDir $hiddenRuntimeItem)) {
+    throw "Runtime item should be embedded in the package, not visible in setup staging: $hiddenRuntimeItem"
   }
 }
 
@@ -215,6 +223,12 @@ Section "$appName" SEC_APP
   SectionIn RO
   Call CloseRunningApp
   SetOutPath "`$INSTDIR"
+  RMDir /r "`$INSTDIR\_internal"
+  Delete "`$INSTDIR\app-version.json"
+  Delete "`$INSTDIR\discord-presence.json"
+  Delete "`$INSTDIR\update-config.json"
+  Delete "`$INSTDIR\hlx-api-key.txt"
+  Delete "`$INSTDIR\hlx-api-key.db"
   File /r "$stageAppDir\*"
   WriteUninstaller "`$INSTDIR\Uninstall.exe"
   Delete "`$DESKTOP\$appName.lnk"

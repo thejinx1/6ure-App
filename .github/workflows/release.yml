@@ -102,8 +102,7 @@ jobs:
 
           $requiredItems = @(
             "$appName.exe",
-            "$appName.pkg",
-            "_internal"
+            "$appName.pkg"
           )
           foreach ($item in $requiredItems) {
             $path = Join-Path $distDir $item
@@ -118,6 +117,12 @@ jobs:
           $pkgSize = (Get-Item -LiteralPath $pkgPath).Length
           if ($pkgSize -le 0) {
             throw "PyInstaller external package is empty: $pkgPath"
+          }
+          foreach ($hiddenItem in @("_internal", "app-version.json", "discord-presence.json", "update-config.json")) {
+            $hiddenPath = Join-Path $distDir $hiddenItem
+            if (Test-Path -LiteralPath $hiddenPath) {
+              throw "Runtime item should be embedded in the package, not visible in the app bundle: $hiddenPath"
+            }
           }
           Write-Host "Verified Windows app bundle."
           Write-Host "EXE size: $exeSize bytes"
@@ -140,7 +145,11 @@ jobs:
               "leaker-proxy-cookies.lwp",
               "6ure-secure-vault.json",
               "6ure-secure-vault.key",
-              "hlx-api-key.txt"
+              "hlx-api-key.txt",
+              "hlx-api-key.db",
+              "app-version.json",
+              "discord-presence.json",
+              "update-config.json"
             )
           } | Remove-Item -Force
           $zipPath = Join-Path $env:GITHUB_WORKSPACE "${{ env.WIN_PACKAGE }}"
@@ -148,7 +157,7 @@ jobs:
             Remove-Item -LiteralPath $zipPath -Force
           }
           Compress-Archive -Path (Join-Path $distDir "*") -DestinationPath $zipPath -Force
-          Write-Host "Created portable ZIP with EXE, PKG, and _internal: $zipPath"
+          Write-Host "Created portable ZIP with EXE and PKG: $zipPath"
 
       - name: Create NSIS setup
         working-directory: ${{ github.workspace }}
@@ -643,7 +652,7 @@ jobs:
           cat > artifacts/latest.json << MANIFEST
           {
             "version": "${VERSION}",
-            "notes": "Cloud Manager has its own sign out, Cloud actions reject no-op moves/renames, and FFX Tools now include folder scanning, progress, and optional original overwrite.",
+            "notes": "App data now lives in 6ure™ App, the HLX API key is read from an encrypted .db file, and Windows runtime JSON/internal files are embedded inside the PyInstaller package.",
             "windows": {
               "url": "${BASE_URL}/${{ env.WIN_SETUP }}",
               "sha256": "${WIN_SHA}",
@@ -684,14 +693,14 @@ jobs:
             - Added a separate Cloud Manager sign out for the files.6ureleaks.com cloud account.
             - Hardened Cloud Manager rename, move, extract, and stale-session handling.
             - Integrated the standalone FFX Tools flow with folder scanning, progress feedback, lazy local file reads, and optional original-file overwrite.
-            - Kept the release version at 1.5.2.
+            - Moved the app data folder to 6ure™ App, encrypted the HLX API key as a .db payload, and embedded runtime JSON/internal files inside the PyInstaller package.
 
             ### Downloads
 
             | Platform | File |
             |----------|------|
             | Windows Setup (x64) | `${{ env.WIN_SETUP }}` |
-            | Windows Portable ZIP (x64) | `${{ env.WIN_PACKAGE }}` (EXE + PKG + _internal) |
+            | Windows Portable ZIP (x64) | `${{ env.WIN_PACKAGE }}` (EXE + PKG) |
             | macOS | `${{ env.MAC_PACKAGE }}` |
             | Linux (x64) | `${{ env.LINUX_PACKAGE }}` |
 

@@ -44,7 +44,7 @@ def resource_root() -> Path:
 
 ROOT = resource_root()
 APP_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
-DEFAULT_APP_VERSION = "1.5.2"
+DEFAULT_APP_VERSION = "1.5.3"
 APP_VERSION_FILE_NAME = os.environ.get("REYLI_APP_VERSION_FILE", "app-version.json")
 
 
@@ -117,7 +117,7 @@ PROTECTED_STATIC_NAMES.update(
 )
 LEAKER_PROXY_COOKIE_PATH = DATA_ROOT / "leaker-proxy-cookies.lwp"
 PROTECTED_STATIC_NAMES.add(LEAKER_PROXY_COOKIE_PATH.name)
-HLX_API_KEY_FILE_NAME = os.environ.get("REYLI_HLX_API_KEY_FILE", "hlx-api-key.txt")
+HLX_API_KEY_FILE_NAME = os.environ.get("REYLI_HLX_API_KEY_FILE", "hlx-api-key.db")
 HLX_API_KEY_PATH = DATA_ROOT / HLX_API_KEY_FILE_NAME
 PROTECTED_STATIC_NAMES.add(HLX_API_KEY_FILE_NAME)
 UPDATE_CONFIG_FILE_NAME = os.environ.get("REYLI_UPDATE_CONFIG_FILE", "update-config.json")
@@ -2525,32 +2525,32 @@ def get_hlx_api_key() -> str:
     key = str(os.environ.get("REYLI_HLX_API_KEY") or os.environ.get("HLX_API_KEY") or "").strip()
     if key:
         return key
-    candidates = [HLX_API_KEY_PATH]
-    if sys.platform.startswith("win"):
-        appdata_root = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
-        if appdata_root:
-            candidates.append(Path(appdata_root) / "6ure Leak Upld. User Data" / HLX_API_KEY_FILE_NAME)
-    for candidate in candidates:
-        try:
-            stat = candidate.stat()
-        except OSError:
-            continue
-        cache_path = str(candidate)
+    try:
+        stat = HLX_API_KEY_PATH.stat()
+    except OSError:
+        return ""
+    cache_path = str(HLX_API_KEY_PATH)
+    with HLX_API_KEY_LOCK:
+        if (
+            HLX_API_KEY_CACHE.get("path") == cache_path
+            and float(HLX_API_KEY_CACHE.get("mtime") or 0) == float(stat.st_mtime)
+            and HLX_API_KEY_CACHE.get("key")
+        ):
+            return str(HLX_API_KEY_CACHE["key"])
+    fernet = vault_fernet(create=False)
+    if fernet is None:
+        return ""
+    try:
+        token = HLX_API_KEY_PATH.read_bytes().strip()
+        raw = fernet.decrypt(token)
+        payload = json.loads(raw.decode("utf-8"))
+        key = str(payload.get("apiKey") if isinstance(payload, dict) else "").strip()
+    except (InvalidToken, OSError, ValueError, json.JSONDecodeError):
+        return ""
+    if key:
         with HLX_API_KEY_LOCK:
-            if (
-                HLX_API_KEY_CACHE.get("path") == cache_path
-                and float(HLX_API_KEY_CACHE.get("mtime") or 0) == float(stat.st_mtime)
-                and HLX_API_KEY_CACHE.get("key")
-            ):
-                return str(HLX_API_KEY_CACHE["key"])
-        try:
-            key = candidate.read_text(encoding="utf-8-sig").strip()
-        except OSError:
-            continue
-        if key:
-            with HLX_API_KEY_LOCK:
-                HLX_API_KEY_CACHE.update({"path": cache_path, "mtime": float(stat.st_mtime), "key": key})
-            return key
+            HLX_API_KEY_CACHE.update({"path": cache_path, "mtime": float(stat.st_mtime), "key": key})
+        return key
     return ""
 
 
@@ -5732,7 +5732,7 @@ $exeName = {ps_single_quote(exe_name)}
 $exePath = {ps_single_quote(str(exe_path))}
 $pidToWait = {os.getpid()}
 $logPath = Join-Path $backupRoot "last-update.log"
-$webViewProfileRoot = if ($env:LOCALAPPDATA) {{ Join-Path $env:LOCALAPPDATA "6ure Leak Upld. User Data\\webview-profile" }} else {{ "" }}
+$webViewProfileRoot = {ps_single_quote(str((DATA_ROOT / "webview-profile").resolve()))}
 
 function Write-UpdateLog {{
   param([string]$Message)
@@ -5843,24 +5843,18 @@ try {{
   }}
 
   Write-UpdateLog "Backing up $appDir"
-  Get-ChildItem -LiteralPath $appDir -Force | Where-Object {{ $_.Name -ne "update-config.json" }} | ForEach-Object {{
+  Get-ChildItem -LiteralPath $appDir -Force | ForEach-Object {{
     Copy-Item -LiteralPath $_.FullName -Destination $backupDir -Recurse -Force
   }}
 
   Write-UpdateLog "Removing old app files"
   Invoke-Retry -Label "Remove old app files" -Action {{
-    Get-ChildItem -LiteralPath $appDir -Force | Where-Object {{ $_.Name -ne "update-config.json" }} | Remove-Item -Recurse -Force
+    Get-ChildItem -LiteralPath $appDir -Force | Remove-Item -Recurse -Force
   }}
 
   Write-UpdateLog "Copying new app files"
   Invoke-Retry -Label "Copy new app files" -Action {{
-    Get-ChildItem -LiteralPath $payloadDir -Force | Where-Object {{ $_.Name -ne "update-config.json" }} | Copy-Item -Destination $appDir -Recurse -Force
-  }}
-
-  $targetConfig = Join-Path $appDir "update-config.json"
-  $payloadConfig = Join-Path $payloadDir "update-config.json"
-  if (-not (Test-Path -LiteralPath $targetConfig) -and (Test-Path -LiteralPath $payloadConfig)) {{
-    Copy-Item -LiteralPath $payloadConfig -Destination $targetConfig -Force
+    Get-ChildItem -LiteralPath $payloadDir -Force | Copy-Item -Destination $appDir -Recurse -Force
   }}
 
   if (-not (Start-UpdatedApp -CandidatePaths @((Join-Path $appDir $exeName), $exePath))) {{
@@ -5927,7 +5921,7 @@ $installerArgs = {ps_array(installer_arg_items)}
 $successExitCodes = @({", ".join(str(code) for code in clean_success_codes)})
 $pidToWait = {os.getpid()}
 $logPath = Join-Path $backupRoot "last-update.log"
-$webViewProfileRoot = if ($env:LOCALAPPDATA) {{ Join-Path $env:LOCALAPPDATA "6ure Leak Upld. User Data\\webview-profile" }} else {{ "" }}
+$webViewProfileRoot = {ps_single_quote(str((DATA_ROOT / "webview-profile").resolve()))}
 
 function Write-UpdateLog {{
   param([string]$Message)

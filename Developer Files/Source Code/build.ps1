@@ -74,14 +74,39 @@ if ($LASTEXITCODE -ne 0) {
   throw "$appName build failed with exit code $LASTEXITCODE"
 }
 
-$distDir = Join-Path $root "dist\$appName"
-$updateConfig = Join-Path $root "update-config.json"
-if (Test-Path -LiteralPath $updateConfig) {
-  Copy-Item -LiteralPath $updateConfig -Destination (Join-Path $distDir "update-config.json") -Force
+$distRoot = Join-Path $root "dist"
+$distDir = Join-Path $distRoot $appName
+$rawDistExe = Join-Path $distRoot "$appName.exe"
+$rawDistPkg = Join-Path $distRoot "$appName.pkg"
+if ((Test-Path -LiteralPath $rawDistExe) -or (Test-Path -LiteralPath $rawDistPkg)) {
+  if (Test-Path -LiteralPath $distDir) {
+    Remove-Item -LiteralPath $distDir -Recurse -Force
+  }
+  New-Item -ItemType Directory -Force -Path $distDir | Out-Null
+  if (Test-Path -LiteralPath $rawDistExe) {
+    Move-Item -LiteralPath $rawDistExe -Destination (Join-Path $distDir "$appName.exe") -Force
+  }
+  if (Test-Path -LiteralPath $rawDistPkg) {
+    Move-Item -LiteralPath $rawDistPkg -Destination (Join-Path $distDir "$appName.pkg") -Force
+  }
 }
-$presenceConfig = Join-Path $root "discord-presence.json"
-if (Test-Path -LiteralPath $presenceConfig) {
-  Copy-Item -LiteralPath $presenceConfig -Destination (Join-Path $distDir "discord-presence.json") -Force
+
+if (-not (Test-Path -LiteralPath $distDir)) {
+  throw "Build output was not found: $distDir"
+}
+
+foreach ($visibleRuntimeItem in @("_internal", "app-version.json", "discord-presence.json", "update-config.json")) {
+  $visibleRuntimePath = Join-Path $distDir $visibleRuntimeItem
+  if (Test-Path -LiteralPath $visibleRuntimePath) {
+    Remove-Item -LiteralPath $visibleRuntimePath -Recurse -Force
+  }
+}
+
+foreach ($requiredRuntimeItem in @("$appName.exe", "$appName.pkg")) {
+  $requiredRuntimePath = Join-Path $distDir $requiredRuntimeItem
+  if (-not (Test-Path -LiteralPath $requiredRuntimePath)) {
+    throw "Required build output is missing: $requiredRuntimePath"
+  }
 }
 
 function Get-CodeSigningCertificate {

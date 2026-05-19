@@ -131,23 +131,45 @@ def run_pyinstaller(root: Path, version: str, clean: bool) -> None:
     subprocess.run(command, cwd=str(root), env=env, check=True)
 
 
-def copy_runtime_config(root: Path) -> list[Path]:
+def normalize_windows_external_pkg(root: Path) -> Path | None:
+    if not sys.platform.startswith("win"):
+        return None
+    dist_root = root / "dist"
+    bundle_root = dist_root / APP_NAME
+    raw_exe = dist_root / f"{APP_NAME}.exe"
+    raw_pkg = dist_root / f"{APP_NAME}.pkg"
+    if raw_exe.exists() or raw_pkg.exists():
+        if bundle_root.exists():
+            shutil.rmtree(bundle_root)
+        bundle_root.mkdir(parents=True, exist_ok=True)
+        if raw_exe.exists():
+            shutil.move(str(raw_exe), str(bundle_root / raw_exe.name))
+        if raw_pkg.exists():
+            shutil.move(str(raw_pkg), str(bundle_root / raw_pkg.name))
+    if bundle_root.exists():
+        for name in (f"{APP_NAME}.exe", f"{APP_NAME}.pkg"):
+            required = bundle_root / name
+            if not required.exists():
+                raise RuntimeError(f"Required Windows build output is missing: {required}")
+        return bundle_root
+    return None
+
+
+def clean_visible_runtime_files(root: Path) -> list[Path]:
     dist_root = root / "dist"
     runtime_roots: list[Path] = []
     onedir = dist_root / APP_NAME
-    mac_app = dist_root / f"{APP_NAME}.app"
 
     if onedir.exists():
         runtime_roots.append(onedir)
-    if mac_app.exists():
-        runtime_roots.extend([mac_app / "Contents" / "MacOS", mac_app / "Contents" / "Resources"])
 
     for target_root in runtime_roots:
-        target_root.mkdir(parents=True, exist_ok=True)
-        for name in ("update-config.json", "discord-presence.json", "app-version.json"):
-            source = root / name
-            if source.exists():
-                shutil.copy2(source, target_root / name)
+        for name in ("_internal", "update-config.json", "discord-presence.json", "app-version.json"):
+            target = target_root / name
+            if target.is_dir():
+                shutil.rmtree(target)
+            elif target.exists():
+                target.unlink()
     return runtime_roots
 
 
@@ -166,11 +188,14 @@ def main() -> None:
     write_windows_version_info(root, version)
     ensure_macos_icns(root)
     run_pyinstaller(root, version, clean=not args.no_clean)
-    runtime_roots = copy_runtime_config(root)
+    normalized = normalize_windows_external_pkg(root)
+    runtime_roots = clean_visible_runtime_files(root)
 
     print(f"App version: {version}")
+    if normalized:
+        print(f"Windows external package normalized into: {normalized}")
     if runtime_roots:
-        print("Runtime config copied to:")
+        print("Visible runtime config cleaned from:")
         for path in runtime_roots:
             print(f"  {path}")
     print(f"Built output: {root / 'dist'}")
