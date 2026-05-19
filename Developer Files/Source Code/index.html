@@ -5794,25 +5794,68 @@
     }
 
     .files-ffx-overwrite-toggle {
-      min-height: 32px;
+      flex: 0 0 auto;
+      width: max-content;
+      min-height: 30px;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 10px;
+      justify-content: center;
+      gap: 7px;
+      padding: 5px 10px 5px 6px;
       border: 1px solid var(--capsule-line);
-      border-radius: var(--capsule-radius);
+      border-radius: 999px;
       background: var(--capsule-fill);
       color: #d8d2ff;
       font-size: 11px;
       font-weight: 900;
       white-space: nowrap;
       box-shadow: var(--capsule-shadow);
+      cursor: pointer;
+      user-select: none;
     }
 
     .files-ffx-overwrite-toggle input {
-      width: 15px;
-      height: 15px;
-      accent-color: #8b5cf6;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .files-ffx-overwrite-toggle .files-ffx-overwrite-box {
+      width: 18px;
+      height: 18px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 1px solid rgba(167, 139, 250, 0.34);
+      border-radius: 6px;
+      background: rgba(8, 9, 16, 0.64);
+      color: transparent;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      transition: border-color 180ms ease, background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .files-ffx-overwrite-toggle .files-ffx-overwrite-box svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    .files-ffx-overwrite-toggle .files-ffx-overwrite-label {
+      color: inherit;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
+      text-align: left;
     }
 
     .files-ffx-overwrite-toggle:has(input:checked) {
@@ -5821,6 +5864,18 @@
       background:
         radial-gradient(circle at 18% 0%, rgba(82, 247, 255, 0.16), transparent 44%),
         var(--capsule-fill);
+    }
+
+    .files-ffx-overwrite-toggle:has(input:checked) .files-ffx-overwrite-box {
+      border-color: rgba(82, 247, 255, 0.45);
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.92), rgba(82, 247, 255, 0.28));
+      color: #ffffff;
+      box-shadow: 0 0 18px rgba(82, 247, 255, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .files-ffx-overwrite-toggle:focus-within {
+      outline: 2px solid rgba(82, 247, 255, 0.22);
+      outline-offset: 2px;
     }
 
     .files-ffx-output-mode {
@@ -10695,7 +10750,12 @@
                 <h3>Effects</h3>
                 <label class="files-ffx-overwrite-toggle">
                   <input id="filesFfxOverwriteOriginals" type="checkbox">
-                  <span>Overwrite originals</span>
+                  <span class="files-ffx-overwrite-box" aria-hidden="true">
+                    <svg viewBox="0 0 16 16">
+                      <path d="M3.5 8.2 6.7 11.3 12.6 4.7"></path>
+                    </svg>
+                  </span>
+                  <span class="files-ffx-overwrite-label">Overwrite originals</span>
                 </label>
               </div>
 

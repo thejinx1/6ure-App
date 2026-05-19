@@ -55,7 +55,7 @@ Section "6ure™ App" SEC_APP
   Delete "$INSTDIR\update-config.json"
   Delete "$INSTDIR\hlx-api-key.txt"
   Delete "$INSTDIR\hlx-api-key.db"
-  File /r "C:\Users\alkim\AppData\Local\Temp\6ure-setup-staging-16368\app-files\*"
+  File /r "C:\Users\alkim\AppData\Local\Temp\6ure-setup-staging-15488\app-files\*"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   Delete "$DESKTOP\6ure™ App.lnk"
   Delete "$DESKTOP\6ure Files.lnk"
